@@ -87,7 +87,8 @@ current image-by-image review.
   retained work was developed by the maintainer with LLM assistance and was
   not copied from another project.
 - [x] Create the `v0.1.0-alpha.1` tagged prerelease with known limitations and
-  migration notes.
+  migration notes, then prepare `v0.1.0-alpha.2` with the post-publication
+  dependency security refresh.
 
 ## External outreach
 
