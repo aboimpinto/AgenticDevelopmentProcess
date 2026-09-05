@@ -49,12 +49,10 @@ passed type checking, web coverage, and all unit tests against that root.
 - [x] Add the MIT license and package metadata.
 - [x] Add governance and code-of-conduct documents before actively inviting a
   broad contributor community.
-- [ ] Enable GitHub private vulnerability reporting immediately after the
+- [x] Enable GitHub private vulnerability reporting immediately after the
   repository becomes public; GitHub does not expose this feature while the
   repository is private.
-- [ ] Apply the documented `master` protection policy when the repository is
-  public. GitHub does not provide branch protection for this private
-  repository on the current account plan.
+- [x] Apply the documented `master` protection policy after publication.
 - [x] Add a public synthetic example and an end-to-end getting-started path.
 
 ## Screenshots
@@ -93,7 +91,9 @@ current image-by-image review.
 
 ## External outreach
 
-- [ ] Make the repository public only after the checks above are complete.
+- [x] Make the repository public after explicit maintainer approval. The
+  maintainer accepted the pending live supervised walkthrough as an alpha
+  limitation; the automated synthetic-demo verification passes.
 - [ ] Open collaboration discussions with a concise comparison, concrete areas
   of shared interest, and links to reproducible HEPHA evidence.
 - [ ] Do not copy code from another project unless its license permits it and
