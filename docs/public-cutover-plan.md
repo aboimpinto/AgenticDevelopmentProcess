@@ -1,30 +1,33 @@
 # Public Repository Cutover Plan
 
 This plan converts the existing private HEPHA repository into a public MIT
-repository while preserving its owner, name, and final URL. The current phase
-is reversible preparation only. No remote repository, history, branches,
-Actions runs, issues, or visibility settings are changed without an explicit
-human approval at the relevant gate.
+repository while preserving its owner, name, and final URL. Gate 4, the private
+repository replacement, completed on 2026-09-06 after explicit human approval.
+The repository remains private; public visibility still requires the separate
+Gate 5 approval.
 
 ## Recovery baseline
 
-The pre-sanitization repository is archived outside the workspace at:
+The final pre-cutover repository and stopped local runtime are archived outside
+the workspace at:
 
 ```text
 ~/.local/share/hepha-private-archives/
-  AgenticDevelopmentProcess-2026-09-05-before-public-sanitization.bundle
+  AgenticDevelopmentProcess-2026-09-06-final-pre-cutover.bundle
+  AgenticDevelopmentProcess-2026-09-06-local-runtime.tar.gz
 ```
 
-The verified bundle SHA-256 is:
+Their verified SHA-256 values are:
 
 ```text
-5ea3e15da14bfa6e615ce605eb386c4094178c5c37f685706c6d07b65c505fb0
+977fa18d093b55389129e09255c73214f5315d6b6446726ab5d1c49c8229212c
+19a96418d492d73db2a4cc7ae1fc2a19b6cfbfa55625034c0bbaf8f9127d0703
 ```
 
-The bundle contains the repository refs that existed before public
-sanitization, including the working repository's branch, stash, and worktree
-refs. Keep this archive private. Test its restoration again immediately before
-the remote cutover.
+The bundle contains the repository refs that existed immediately before the
+private cutover, including the working repository's branch, stash, and remote
+tracking refs. The runtime archive contains the stopped local SQLite state.
+Keep both archives private.
 
 ## Public-tree contract
 
@@ -106,8 +109,10 @@ With separate explicit approval:
 4. Recreate `aboimpinto/AgenticDevelopmentProcess` immediately as a private,
    empty repository without an initialized README, licence, or `.gitignore`.
 5. Push only the reviewed one-commit public candidate to `master`.
-6. Confirm that the remote exposes one branch, one root commit, no pull refs,
-   no Actions history, and no old issues or artifacts.
+6. Confirm that the remote initially exposes one branch, one root commit, no
+   pre-cutover pull refs, no pre-cutover Actions history, and no old issues or
+   artifacts. New Dependabot branches and Actions runs may be created from the
+   clean root immediately after the push.
 7. Fresh-clone the repository into a new directory and repeat the release
    audit, install, typecheck, tests, build, and synthetic-demo verification.
 8. Point the canonical local checkout at the new public root without restoring
@@ -119,6 +124,14 @@ Closing PRs and deleting their source branches is not sufficient.
 
 Keep the repository private throughout this gate. If verification fails,
 restore from the bundle or correct the candidate before continuing.
+
+Gate 4 completed on 2026-09-06. The recreated private repository started from
+root commit `2889c3a2505ba49783163bda43d66c98feb1ba8e`. Sampled old commits and
+all pre-cutover pull refs were unreachable. A fresh clone passed the release
+audit, Gitleaks scan, install, typecheck, 6,160 tests, production build,
+synthetic-demo generation, and demo verification. GitHub CI run `33996079494`
+also passed. The canonical checkout now tracks the clean root, and only ignored
+local runtime state was restored.
 
 ### Gate 5: public launch
 
