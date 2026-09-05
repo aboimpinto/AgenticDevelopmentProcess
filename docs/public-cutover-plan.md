@@ -135,10 +135,26 @@ local runtime state was restored.
 
 ### Gate 5: public launch
 
-With final explicit approval, enable private vulnerability reporting, configure
-the available branch/ruleset protections, then change visibility to public.
-Create a public-alpha release with known limitations. Only after the public URL
-and fresh clone are verified should HEPHA be introduced to other communities.
+The tagged alpha prerelease and its notes may be prepared while the repository
+is private. With final explicit approval, change visibility to public, then
+immediately enable private vulnerability reporting and configure the available
+branch/ruleset protections. Only after the public URL and fresh clone are
+verified should HEPHA be introduced to other communities.
+
+GitHub does not make branch protection available to this private repository on
+the current account plan. Immediately after publication, protect `master` with
+this initial one-maintainer policy:
+
+- require a pull request before merging, without requiring a second person's
+  approval;
+- require the `Typecheck`, `Unit Tests`, and `Web Coverage` checks on the latest
+  branch head;
+- require resolved review conversations and linear history;
+- block force-pushes and branch deletion, including for administrators; and
+- do not require signed commits or deployment approvals yet.
+
+The maintainer can deliberately relax the rule in an emergency, but ordinary
+changes should go through a short-lived branch and a green pull request.
 
 ## Rollback
 

@@ -49,7 +49,12 @@ passed type checking, web coverage, and all unit tests against that root.
 - [x] Add the MIT license and package metadata.
 - [x] Add governance and code-of-conduct documents before actively inviting a
   broad contributor community.
-- [ ] Enable GitHub private vulnerability reporting.
+- [ ] Enable GitHub private vulnerability reporting immediately after the
+  repository becomes public; GitHub does not expose this feature while the
+  repository is private.
+- [ ] Apply the documented `master` protection policy when the repository is
+  public. GitHub does not provide branch protection for this private
+  repository on the current account plan.
 - [x] Add a public synthetic example and an end-to-end getting-started path.
 
 ## Screenshots
@@ -79,10 +84,12 @@ current image-by-image review.
 - [x] Confirm third-party dependency licences and required notices. The
   installed inventory is permissive; `khroma` omits package metadata but ships
   an MIT licence file.
-- [ ] Confirm the repository contains only code and content the project has the
-  right to release under MIT.
-- [ ] Create a tagged public-alpha release with known limitations and migration
-  notes.
+- [x] Confirm the repository contains only code and content the project has the
+  right to release under MIT. On 2026-09-06 the maintainer confirmed that the
+  retained work was developed by the maintainer with LLM assistance and was
+  not copied from another project.
+- [x] Create the `v0.1.0-alpha.1` tagged prerelease with known limitations and
+  migration notes.
 
 ## External outreach
 
