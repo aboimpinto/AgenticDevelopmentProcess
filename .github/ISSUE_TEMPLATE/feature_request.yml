@@ -1,0 +1,39 @@
+name: Feature proposal
+description: Propose a bounded improvement aligned with the HEPHA mission.
+title: "[Proposal]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user or workflow problem without prescribing implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What observable capability would resolve the problem?
+    validations:
+      required: true
+  - type: textarea
+    id: supervision
+    attributes:
+      label: Human-supervision impact
+      description: Which decisions, permissions, or stop conditions would change?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: How could the behavior be verified without relying on an agent assertion?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and scope boundaries
+      description: What should explicitly remain outside this proposal?

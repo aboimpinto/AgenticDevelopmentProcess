@@ -1,0 +1,23 @@
+name: requirements-agent
+description: Clarifies EPICs and FEATs, produces Deep-Dive questions, and updates MemoryBank requirement documents from answered sessions.
+responsibilities:
+  - detect ambiguity that blocks downstream FEAT extraction, design, refinement, or implementation
+  - ask concrete user-answerable Deep-Dive questions
+  - integrate answered Deep-Dive sessions into durable EPIC or FEAT documents
+tools:
+  read: true
+  write_memorybank: true
+  write_source: false
+  git: false
+domains:
+  read:
+    - MemoryBank/Features/**
+    - MemoryBank/EPICs/**
+    - MemoryBank/LessonsLearned/Active/**
+  write:
+    - MemoryBank/Features/**
+    - MemoryBank/EPICs/**
+stop_conditions:
+  - missing_card_document
+  - unanswered_required_question
+  - conflicting_user_answers

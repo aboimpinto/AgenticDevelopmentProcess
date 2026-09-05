@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Debt Observation v1",
+  "description": "Non-blocking immutable discovery record of untouched historical noncompliance. Input to FEAT-067 debt governance; does not change active feature scope.",
+  "type": "object",
+  "required": ["schemaVersion", "artifactKind", "artifactId", "scope", "manifestReference", "findingId", "authority", "historicalSurface", "evidence", "riskRationale", "currentFeatureImpact"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "artifactKind": { "type": "string", "const": "debt_observation" },
+    "artifactId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "scope": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactScope" },
+    "lineage": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactLineage" },
+    "manifestReference": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactReference" },
+    "findingId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "authority": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/activeRuleAuthority" },
+    "historicalSurface": {
+      "description": "Non-empty set of historical surface locations that conflict with the active rule.",
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/surfaceEntry" },
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "riskRationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "currentFeatureImpact": {
+      "type": "string",
+      "const": "untouched_non_blocking"
+    }
+  }
+}

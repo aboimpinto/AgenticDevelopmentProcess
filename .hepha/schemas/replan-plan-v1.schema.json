@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Replan Plan v1",
+  "description": "Reviewer-owned bounded replan proposal triggered by finding exhaustiveness or recurrence signal. Contains complete surface, remediation, test, and verification plan.",
+  "type": "object",
+  "required": ["schemaVersion", "artifactKind", "artifactId", "scope", "manifestReference", "findingIds", "defectClass", "replanReason", "rootCause", "surface", "explicitExclusions", "remediationItems", "testMatrix", "verificationPlan", "closureCriteria"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "artifactKind": { "type": "string", "const": "replan_plan" },
+    "artifactId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "scope": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactScope" },
+    "lineage": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactLineage" },
+    "manifestReference": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactReference" },
+    "findingIds": {
+      "description": "Non-empty unique list of finding IDs that share the declared defect class.",
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "defectClass": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "replanReason": {
+      "type": "string",
+      "enum": ["finding_exhaustiveness", "recurrence_signal"]
+    },
+    "rootCause": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "surface": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/surface" },
+    "explicitExclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["relativePath", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "relativePath": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/projectRelativePath" },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      },
+      "maxItems": 64
+    },
+    "remediationItems": {
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/remediationItem" },
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "testMatrix": {
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/testMatrixItem" },
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "verificationPlan": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "closureCriteria": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    }
+  }
+}

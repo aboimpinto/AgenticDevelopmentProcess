@@ -1,0 +1,93 @@
+# FEAT-044: Final Verification Profile
+#
+# Project-owned verification profile defining ordered build, test, and lint
+# checks for the final verification gate. Every command is an argv array
+# (no shell evaluation), with relative working directories and explicit timeouts.
+#
+# This file is loaded by apps/orchestrator/src/final-verification-adapter.ts
+# during the autonomous implementation workflow.
+
+version: "2.0"
+description: "Hepha orchestrator final verification profile."
+
+checks:
+  # --- Build intent ---
+  - id: "build-check"
+    description: "Full project build (pnpm recursive build)."
+    intent: "build"
+    command: ["pnpm", "run", "build"]
+    workingDirectory: "."
+    timeout: 300000
+    required: true
+
+  # --- Lint intent ---
+  - id: "typecheck"
+    description: "TypeScript type-check with --noEmit."
+    intent: "lint"
+    command: ["pnpm", "run", "typecheck"]
+    workingDirectory: "."
+    timeout: 120000
+    required: true
+
+  # --- Test intent ---
+  - id: "unit-tests"
+    description: "Run all project unit and integration tests via vitest."
+    intent: "test"
+    command: ["pnpm", "run", "test"]
+    workingDirectory: "."
+    timeout: 300000
+    required: true
+
+  # --- Final checkpoint test-coverage intent ---
+  - id: "core-test-coverage"
+    description: "Measure changed executable orchestrator and package lines from the StartFeature baseline."
+    intent: "coverage"
+    command: ["pnpm", "exec", "vitest", "run", "--coverage"]
+    workingDirectory: "."
+    timeout: 600000
+    required: true
+    runAt: "final_checkpoint"
+    coverage:
+      reportPath: "coverage/core/lcov.info"
+      format: "lcov"
+      include:
+        - "apps/orchestrator/src/**/*.ts"
+        - "packages/*/src/**/*.ts"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.integration.test.ts"
+        - "**/test/**"
+        - "**/__fixtures__/**"
+        - "**/types.ts"
+        - "**/*-types.ts"
+        - "**/contracts/**"
+        - "**/*-contracts.ts"
+      minimumPercent: 80
+      targetPercent: 95
+      improvementAttempts: 5
+
+  - id: "web-test-coverage"
+    description: "Measure changed executable web lines from the StartFeature baseline."
+    intent: "coverage"
+    command: ["pnpm", "exec", "vitest", "run", "--coverage"]
+    workingDirectory: "apps/web"
+    timeout: 600000
+    required: true
+    runAt: "final_checkpoint"
+    coverage:
+      reportPath: "apps/web/coverage/lcov.info"
+      format: "lcov"
+      include:
+        - "apps/web/src/**/*.ts"
+        - "apps/web/src/**/*.tsx"
+      exclude:
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        - "**/*.spec.ts"
+        - "**/*.spec.tsx"
+        - "**/test/**"
+        - "**/types.ts"
+        - "**/*-types.ts"
+      minimumPercent: 80
+      targetPercent: 95
+      improvementAttempts: 5

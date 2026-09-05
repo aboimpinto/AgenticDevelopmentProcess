@@ -1,0 +1,25 @@
+{
+  "name": "@hepha/orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "dev:watch": "tsx watch --exclude \"../../.hepha/**\" --exclude \"../../logs/**\" --exclude \"../../MemoryBank/**\" --exclude \"../../pi-packages/**\" src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hepha/db": "workspace:*",
+    "@hepha/shared": "workspace:*",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}

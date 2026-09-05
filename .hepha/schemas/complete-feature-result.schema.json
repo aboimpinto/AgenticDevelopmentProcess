@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Complete Feature Result",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "result": {
+      "type": "string",
+      "enum": ["COMPLETED", "BLOCKED"]
+    },
+    "completionReport": { "type": "string" },
+    "lessonsLearnedPath": { "type": "string" },
+    "blockerReason": { "type": "string" }
+  }
+}

@@ -1,0 +1,348 @@
+# FEAT-028: Command Policy Definitions
+#
+# Defines command classification rules for Hepha's orchestrator policy gateway.
+# Commands are classified before worker execution as:
+#   - allowed             : May proceed to worker execution
+#   - approval_required   : Recorded and stopped before execution (approval UX deferred to FEAT-030)
+#   - blocked             : Must not execute
+#
+# Rules use executable names and argument patterns rather than machine-specific
+# absolute paths. Profile IDs reference FEAT-026 tool profile definitions.
+#
+# This file is the durable source of truth. It must be loaded and validated
+# by apps/orchestrator/src/command-policy-validator.ts before use.
+
+version: "1.0"
+description: "FEAT-028 command policy definitions for Hepha orchestrator command classification."
+
+# ---------------------------------------------------------------------------
+# Default dangerous-pattern blocking rules
+#
+# These rules are evaluated first, before explicit allow or approval-required
+# rules. Dangerous patterns always take precedence. Each rule here produces
+# a "blocked" outcome.
+#
+# Match strategies:
+#   executable        — Match by executable name (normalized, lowercase)
+#   executable+args   — Match by executable name AND at least one matching arg
+#   pattern           — Match by regex pattern against full normalized command text
+# ---------------------------------------------------------------------------
+defaultBlockRules:
+  # --- Destructive filesystem operations ---
+  - id: "block-rm-rf-root"
+    description: "Block recursive deletions targeting root or significant portions of the filesystem."
+    matchStrategy: "executable+args"
+    executables:
+      - "rm"
+      - "rmdir"
+    args:
+      - "/"
+      - "-rf"
+      - "-fr"
+    outcome: "blocked"
+    riskCategory: "destructive"
+
+  - id: "block-format-disk"
+    description: "Block commands that format or partition disks."
+    matchStrategy: "executable"
+    executables:
+      - "format"
+      - "mkfs"
+      - "fdisk"
+      - "dd"
+    outcome: "blocked"
+    riskCategory: "destructive"
+
+  # --- Privilege escalation ---
+  - id: "block-sudo"
+    description: "Block commands using sudo or privilege escalation."
+    matchStrategy: "executable"
+    executables:
+      - "sudo"
+      - "su"
+      - "doas"
+      - "pkexec"
+      - "runas"
+    outcome: "blocked"
+    riskCategory: "privileged"
+
+  - id: "block-chmod-broad"
+    description: "Block broad permission changes that could compromise security."
+    matchStrategy: "executable+args"
+    executables:
+      - "chmod"
+      - "chown"
+      - "chattr"
+    args:
+      - "777"
+      - "a+w"
+      - "a+rwx"
+      - "a+rw"
+    outcome: "blocked"
+    riskCategory: "privileged"
+
+  # --- Shell chaining from remote ---
+  - id: "block-curl-pipe-shell"
+    description: "Block curl/wget piped into shell interpreters (common malware pattern)."
+    matchStrategy: "pattern"
+    pattern: "(curl|wget|iwr|Invoke-WebRequest)(.*)[|](.*)(bash|sh|zsh|powershell|pwsh|cmd|iex)"
+    outcome: "blocked"
+    riskCategory: "remote_effect"
+
+  # --- Credential/secret exposure ---
+  - id: "block-env-dump"
+    description: "Block dumping all environment variables (may contain secrets)."
+    matchStrategy: "executable"
+    executables:
+      - "env"
+      - "printenv"
+      - "export"
+    outcome: "blocked"
+    riskCategory: "secret_exposure"
+    priority: 150
+
+  - id: "block-windows-enum"
+    description: "Block PowerShell commands that enumerate secrets or credentials."
+    matchStrategy: "pattern"
+    pattern: "(Get-ChildItem|Get-Item|Get-Content|Select-String).*(Env:|env:).*"
+    outcome: "blocked"
+    riskCategory: "secret_exposure"
+
+  # --- Generic dangerous shell operations ---
+  - id: "block-destructive-recursive-delete"
+    description: "Block recursive deletion patterns that could remove large portions of the project."
+    matchStrategy: "pattern"
+    pattern: "(rm|Remove-Item|del|erase)(.*)(-rf|-Recurse|-Force|-fr)(.*)"
+    outcome: "blocked"
+    riskCategory: "destructive"
+
+# ---------------------------------------------------------------------------
+# Explicit verification allow rules
+#
+# These rules allow project-specific verification commands for profiles that
+# have test-run or source-editor capabilities. Rules are evaluated after
+# default blocking but before approval-required rules.
+# ---------------------------------------------------------------------------
+allowRules:
+  # --- Cargo verification commands ---
+  - id: "allow-cargo-test"
+    description: "Allow cargo test for test-runner and source-editor profiles."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "test"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-cargo-check"
+    description: "Allow cargo check for verification."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "check"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-cargo-clippy"
+    description: "Allow cargo clippy for linting."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "clippy"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-cargo-build"
+    description: "Allow cargo build for compilation verification."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "build"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-cargo-fmt"
+    description: "Allow cargo fmt for formatting verification."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "fmt"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  # --- TypeScript/JavaScript verification commands ---
+  - id: "allow-tsc-typecheck"
+    description: "Allow TypeScript compiler for type-checking."
+    matchStrategy: "executable+args"
+    executables:
+      - "tsc"
+    args:
+      - "--noEmit"
+      - "--noemit"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-vitest"
+    description: "Allow vitest test runner."
+    matchStrategy: "executable+args"
+    executables:
+      - "vitest"
+    args:
+      - "run"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-npx-eslint"
+    description: "Allow npx eslint for linting."
+    matchStrategy: "executable+args"
+    executables:
+      - "npx"
+    args:
+      - "eslint"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  - id: "allow-npx-prettier"
+    description: "Allow npx prettier for format checking."
+    matchStrategy: "executable+args"
+    executables:
+      - "npx"
+    args:
+      - "prettier"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+  # --- Git local read-only commands ---
+  - id: "allow-git-status"
+    description: "Allow git status for workspace inspection."
+    matchStrategy: "executable+args"
+    executables:
+      - "git"
+    args:
+      - "status"
+      - "diff"
+      - "log"
+    outcome: "allowed"
+    riskCategory: "git_local"
+
+  - id: "allow-git-branch"
+    description: "Allow git branch listing."
+    matchStrategy: "executable+args"
+    executables:
+      - "git"
+    args:
+      - "branch"
+    outcome: "allowed"
+    riskCategory: "git_local"
+
+  # --- General file inspection ---
+  - id: "allow-ls-cat"
+    description: "Allow file listing and reading commands."
+    matchStrategy: "executable"
+    executables:
+      - "ls"
+      - "cat"
+      - "head"
+      - "tail"
+      - "less"
+      - "more"
+      - "find"
+      - "grep"
+      - "rg"
+      - "type"
+      - "Get-ChildItem"
+      - "Get-Content"
+    outcome: "allowed"
+    riskCategory: "verification"
+
+# ---------------------------------------------------------------------------
+# Approval-required rules
+#
+# Commands matching these rules are recorded and stopped before execution.
+# Actual approval UX (dashboard prompts, request records, resume behavior)
+# is deferred to FEAT-030.
+# ---------------------------------------------------------------------------
+approvalRules:
+  # --- Git remote write operations ---
+  - id: "approve-git-push"
+    description: "Git push requires approval (deferred to FEAT-031)."
+    matchStrategy: "executable+args"
+    executables:
+      - "git"
+    args:
+      - "push"
+    outcome: "approval_required"
+    riskCategory: "git_remote"
+
+  - id: "approve-git-commit"
+    description: "Git commit requires approval (deferred to FEAT-031)."
+    matchStrategy: "executable+args"
+    executables:
+      - "git"
+    args:
+      - "commit"
+    outcome: "approval_required"
+    riskCategory: "git_remote"
+
+  - id: "approve-gh-pr"
+    description: "GitHub PR creation requires approval (deferred to FEAT-031)."
+    matchStrategy: "executable+args"
+    executables:
+      - "gh"
+    args:
+      - "pr"
+    outcome: "approval_required"
+    riskCategory: "git_remote"
+
+  # --- Network/deploy operations ---
+  - id: "approve-rsync"
+    description: "Remote sync/transfer requires approval."
+    matchStrategy: "executable"
+    executables:
+      - "rsync"
+      - "scp"
+      - "sftp"
+    outcome: "approval_required"
+    riskCategory: "remote_effect"
+
+  # --- Package/dependency modifications ---
+  - id: "approve-npm-install-global"
+    description: "Global package installs require approval."
+    matchStrategy: "executable+args"
+    executables:
+      - "npm"
+      - "pnpm"
+      - "yarn"
+    args:
+      - "install"
+      - "add"
+      - "remove"
+      - "update"
+    outcome: "approval_required"
+    riskCategory: "package_install"
+
+  - id: "approve-cargo-install"
+    description: "Cargo crate install requires approval."
+    matchStrategy: "executable+args"
+    executables:
+      - "cargo"
+    args:
+      - "install"
+    outcome: "approval_required"
+    riskCategory: "package_install"
+
+  # --- Privileged shell commands ---
+  - id: "approve-chmod-non-broad"
+    description: "Chmod/chown operations require approval unless caught by block rules."
+    matchStrategy: "executable"
+    executables:
+      - "chmod"
+      - "chown"
+    outcome: "approval_required"
+    riskCategory: "privileged"
+    priority: 50

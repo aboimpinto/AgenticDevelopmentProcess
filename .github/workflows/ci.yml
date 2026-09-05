@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [master, dev, "feat/**"]
+  pull_request:
+    branches: [master]
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: npx vitest run --reporter verbose
+
+  web-coverage:
+    name: Web Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Run web unit tests with coverage
+        working-directory: apps/web
+        run: npx vitest run --coverage --reporter verbose
+      - name: Quality evaluator — inventory, size, coverage, journey checks
+        # tsx is owned by the orchestrator workspace. The evaluator resolves
+        # the repository root from its own file location.
+        run: pnpm --filter @hepha/orchestrator exec tsx ../../scripts/quality-evaluator.ts
+        if: always()
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: web-coverage-report
+          path: apps/web/coverage/
+          retention-days: 30
+      - name: Upload quality evaluator report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: quality-evaluator-report
+          path: scripts/quality-evaluator.ts
+          retention-days: 30

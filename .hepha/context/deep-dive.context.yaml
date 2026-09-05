@@ -1,0 +1,20 @@
+name: deep-dive
+description: Context pack for EPIC and FEAT clarification sessions.
+required:
+  - project
+  - card
+  - current_document
+  - validation_topics
+optional:
+  - linked_epics
+  - active_lessons
+selectors:
+  current_document:
+    source: card.specMarkdown
+  active_lessons:
+    include:
+      - MemoryBank/LessonsLearned/Active/common.md
+      - MemoryBank/LessonsLearned/Active/memorybank-docs.md
+constraints:
+  - ask only questions needed for the next lifecycle transition
+  - do not start design, refinement, or implementation

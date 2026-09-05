@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "policy": "Include tracked source by default, remove runtime/generated evidence, and retain only curated MemoryBank contracts.",
+  "excludedExactPaths": [
+    "apps/orchestrator/.hepha/hepha.sqlite"
+  ],
+  "excludedPathPrefixes": [
+    "apps/orchestrator/.hepha/"
+  ],
+  "excludedExtensions": [
+    ".db",
+    ".pdf",
+    ".sqlite",
+    ".sqlite3"
+  ],
+  "memoryBankIncludePatterns": [
+    "^MemoryBank/Features/00_EPICS/",
+    "^MemoryBank/Features/NEXT_FEATURE_ID\\.txt$",
+    "^MemoryBank/Features/04_COMPLETED/[^/]+/FeatureDescription\\.md$",
+    "^MemoryBank/LessonsLearned/Active/",
+    "^MemoryBank/Overview/"
+  ],
+  "requiredPaths": [
+    ".env.example",
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "AGENTS.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "docs/getting-started-supervised-demo.md",
+    "docs/public-release-manifest.json",
+    "examples/supervised-demo/template/MemoryBank/Features/01_SUBMITTED/FEAT-001-due-date-filter/FeatureDescription.md",
+    "GOVERNANCE.md",
+    "LICENSE",
+    "MISSION.md",
+    "README.md",
+    "ROADMAP.md",
+    "scripts/create-supervised-demo.mjs",
+    "SECURITY.md",
+    "SUPERVISION.md",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "forbiddenTextMarkers": [
+    "/home/esqueleto",
+    "AboimPintoConsulting",
+    "D:\\\\myWork",
+    "HushVoting",
+    "HushNetwork",
+    "LimmatSharks",
+    "SHARKS_DATABASE_URL",
+    "SWIMRANKINGS_DATABASE_URL",
+    "SharksDb",
+    "limmatsharks",
+    "swimrankingsdb"
+  ],
+  "reviewedSyntheticSecretFingerprints": {
+    "apps/orchestrator/test/authoritative-review-presentation.test.ts": [
+      "3021d90eb9437b2d8f30e8363695c4418b5e5f1870801b5c317e9398ee0f572d"
+    ],
+    "apps/orchestrator/test/delivery-presentation.test.ts": [
+      "48429a32754cb4a8fe685372c705783454f427951a018b6b8eb4b1105caca17a"
+    ],
+    "apps/orchestrator/test/delivery.integration.test.ts": [
+      "48429a32754cb4a8fe685372c705783454f427951a018b6b8eb4b1105caca17a"
+    ],
+    "apps/orchestrator/test/final-verification-presentation.test.ts": [
+      "743554670c6065b3f7f13ac4f07e392f977b3556ceb7457411633c454bcbece8",
+      "03aafb028d538b06c4341bf8cf2a692a3c6d1f36e34e0e0b376f407c6117a246",
+      "751da0d2100c8413bb2a75e87327144355cca63a7634fa28ec370a74b13a8c9b"
+    ],
+    "apps/orchestrator/test/provider-connection-diagnostics.test.ts": [
+      "11821bfd7930417caf9977fe3c091c0f26f6ace0a905c2590c1c5a61863025f1"
+    ],
+    "apps/orchestrator/test/provider-connection-http-adapter.test.ts": [
+      "f49ff5b5883eff3a12512fb4b5a86994cab391650506959c7ab9dc20f161d5f8"
+    ],
+    "apps/orchestrator/test/provider-connection-non-leak-regression.test.ts": [
+      "461c7aa2325ce8a25a2c3be3aedd5bdbe68eec651f5af308604561eaacd77ee0"
+    ],
+    "apps/orchestrator/test/provider-connection-secret-vault.test.ts": [
+      "a52857c86b18c889e87e5b0783dc0a18d9b732915b20e50ffb03548d6489c010"
+    ],
+    "apps/orchestrator/test/provider-connections.integration.test.ts": [
+      "11821bfd7930417caf9977fe3c091c0f26f6ace0a905c2590c1c5a61863025f1"
+    ],
+    "apps/orchestrator/test/review-contract-integration.test.ts": [
+      "34c4df9e6a6d608161597c47aa57a7d0d43704b4fd7bfe40f03cdc617f84551d",
+      "b629d32c2d272a2f7c0c07be0640c73b2534b8caf8d7b552161966f77ba209e3"
+    ],
+    "apps/orchestrator/test/review-contracts.test.ts": [
+      "7ef254cddd408789b950017a1c1cfb5d16863423f88cdacded8954c9f914012d",
+      "8bcac7908eb950419537b91e19adc83ce2c9cbfdacf4f81157fdadfec11f7017"
+    ],
+    "apps/web/e2e/provider-connections.spec.ts": [
+      "cb06e6b0e5d956df82f33e488017650ed8a8739bdafd5050a453c3390ad40b28"
+    ],
+    "packages/db/test/review-governance-content-safety.test.ts": [
+      "8bcac7908eb950419537b91e19adc83ce2c9cbfdacf4f81157fdadfec11f7017"
+    ],
+    "packages/db/test/review-store.test.ts": [
+      "c363c84107e7366590728f1a3570e8311d6fe1df1912d9f07ad3afb2eaff8979"
+    ],
+    "packages/shared/test/runtime-evidence-mode-contracts.test.ts": [
+      "3021d90eb9437b2d8f30e8363695c4418b5e5f1870801b5c317e9398ee0f572d"
+    ]
+  }
+}

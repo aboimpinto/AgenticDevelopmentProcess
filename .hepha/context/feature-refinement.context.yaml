@@ -1,0 +1,31 @@
+name: feature-refinement
+description: Context pack for converting clarified FEATs into implementation handoff documents.
+required:
+  - project
+  - feature_document
+  - linked_epics
+  - phase_file_names
+  - active_lessons
+optional:
+  - deep_dive_answers
+  - design_artifacts
+  - linked_epic_acceptance_tests
+  - project_verification_profile
+selectors:
+  feature_document:
+    include:
+      - MemoryBank/Features/**/FeatureDescription.md
+  design_artifacts:
+    include:
+      - MemoryBank/Features/**/UX-research-report.md
+      - MemoryBank/Features/**/Wireframes-design.md
+      - MemoryBank/Features/**/design-summary.md
+  active_lessons:
+    include:
+      - MemoryBank/LessonsLearned/Active/common.md
+      - MemoryBank/LessonsLearned/Active/code-review-recovery.md
+      - MemoryBank/LessonsLearned/Active/code-quality-assumptions.md
+constraints:
+  - do not write implementation code
+  - produce phase files with verification intent labels rather than shell commands
+  - map linked EPIC acceptance tests when present

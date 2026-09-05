@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "inventoryDate": "2026-07-26",
+  "purpose": "Authoritative implementation inventory for provisioning a configured project's project-local Hepha workflow contract.",
+  "managedAssetGroups": [
+    {
+      "sourceDirectory": ".hepha/agents",
+      "destinationDirectory": ".hepha/agents",
+      "files": [
+        "design-agent.agent.yaml",
+        "documentation-agent.agent.yaml",
+        "feature-refiner.agent.yaml",
+        "implementation-lead.agent.yaml",
+        "requirements-agent.agent.yaml"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha/commands",
+      "destinationDirectory": ".hepha/commands",
+      "files": [
+        "complete-feature.md",
+        "deep-dive-document-update.md",
+        "deep-dive-questions.md",
+        "design-feature.md",
+        "refine-feature.md",
+        "start-feature-postprocess.md"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha/context",
+      "destinationDirectory": ".hepha/context",
+      "files": [
+        "deep-dive.context.yaml",
+        "design-feature.context.yaml",
+        "feature-completion.context.yaml",
+        "feature-refinement.context.yaml",
+        "implementation-start.context.yaml"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha/schemas",
+      "destinationDirectory": ".hepha/schemas",
+      "files": [
+        "architecture-rules-v1.schema.json",
+        "common-review-contract-types-v1.schema.json",
+        "complete-feature-result.schema.json",
+        "debt-observation-v1.schema.json",
+        "deep-dive-document-update.schema.json",
+        "deep-dive-questions.schema.json",
+        "design-feature-files.schema.json",
+        "refine-feature-result.schema.json",
+        "remediation-response-v1.schema.json",
+        "replan-plan-v1.schema.json",
+        "review-manifest-v1.schema.json",
+        "start-feature-postprocess.schema.json",
+        "verification-receipt-v1.schema.json"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha/skills",
+      "destinationDirectory": ".hepha/skills",
+      "files": [
+        "repair-review-findings.skill.md",
+        "replan-phase.skill.md",
+        "review-phase.skill.md"
+      ]
+    },
+    {
+      "sourceDirectory": ".workflows",
+      "destinationDirectory": ".hepha/workflows",
+      "migrationNote": "The source remains .workflows until the legacy-path migration moves the canonical bundle to .hepha/workflows.",
+      "files": [
+        "complete-feature.workflow.yaml",
+        "continue-implementing.workflow.yaml",
+        "deep-dive-epic.workflow.yaml",
+        "deep-dive-feature.workflow.yaml",
+        "design-feature.workflow.yaml",
+        "refine-feature.workflow.yaml",
+        "start-implementing.workflow.yaml"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha/safety",
+      "destinationDirectory": ".hepha/safety",
+      "files": [
+        "command-policy.yaml",
+        "path-policy.yaml",
+        "tool-profiles.yaml"
+      ]
+    },
+    {
+      "sourceDirectory": ".hepha",
+      "destinationDirectory": ".hepha",
+      "files": [
+        "README.md"
+      ]
+    }
+  ],
+  "projectOwnedAssets": [
+    {
+      "path": ".hepha/safety/final-verification-profile.yaml",
+      "setupRule": "Create from explicit project defaults when absent; validate and preserve when present; never silently overwrite."
+    },
+    {
+      "path": ".hepha/architecture-rules.yaml",
+      "setupRule": "Preserve when present. When REVIEW_CONTRACT_V1 requires a catalog, setup must create a valid project-appropriate catalog from an explicit template or report setup incomplete. Never borrow Hepha's own project catalog implicitly."
+    }
+  ],
+  "requiredCompatibilityChecks": [
+    "Every listed managed file exists at the project destination.",
+    "Every managed file has a recorded Hepha release and SHA-256 checksum.",
+    "Every JSON schema parses and all local $ref targets resolve inside the project .hepha/schemas directory.",
+    "The review schemas are semantically compatible with the current runtime review types and validators; byte equality with a stale source schema is not readiness evidence.",
+    "The review-manifest schema and runtime agree on minimum findings, optional OBSERVATION authority, compatibility-decision fields, disposition field requirements, and forbidden fields.",
+    "All YAML assets parse with duplicate-key rejection and all workflow references resolve to copied project-local commands, agents, contexts, schemas, skills, and safety assets.",
+    "Every launch-bearing workflow node declares exactly one registered top-level agent_action and matching command metadata; deterministic action, gate, and grouping nodes remain route-neutral.",
+    "Commands, agents, project skills, package lifecycle skills, configured skill-path overrides, and copied workflow layouts pass validatePortableModelAuthorityInventory with no model/provider/model-policy/routing/effort/fallback/authentication fields or host-switch directives.",
+    "Direct lifecycle skills declare direct_host authority for the current Pi, Codex, or Claude Code session and never query Hepha routing, switch model, hand off automatically, or fabricate an orchestrated receipt.",
+    "REVIEW_CONTRACT_V1 preflight executes a representative no-finding-scope APPROVED observation manifest and, when configured, an active-rule manifest against the project catalog.",
+    "No workflow resolves a required contract from the Hepha source repository, another configured project, or ~/.pi."
+  ],
+  "knownFailurePrevented": {
+    "workflowRunId": "workflow-cc359c0b-69ac-4954-acc1-96e72db0a404",
+    "failure": "REVIEW_CONTRACT_V1_VALIDATION_DENIED (invalid_shape)",
+    "cause": "The project had copied schema files, but schema/runtime compatibility was not proven and the project had no .hepha/architecture-rules.yaml while the active V1 validation path attempted to load one unconditionally.",
+    "lesson": "Setup readiness must validate the complete executable contract, not only directory presence, JSON parsing, or equality with the current Hepha source files."
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Remediation Response v1",
+  "description": "Fixer/developer-owned bounded response to a review manifest. References manifest and finding/remediation IDs; never contains reviewer-owned text.",
+  "type": "object",
+  "required": ["schemaVersion", "artifactKind", "artifactId", "scope", "manifestReference", "findingResponses"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "artifactKind": { "type": "string", "const": "remediation_response" },
+    "artifactId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "scope": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactScope" },
+    "lineage": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactLineage" },
+    "manifestReference": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactReference" },
+    "findingResponses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["findingId", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "findingId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["remediationItemId", "decision", "changedSurfaceIds", "rationale"],
+              "additionalProperties": false,
+              "properties": {
+                "remediationItemId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+                "decision": {
+                  "type": "string",
+                  "enum": ["APPLIED", "NOT_APPLIED", "NOT_APPLICABLE"]
+                },
+                "changedSurfaceIds": {
+                  "type": "array",
+                  "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+                  "minItems": 0,
+                  "maxItems": 64,
+                  "uniqueItems": true
+                },
+                "rationale": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 64
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "suspectedOutOfScopeObservations": {
+      "description": "Optional bounded pointers to project-relative surface and rationale only. Not findings; do not change the manifest.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["relativePath", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "relativePath": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/projectRelativePath" },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      },
+      "maxItems": 16
+    }
+  }
+}

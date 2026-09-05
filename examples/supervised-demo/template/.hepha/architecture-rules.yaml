@@ -1,0 +1,16 @@
+catalogId: supervised-demo-architecture-rules
+schemaVersion: 1
+rules:
+  - id: preserve-explicit-human-decisions
+    version: "1.0.0"
+    status: active
+    category: policy
+    scope: review-governance
+    title: Preserve Explicit Human Decisions
+    description: >-
+      Product ambiguity must remain visible until the operator answers it.
+      Agents may recommend options but must not infer approval or begin
+      implementation from silence.
+    source:
+      document: README.md
+      section: Human-control boundary

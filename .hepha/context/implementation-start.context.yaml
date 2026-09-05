@@ -1,0 +1,26 @@
+name: implementation-start
+description: Context pack for preparing a refined FEAT for autonomous implementation.
+required:
+  - project
+  - feature_tasks
+  - phase_documents
+  - active_lessons
+optional:
+  - planning_artifact
+  - previous_run_state
+selectors:
+  feature_tasks:
+    include:
+      - MemoryBank/Features/**/FeatureTasks.md
+  phase_documents:
+    include:
+      - MemoryBank/Features/**/Phases/*.md
+  active_lessons:
+    include:
+      - MemoryBank/LessonsLearned/Active/common.md
+      - MemoryBank/LessonsLearned/Active/code-review-recovery.md
+      - MemoryBank/LessonsLearned/Active/code-quality-assumptions.md
+constraints:
+  - preserve approved planning intent
+  - do not mark phase work complete
+  - block when phase handoff is too weak for implementation

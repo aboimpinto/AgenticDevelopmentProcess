@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Common Review Contract Types v1",
+  "description": "Shared type definitions for all FEAT-064 v1 structured review artifacts. Reusable via $defs from individual artifact schemas.",
+  "$defs": {
+    "kebabCaseIdentifier": {
+      "description": "Lowercase kebab-case identifier, 1–128 characters.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "projectRelativePath": {
+      "description": "POSIX project-relative path. No absolute paths, Windows drive letters, backslashes, NUL bytes, empty segments, or '.'/'..' segments.",
+      "type": "string",
+      "pattern": "^(?!.*[\\x00\\\\])(?!.*//)[a-zA-Z0-9_./-]+$",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "sha256Hex": {
+      "description": "Lowercase SHA-256 hex digest (64 hex characters).",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifactKind": {
+      "type": "string",
+      "enum": ["review_manifest", "remediation_response", "verification_receipt", "replan_plan", "debt_observation"]
+    },
+    "artifactScope": {
+      "type": "object",
+      "required": ["projectId", "featureId", "phaseNumber", "reviewGateId"],
+      "additionalProperties": false,
+      "properties": {
+        "projectId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "featureId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "phaseNumber": { "type": "integer", "minimum": 0 },
+        "reviewGateId": { "$ref": "#/$defs/kebabCaseIdentifier" }
+      }
+    },
+    "artifactReference": {
+      "description": "Reference to an already-created artifact by identity and location.",
+      "type": "object",
+      "required": ["artifactKind", "artifactId", "contentHash", "relativePath"],
+      "additionalProperties": false,
+      "properties": {
+        "artifactKind": { "$ref": "#/$defs/artifactKind" },
+        "artifactId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "contentHash": { "$ref": "#/$defs/sha256Hex" },
+        "relativePath": { "$ref": "#/$defs/projectRelativePath" }
+      }
+    },
+    "artifactLineage": {
+      "description": "Optional predecessor/supersession lineage for an artifact.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "predecessors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactReference" },
+          "uniqueItems": true
+        },
+        "supersedes": { "$ref": "#/$defs/artifactReference" }
+      }
+    },
+    "surfaceEntry": {
+      "description": "One location/symbol in the code review surface.",
+      "type": "object",
+      "required": ["surfaceId", "relativePath"],
+      "additionalProperties": false,
+      "properties": {
+        "surfaceId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "relativePath": { "$ref": "#/$defs/projectRelativePath" },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "surface": {
+      "description": "Reviewed surface grouped by inspection category.",
+      "type": "object",
+      "required": ["inspected", "affected", "confirmedUnaffected"],
+      "additionalProperties": false,
+      "properties": {
+        "inspected": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surfaceEntry" },
+          "minItems": 1,
+          "maxItems": 128
+        },
+        "affected": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surfaceEntry" },
+          "maxItems": 128
+        },
+        "confirmedUnaffected": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surfaceEntry" },
+          "maxItems": 128
+        }
+      }
+    },
+    "remediationItem": {
+      "type": "object",
+      "required": ["remediationItemId", "instruction", "targetSurfaceIds"],
+      "additionalProperties": false,
+      "properties": {
+        "remediationItemId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "instruction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "targetSurfaceIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/kebabCaseIdentifier" },
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true
+        }
+      }
+    },
+    "testMatrixItem": {
+      "type": "object",
+      "required": ["testId", "requirement", "targetSurfaceIds"],
+      "additionalProperties": false,
+      "properties": {
+        "testId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "requirement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "targetSurfaceIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/kebabCaseIdentifier" },
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true
+        }
+      }
+    },
+    "disposition": {
+      "type": "string",
+      "enum": ["IN_SCOPE_BLOCKER", "SCOPE_EXPANSION", "ARCHITECTURE_DEBT", "OBSERVATION"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["blocker", "required", "note", "info"]
+    },
+    "claimType": {
+      "type": "string",
+      "enum": ["architecture", "security", "policy", "quality", "feature_correctness"]
+    },
+    "exhaustivenessDecision": {
+      "type": "string",
+      "enum": ["local_only", "cross_cutting_complete", "replan_required"]
+    },
+    "activeRuleAuthority": {
+      "description": "Authority bound to an active catalog rule snapshot.",
+      "type": "object",
+      "required": ["kind", "reference", "snapshot"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "const": "active_rule" },
+        "reference": {
+          "type": "string",
+          "pattern": "^rule:[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "minLength": 6,
+          "maxLength": 132
+        },
+        "snapshot": { "$ref": "#/$defs/activeRuleSnapshotContainer" }
+      }
+    },
+    "acceptanceCriterionAuthority": {
+      "description": "Authority bound to an explicit acceptance criterion.",
+      "type": "object",
+      "required": ["kind", "reference", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "const": "acceptance_criterion" },
+        "reference": {
+          "type": "string",
+          "pattern": "^ac:[a-z][a-z0-9]*(?:-[a-z0-9]+)*:[a-zA-Z0-9_-]+$",
+          "minLength": 5,
+          "maxLength": 256
+        },
+        "source": {
+          "type": "object",
+          "required": ["relativePath", "section"],
+          "additionalProperties": false,
+          "properties": {
+            "relativePath": { "$ref": "#/$defs/projectRelativePath" },
+            "section": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      }
+    },
+    "authority": {
+      "oneOf": [
+        { "$ref": "#/$defs/activeRuleAuthority" },
+        { "$ref": "#/$defs/acceptanceCriterionAuthority" }
+      ]
+    },
+    "activeRuleSnapshotContainer": {
+      "description": "Snapshot container embedded inside an authority or manifest.",
+      "type": "object",
+      "required": ["schemaVersion", "catalogSchemaVersion", "ruleId", "ruleVersion", "category", "scope", "title", "source", "catalogPath", "catalogSourceHash", "ruleHash"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "integer", "const": 1 },
+        "catalogSchemaVersion": { "type": "integer", "const": 1 },
+        "ruleId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "ruleVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "category": {
+          "type": "string",
+          "enum": ["architecture", "security", "policy", "quality"]
+        },
+        "scope": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "source": {
+          "type": "object",
+          "required": ["document", "section"],
+          "additionalProperties": false,
+          "properties": {
+            "document": { "$ref": "#/$defs/projectRelativePath" },
+            "section": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        },
+        "catalogPath": {
+          "type": "string",
+          "const": ".hepha/architecture-rules.yaml"
+        },
+        "catalogSourceHash": { "$ref": "#/$defs/sha256Hex" },
+        "ruleHash": { "$ref": "#/$defs/sha256Hex" }
+      }
+    },
+    "reviewFinding": {
+      "type": "object",
+      "required": ["findingId", "disposition", "claimType", "authority", "defectClass", "severity", "summary", "surface"],
+      "additionalProperties": false,
+      "properties": {
+        "findingId": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "disposition": { "$ref": "#/$defs/disposition" },
+        "claimType": { "$ref": "#/$defs/claimType" },
+        "authority": { "$ref": "#/$defs/authority" },
+        "defectClass": { "$ref": "#/$defs/kebabCaseIdentifier" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "surface": { "$ref": "#/$defs/surface" },
+        "rootCause": {
+          "description": "Required for IN_SCOPE_BLOCKER and SCOPE_EXPANSION; optional for others.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "scopeExpansionRationale": {
+          "description": "Required for SCOPE_EXPANSION only.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "remediationItems": {
+          "description": "Required for IN_SCOPE_BLOCKER and SCOPE_EXPANSION.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/remediationItem" },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "testMatrix": {
+          "description": "Required for IN_SCOPE_BLOCKER and SCOPE_EXPANSION.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/testMatrixItem" },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "exhaustivenessDecision": {
+          "description": "Required for IN_SCOPE_BLOCKER and SCOPE_EXPANSION.",
+          "$ref": "#/$defs/exhaustivenessDecision"
+        },
+        "debtImpact": {
+          "description": "Required for ARCHITECTURE_DEBT disposition.",
+          "type": "string",
+          "const": "untouched_non_blocking"
+        },
+        "debtObservationReference": {
+          "description": "Optional ArtifactReference to a prior debt_observation.",
+          "$ref": "#/$defs/artifactReference"
+        }
+      },
+      "allOf": [
+        {
+          "description": "IN_SCOPE_BLOCKER and SCOPE_EXPANSION require remediationItems, testMatrix, exhaustivenessDecision, and rootCause.",
+          "if": {
+            "properties": { "disposition": { "enum": ["IN_SCOPE_BLOCKER", "SCOPE_EXPANSION"] } },
+            "required": ["disposition"]
+          },
+          "then": {
+            "required": ["rootCause", "remediationItems", "testMatrix", "exhaustivenessDecision"]
+          }
+        },
+        {
+          "description": "SCOPE_EXPANSION requires scopeExpansionRationale.",
+          "if": {
+            "properties": { "disposition": { "const": "SCOPE_EXPANSION" } },
+            "required": ["disposition"]
+          },
+          "then": {
+            "required": ["scopeExpansionRationale"]
+          }
+        },
+        {
+          "description": "ARCHITECTURE_DEBT requires debtImpact.",
+          "if": {
+            "properties": { "disposition": { "const": "ARCHITECTURE_DEBT" } },
+            "required": ["disposition"]
+          },
+          "then": {
+            "required": ["debtImpact"]
+          }
+        },
+        {
+          "description": "OBSERVATION must not have remediationItems, testMatrix, or exhaustivenessDecision.",
+          "if": {
+            "properties": { "disposition": { "const": "OBSERVATION" } },
+            "required": ["disposition"]
+          },
+          "then": {
+            "not": {
+              "required": ["remediationItems", "testMatrix", "exhaustivenessDecision"]
+            }
+          }
+        },
+        {
+          "description": "active_rule authority requires architecture/security/policy/quality claimType.",
+          "if": {
+            "properties": { "authority": { "properties": { "kind": { "const": "active_rule" } }, "required": ["kind"] } },
+            "required": ["authority"]
+          },
+          "then": {
+            "properties": { "claimType": { "enum": ["architecture", "security", "policy", "quality"] } },
+            "required": ["claimType"]
+          }
+        },
+        {
+          "description": "acceptance_criterion authority requires feature_correctness claimType.",
+          "if": {
+            "properties": { "authority": { "properties": { "kind": { "const": "acceptance_criterion" } }, "required": ["kind"] } },
+            "required": ["authority"]
+          },
+          "then": {
+            "properties": { "claimType": { "const": "feature_correctness" } },
+            "required": ["claimType"]
+          }
+        },
+        {
+          "description": "BLOCKER or REQUIRED severity requires IN_SCOPE_BLOCKER or SCOPE_EXPANSION disposition.",
+          "if": {
+            "properties": { "severity": { "enum": ["blocker", "required"] } },
+            "required": ["severity"]
+          },
+          "then": {
+            "properties": { "disposition": { "enum": ["IN_SCOPE_BLOCKER", "SCOPE_EXPANSION"] } },
+            "required": ["disposition"]
+          }
+        }
+      ]
+    }
+  }
+}

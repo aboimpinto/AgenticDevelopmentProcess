@@ -1,0 +1,25 @@
+{
+  "name": "@aboimpinto/pi-skill-serialized-build-commands",
+  "version": "0.1.0",
+  "description": "Pi skill for serialized build, test, lint, and format command execution, especially Rust Cargo commands that use shared locks.",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "skill",
+    "cargo",
+    "rust",
+    "build-commands"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ]
+}

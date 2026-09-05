@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Architecture Rules Catalog v1",
+  "description": "Strict v1 schema for .hepha/architecture-rules.yaml. Intentionally separate from the permissive legacy resolver for additive compatibility.",
+  "type": "object",
+  "required": ["catalogId", "schemaVersion", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "catalogId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [1]
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "status", "category", "scope", "title", "description", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Stable lowercase kebab-case rule identifier. Unique within the catalog; never reused for a different rule meaning.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "version": {
+            "description": "Release SemVer MAJOR.MINOR.PATCH",
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "minLength": 5,
+            "maxLength": 32
+          },
+          "status": {
+            "description": "Only 'active' rules resolve for new architecture/security/policy claims.",
+            "type": "string",
+            "enum": ["draft", "active", "superseded", "retired"]
+          },
+          "category": {
+            "description": "Classification for authority binding and routing.",
+            "type": "string",
+            "enum": ["architecture", "security", "policy", "quality"]
+          },
+          "scope": {
+            "description": "Kebab-case enforcement domain.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "source": {
+            "type": "object",
+            "required": ["document", "section"],
+            "additionalProperties": false,
+            "properties": {
+              "document": {
+                "description": "Project-relative POSIX path to the approved design/policy source.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "section": {
+                "description": "Human-readable locator within the source document.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              }
+            }
+          },
+          "supersedes": {
+            "description": "Optional unique list of predecessor rule IDs. Must not contain own ID; every link must resolve to a distinct catalog rule with a reciprocal supersededBy edge.",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          "supersededBy": {
+            "description": "Required for 'superseded' rules; forbidden otherwise. Names the successor rule ID.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+# FEAT-026: Canonical Tool Profile Definitions
+#
+# Each profile defines a named category with explicit capability classes.
+# Profiles are consumed by the orchestrator profile selector to determine
+# the effective tool authority for a given workflow node and agent role.
+#
+# This file is the durable source of truth. It must be loaded and validated
+# by apps/orchestrator/src/tool-profiles.ts before use.
+
+version: "1.0"
+description: "FEAT-026 canonical tool profile definitions for Hepha safety profiles."
+
+profiles:
+  - id: "read-only-discovery"
+    category: "discovery"
+    description: >
+      Read-only access for inspecting project state, reading files,
+      listing directories, and gathering context. No write authority.
+    capabilities:
+      read-discover: true
+      document-write: false
+      test-run: false
+      source-edit: false
+      git-write: false
+      privileged-action: false
+
+  - id: "documentation-writer"
+    category: "documentation"
+    description: >
+      Documentation and MemoryBank write access without source
+      code or git write authority. Can read project state and
+      create/update non-runtime text artifacts.
+    capabilities:
+      read-discover: true
+      document-write: true
+      test-run: false
+      source-edit: false
+      git-write: false
+      privileged-action: false
+
+  - id: "test-runner"
+    category: "tests"
+    description: >
+      Test, lint, typecheck, build validation, and other verification
+      command execution. Read-only for project state; no source edits
+      or git writes.
+    capabilities:
+      read-discover: true
+      document-write: false
+      test-run: true
+      source-edit: false
+      git-write: false
+      privileged-action: false
+
+  - id: "source-editor"
+    category: "source-edits"
+    description: >
+      Full source-code editing authority: read project state,
+      create/modify implementation files, run tests/build for
+      verification, and update documentation. No git write authority.
+    capabilities:
+      read-discover: true
+      document-write: true
+      test-run: true
+      source-edit: true
+      git-write: false
+      privileged-action: false
+
+  - id: "git-writer"
+    category: "git-writes"
+    description: >
+      Git write operations including staging, committing, branch
+      manipulation, and push where allowed by workflow policy.
+      Read-only for project state.
+    capabilities:
+      read-discover: true
+      document-write: false
+      test-run: false
+      source-edit: false
+      git-write: true
+      privileged-action: false
+
+  - id: "privileged-executor"
+    category: "privileged-actions"
+    description: >
+      High-risk or irreversible operations requiring later
+      approval-gate behavior. Full read and privileged-action
+      authority.
+    capabilities:
+      read-discover: true
+      document-write: false
+      test-run: false
+      source-edit: false
+      git-write: false
+      privileged-action: true

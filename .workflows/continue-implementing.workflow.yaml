@@ -1,0 +1,47 @@
+name: continue-implementing
+description: Verify the Start Feature branch, then resume the implementation loop from the current phase, review gate, or final verification step.
+nodes:
+  - id: refresh-current-feature
+    action: reload-feature-state
+    status: Refreshing current FEAT state
+    summary: Reading the latest MemoryBank phase state before resuming implementation.
+
+  - id: resolve-next-task
+    depends_on: [refresh-current-feature]
+    action: resolve-next-implementation-task
+    status: Resolving next implementation task
+    summary: Reading task state from SQLite and phase Markdown before selecting the next worker entry point.
+
+  - id: implementation-loop
+    depends_on: [resolve-next-task]
+    loop:
+      workflow: implementation-phases
+      until: ALL_PHASES_RESOLVED
+      fresh_context: true
+      transitions:
+        - from: phase-state
+          to: execute-next-task
+          when: NEXT_DECLARED_PHASE_TASK_EXISTS
+          summary: Execute exactly the first unresolved task declared by the current phase.
+        - from: execute-next-task
+          to: execute-next-task
+          when: CURRENT_TASK_REQUIRES_REPAIR_OR_RETRY
+          summary: Keep the same task active, repair its recoverable failure, and rerun it.
+        - from: execute-next-task
+          to: phase-state
+          when: CURRENT_TASK_COMPLETED
+          summary: Persist task evidence and select the next declared task.
+        - from: phase-state
+          to: complete-phase
+          when: NO_DECLARED_PHASE_TASK_REMAINS
+          summary: Complete the phase only after its declared task queue is exhausted.
+        - from: complete-phase
+          to: phase-git-checkpoint
+          when: PHASE_EXIT_ALLOWED
+          summary: Commit the completed phase, record its immutable commit hash, and push the verified FEAT branch.
+        - from: phase-git-checkpoint
+          to: phase-state
+          when: PHASE_GIT_CHECKPOINT_PUSHED_AND_MORE_PHASES_REMAIN
+          summary: Resolve the next phase from durable task and phase state.
+    status: '{{implementationLoopStep}}'
+    summary: '{{branchMessage}}'

@@ -1,0 +1,64 @@
+name: start-implementing
+description: Prepare and verify the FEAT branch across workflow repositories, enrich phase routing, then run the implementation loop.
+nodes:
+  - id: create-branch
+    action: create-implementation-branch
+    status: Creating branch {{branchName}}
+    summary: Starting implementation for {{featureId}}.
+
+  - id: move-in-progress
+    depends_on: [create-branch]
+    action: move-feature-to-in-progress
+    status: Moving FEAT to In Progress
+    summary: Moving the FEAT into active implementation.
+
+  - id: sync-linked-epic-state
+    depends_on: [move-in-progress]
+    action: sync-linked-epic-state
+    status: Updating linked EPIC state
+    summary: Persisting linked EPIC State after the FEAT entered implementation.
+
+  - id: post-process
+    depends_on: [sync-linked-epic-state]
+    prompt: start-feature-postprocess
+    agent_action: start-feature
+    command: commands/start-feature-postprocess.md
+    agent: agents/implementation-lead.agent.yaml
+    context: context/implementation-start.context.yaml
+    output_schema: schemas/start-feature-postprocess.schema.json
+    status: Post-processing phase routing and estimates
+    summary: Adding phase routing recommendations, effort estimates, resume ledgers, and planning handoff checks.
+
+  - id: implementation-loop
+    depends_on: [post-process]
+    loop:
+      workflow: implementation-phases
+      until: ALL_PHASES_RESOLVED
+      fresh_context: true
+      transitions:
+        - from: phase-state
+          to: execute-next-task
+          when: NEXT_DECLARED_PHASE_TASK_EXISTS
+          summary: Execute exactly the first unresolved task declared by the current phase.
+        - from: execute-next-task
+          to: execute-next-task
+          when: CURRENT_TASK_REQUIRES_REPAIR_OR_RETRY
+          summary: Keep the same task active, repair its recoverable failure, and rerun it.
+        - from: execute-next-task
+          to: phase-state
+          when: CURRENT_TASK_COMPLETED
+          summary: Persist task evidence and select the next declared task.
+        - from: phase-state
+          to: complete-phase
+          when: NO_DECLARED_PHASE_TASK_REMAINS
+          summary: Complete the phase only after its declared task queue is exhausted.
+        - from: complete-phase
+          to: phase-git-checkpoint
+          when: PHASE_EXIT_ALLOWED
+          summary: Commit the completed phase, record its immutable commit hash, and push the verified FEAT branch.
+        - from: phase-git-checkpoint
+          to: phase-state
+          when: PHASE_GIT_CHECKPOINT_PUSHED_AND_MORE_PHASES_REMAIN
+          summary: Resolve the next phase from durable task and phase state.
+    status: '{{implementationLoopStep}}'
+    summary: '{{branchMessage}}'

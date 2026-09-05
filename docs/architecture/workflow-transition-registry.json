@@ -1,0 +1,1618 @@
+{
+  "version": 1,
+  "workflowDefinitions": [
+    {
+      "command": "deep-dive-epic",
+      "definitionPath": ".workflows/deep-dive-epic.workflow.yaml",
+      "nodes": [
+        "create-session",
+        "generate-questions",
+        "wait-for-answers",
+        "answers-ready",
+        "update-document",
+        "sync-epic-state",
+        "record-completion"
+      ],
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.start",
+      "rationale": "Start the EPIC clarification session; answer and completion applications resume its declared gates.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-start.feature",
+        "apps/orchestrator/test/generic-deep-dive-completion.feature"
+      ]
+    },
+    {
+      "command": "deep-dive-feature",
+      "definitionPath": ".workflows/deep-dive-feature.workflow.yaml",
+      "nodes": [
+        "create-session",
+        "generate-questions",
+        "wait-for-answers",
+        "answers-ready",
+        "update-document",
+        "record-completion"
+      ],
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.start",
+      "rationale": "Start the FEAT clarification session; answer and completion applications resume its declared gates.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-start.feature",
+        "apps/orchestrator/test/generic-deep-dive-completion.feature"
+      ]
+    },
+    {
+      "command": "design-feature",
+      "definitionPath": ".workflows/design-feature.workflow.yaml",
+      "nodes": [
+        "collect-context",
+        "generate-design-artifacts"
+      ],
+      "ownerPath": "apps/orchestrator/src/application/features/design-feature-execution-application.ts",
+      "ownerSymbol": "DesignFeatureExecutionApplication.execute",
+      "rationale": "Collect readiness-approved context and generate the declared design artifacts.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/design-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-design-feature-execution-application.feature"
+      ]
+    },
+    {
+      "command": "refine-feature",
+      "definitionPath": ".workflows/refine-feature.workflow.yaml",
+      "nodes": [
+        "collect-context",
+        "generate-artifacts",
+        "evaluate-result",
+        "promote-ready"
+      ],
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Evaluate the structured worker outcome, route unresolved decisions to Deep-Dive, and promote only a completed result with valid artifacts.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/refine-feature-worker-result.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "command": "start-implementing",
+      "definitionPath": ".workflows/start-implementing.workflow.yaml",
+      "nodes": [
+        "create-branch",
+        "move-in-progress",
+        "sync-linked-epic-state",
+        "post-process",
+        "implementation-loop"
+      ],
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/start-implementation-run-application.ts",
+      "ownerSymbol": "StartImplementationRunApplication.execute",
+      "rationale": "Establish implementation prerequisites once and enter the shared phase executor.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/start-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-start-implementation-run.feature"
+      ]
+    },
+    {
+      "command": "continue-implementing",
+      "definitionPath": ".workflows/continue-implementing.workflow.yaml",
+      "nodes": [
+        "refresh-current-feature",
+        "resolve-next-task",
+        "implementation-loop"
+      ],
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/continue-implementation-run-application.ts",
+      "ownerSymbol": "ContinueImplementationRunApplication.execute",
+      "rationale": "Reconcile durable progress and re-enter the same shared phase executor.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/continue-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-continue-implementation-run.feature"
+      ]
+    },
+    {
+      "command": "complete-feature",
+      "definitionPath": ".workflows/complete-feature.workflow.yaml",
+      "nodes": [
+        "collect-context",
+        "finalize-feature",
+        "verify-completed-state",
+        "sync-linked-epic-state"
+      ],
+      "ownerPath": "apps/orchestrator/src/application/features/complete-feature-execution-application.ts",
+      "ownerSymbol": "CompleteFeatureExecutionApplication.execute",
+      "rationale": "Finalize evidence and lifecycle state only after all completion gates pass.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/complete-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-complete-feature-execution-application.feature"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "WF-RECIPE-SOURCE-MCP",
+      "scope": "dispatch",
+      "from": "supported feature workflow action request",
+      "trigger": "validated recipe-source policy selects devcycle-mcp for the exact action identity",
+      "to": "one plan-bound MCP compatibility worker using the mapped legacy recipe",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
+      "rationale": "Compare the proven legacy recipe with native Hepha while preserving the selected action/model identity, provider-owned artifact format, and phase-scoped implementation telemetry. Hepha still enforces Deep-Dive decision closure, prohibits deferred human gates, and delegates autonomous review/acceptance. Refine Feature remains documentation-only: stack and quality commands are discovered statically and no package-manager, compiler, build, test, lint, audit, registry-search, or version-probe command may execute during planning. Refinement conditionally generates a Rust/Cargo foreground execution profile only when the target product workspace has Cargo.toml and the feature or configured gates will invoke Cargo; FeatureTasks and every phase inherit that activated profile, sequential foreground Cargo invocations are permitted, background and sibling concurrent Cargo processes are prohibited, and non-Cargo features receive no Cargo instructions. Implementation dispatch is technology-neutral and applies only inherited stack constraints. Implementation completion and release readiness are independent: only in-scope tasks and configured executable gates block phase or feature implementation acceptance, while external release dependencies become findings and follow-up work. Zero-warning authority remains universal for executed in-scope commands: no configured warning may be classified green even when the process exits zero.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/mcp-compatibility-runtime-configuration.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
+        "apps/orchestrator/test/feat-062-projection-composition.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-REFINE-POSTCONDITION-BLOCK",
+      "scope": "preparation",
+      "from": "terminal MCP refinement worker with no complete provider refinement artifacts",
+      "trigger": "provider-independent postcondition scan finds that the FEAT is not Ready To Develop with complete refinement artifacts",
+      "to": "blocked result evaluation with interactive FEAT Deep-Dive recovery",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.execute",
+      "rationale": "A zero-exit model process is transport success, not refinement completion. Preserve the worker summary, withhold repeat Refine, and expose the standard decision-closure workflow until provider-owned artifacts and lifecycle state satisfy completion postconditions.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WF-DD-START",
+      "scope": "preparation",
+      "from": "submitted work item",
+      "trigger": "deep-dive command accepted",
+      "to": "question generation",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.start",
+      "rationale": "Create one durable clarification session with one highest-priority opening question, then close every target decision through adaptive answer turns. Opening research uses progress-based inactivity liveness with no repository-default wall-clock maximum, so productive context inspection is not killed at the generic prompt timeout. Compatibility manifests are parsed without a hidden question-count ceiling, while the adaptive opening contract fails visibly unless exactly one question is returned.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/deep-dive-question-planner.test.ts",
+        "apps/orchestrator/test/deep-dive-question-parser.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-start.feature",
+        "apps/orchestrator/test/generic-deep-dive-question-planning.feature"
+      ]
+    },
+    {
+      "id": "WF-DD-WAIT",
+      "scope": "preparation",
+      "from": "question generation",
+      "trigger": "questions persisted",
+      "to": "waiting for human answers",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.generateQuestions",
+      "rationale": "Represent a human-input wait as durable workflow state rather than a failure.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-interaction.feature"
+      ]
+    },
+    {
+      "id": "WF-DD-ADAPTIVE-FOLLOW-UP",
+      "scope": "preparation",
+      "from": "waiting for human answers",
+      "trigger": "one pending decision is saved",
+      "to": "immediate dependent follow-up or the next pending decision",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-session-application.ts",
+      "ownerSymbol": "DeepDiveSessionApplication.answer",
+      "rationale": "Evaluate each durable answer as part of the interview, insert an answer-dependent question immediately after its parent, and authorize document readiness only when the final answer closes the adaptive branch.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-follow-up-planner.test.ts",
+        "apps/orchestrator/test/deep-dive-session-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-session.feature"
+      ]
+    },
+    {
+      "id": "WF-DD-COMPLETE",
+      "scope": "preparation",
+      "from": "waiting for human answers",
+      "trigger": "all answers are durable",
+      "to": "updated source document",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-completion-application.ts",
+      "ownerSymbol": "DeepDiveCompletionApplication.complete",
+      "rationale": "Rewrite the source only after the explicit Deep-Dive answer gate is satisfied, recording deterministic boundaries without future human-sign-off implementation tasks.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts",
+        "apps/orchestrator/test/deep-dive-document-updater.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-completion.feature"
+      ]
+    },
+    {
+      "id": "WF-DD-FAIL",
+      "scope": "failed",
+      "from": "question generation or document update",
+      "trigger": "deep-dive worker or persistence fails",
+      "to": "failed durable deep-dive session",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.generateQuestions",
+      "rationale": "Persist the failed clarification boundary so it can be diagnosed or resumed safely. Never replace a timed-out, failed, empty, or malformed model question manifest with generic Accept current questions that can falsely authorize an underspecified target.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/deep-dive-question-planner.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-deep-dive-start.feature",
+        "apps/orchestrator/test/generic-deep-dive-question-planning.feature"
+      ]
+    },
+    {
+      "id": "WF-DESIGN-EXECUTE",
+      "scope": "preparation",
+      "from": "clarified feature",
+      "trigger": "UI design is required",
+      "to": "design artifacts ready",
+      "ownerPath": "apps/orchestrator/src/application/features/design-feature-execution-application.ts",
+      "ownerSymbol": "DesignFeatureExecutionApplication.execute",
+      "rationale": "Produce design evidence only for features whose readiness policy requires it.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/design-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-design-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-DESIGN-FAIL",
+      "scope": "failed",
+      "from": "design execution",
+      "trigger": "design agent or artifact persistence fails",
+      "to": "failed design workflow with feature unchanged",
+      "ownerPath": "apps/orchestrator/src/application/features/design-feature-execution-application.ts",
+      "ownerSymbol": "DesignFeatureExecutionApplication.execute",
+      "rationale": "Keep an unsuccessful design run auditable without falsely advancing readiness.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/design-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-design-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-DEEP-DIVE-MARKER-GATE",
+      "scope": "preparation",
+      "from": "scanned work-item description",
+      "trigger": "one or more unresolved validation markers are present",
+      "to": "Deep-Dive required until every marker is resolved",
+      "ownerPath": "apps/orchestrator/src/work-item-validation.ts",
+      "ownerSymbol": "createValidationSummary",
+      "rationale": "Require clarification only for explicit unresolved decisions; file hashes, lifecycle-link edits, metadata availability, and historical Deep-Dive receipts remain non-authoritative audit evidence.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/work-item-validation.test.ts",
+        "apps/orchestrator/test/work-item-deep-dive-validation-contract.test.ts",
+        "apps/orchestrator/test/work-item-deep-dive-validation-policy.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts",
+        "apps/orchestrator/test/feature-workflow-target-resolver.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-design-document-deep-dive-freshness.feature",
+        "apps/orchestrator/test/generic-feature-workflow-target.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-EXECUTE",
+      "scope": "preparation",
+      "from": "clarified or designed feature",
+      "trigger": "refine command returns COMPLETED, durable artifacts satisfy the current V3 authoring contract, and any declared final checkpoint has an executable project coverage profile",
+      "to": "ready-to-develop feature",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Generate and validate the complete current implementation contract before promotion; historical contract readability cannot authorize obsolete new output.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/final-checkpoint-coverage-profile-policy.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/model-routing.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-PROGRESS",
+      "scope": "preparation",
+      "from": "active refine-feature generate-artifacts worker",
+      "trigger": "trusted Pi write/edit events or durable refinement artifact projection identify the current core artifact or contract-declared phase ordinal",
+      "to": "active refinement with persisted user-visible artifact progress",
+      "ownerPath": "apps/orchestrator/src/application/features/refinement-artifact-progress.ts",
+      "ownerSymbol": "RefinementArtifactProgressReporter.observe",
+      "rationale": "Show deterministic core-artifact and phase progress from the selected FEAT folder and contract topology instead of opaque elapsed time or assistant prose.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refinement-artifact-progress.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-INTERRUPT",
+      "scope": "recovery",
+      "from": "active refinement worker",
+      "trigger": "configured no-progress stall, explicit operator maximum, process loss, or cancellation stops the worker before complete promotion",
+      "to": "stopped refinement with source files preserved and resumable artifact position recorded",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Preserve the primary stop cause and partial artifact checkpoint instead of hiding it behind route exhaustion or implementation-task recovery prose.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-RESUME",
+      "scope": "recovery",
+      "from": "submitted feature with stopped refinement and partial artifacts",
+      "trigger": "operator retries refine-feature with no active run or unresolved human/safety blocker",
+      "to": "active refinement starting from the first missing or invalid artifact",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Reuse valid core and phase artifacts, repair inconsistent output, and avoid replaying the complete handoff after a resumable interruption.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refinement-artifact-progress.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-DEEP-DIVE",
+      "scope": "preparation",
+      "from": "clarified or designed feature under refinement",
+      "trigger": "refinement worker returns a valid NEEDS_DEEP_DIVE result with unresolved user-owned decisions",
+      "to": "blocked refinement with an open interactive FEAT Deep-Dive question round",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Preserve newly discovered planning questions as a durable human-input loop without misclassifying them as missing artifacts or failed refinement.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/refine-feature-worker-result.test.ts",
+        "apps/orchestrator/test/refinement-deep-dive-handoff-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-RECOVER",
+      "scope": "recovery",
+      "from": "refinement error",
+      "trigger": "current Ready artifacts satisfy the refinement contract, architecture-debt readiness, source confirmation, and transition receipt even when worker transport or the Refine Feature Result V1 envelope failed",
+      "to": "ready-to-develop feature",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.recordRecovered",
+      "rationale": "Recover from stale transport or result-envelope reporting failures without duplicating valid refinement work; readiness queries canonicalize independent selector order before the fail-closed store boundary.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/architecture-debt-future-touch.integration.test.ts",
+        "apps/orchestrator/test/feature-entry-prompts.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REFINE-FAIL",
+      "scope": "failed",
+      "from": "refinement error",
+      "trigger": "worker result is malformed, Deep-Dive handoff persistence fails, or a COMPLETED claim does not satisfy the current V3 artifact and declared final-checkpoint coverage-profile contract",
+      "to": "failed refinement with source state preserved",
+      "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+      "ownerSymbol": "RefineFeatureExecutionApplication.execute",
+      "rationale": "Prevent incomplete planning artifacts from being promoted to implementation readiness.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/final-checkpoint-coverage-profile-policy.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+      ]
+    },
+    {
+      "id": "WF-START-PREPARE",
+      "scope": "implementation",
+      "from": "ready-to-develop feature",
+      "trigger": "start implementation accepted",
+      "to": "branch verified and feature in progress",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/start-implementation-run-application.ts",
+      "ownerSymbol": "StartImplementationRunApplication.execute",
+      "rationale": "Establish the branch and lifecycle prerequisites before any phase work runs.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/start-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-start-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-START-ROLLBACK",
+      "scope": "recovery",
+      "from": "start preparation error",
+      "trigger": "feature moved but implementation loop did not start",
+      "to": "ready-to-develop feature",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/start-implementation-run-application.ts",
+      "ownerSymbol": "StartImplementationRunApplication.handleFailure",
+      "rationale": "Undo a partial lifecycle move when no implementation work could have happened.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/start-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-start-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-START-FAIL",
+      "scope": "failed",
+      "from": "start implementation preparation",
+      "trigger": "branch or lifecycle prerequisites cannot be established",
+      "to": "failed start run without phase execution",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/start-implementation-run-application.ts",
+      "ownerSymbol": "StartImplementationRunApplication.handleFailure",
+      "rationale": "Report prerequisite failure without pretending that the shared phase loop started.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/start-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-start-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUE-ELIGIBLE",
+      "scope": "implementation",
+      "from": "idle, blocked, cancelled, or failed in-progress feature",
+      "trigger": "the authoritative continuation contract is valid, unresolved work remains, and no workflow is running",
+      "to": "continue implementation action available",
+      "ownerPath": "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+      "ownerSymbol": "FeatureWorkflowSummaryProjector.build",
+      "rationale": "Keep every stopped implementation resumable from the artifact contract owned by its selected recipe provider and project current-action readiness independently from Complete Feature obligations. Refinement-only satellites and diagnostics are not continuation authority; malformed native V3 or DevCycle lifecycle artifacts remain fail-closed.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/continue-implementation-application.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/refinement-artifact-policy.test.ts",
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
+        "apps/orchestrator/test/feat-062-projection-composition.test.ts",
+        "apps/web/src/workflow/workflow-mappers.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-feature-workflow-summary.feature",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUE-REFRESH",
+      "scope": "implementation",
+      "from": "in-progress feature",
+      "trigger": "continue implementation accepted",
+      "to": "refreshed disk feature state",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/continue-implementation-run-application.ts",
+      "ownerSymbol": "ContinueImplementationRunApplication.execute",
+      "rationale": "Resume from SQLite and MemoryBank evidence rather than stale in-memory state.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/continue-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-continue-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUE-RECONCILE",
+      "scope": "implementation",
+      "from": "refreshed disk feature state",
+      "trigger": "Continue Implementation reconciles phase documents, FeatureTasks projection, and SQLite task mirrors before task selection",
+      "to": "reconciled durable feature state",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-state-reconciliation-application.ts",
+      "ownerSymbol": "PhaseStateReconciliationApplication.reconcile",
+      "rationale": "Resolve and persist phase lifecycle state through one contract-aware projection before any implementation, review, or checkpoint worker is selected.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/feature-tasks-phase-status.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-adapter.test.ts",
+        "apps/orchestrator/test/phase-status-document-repository.test.ts",
+        "apps/orchestrator/test/phase-task-document-repository.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-state-reconciliation-application.feature"
+      ]
+    },
+    {
+      "id": "WF-IMPLEMENT-QUEUE",
+      "scope": "implementation",
+      "from": "reconciled durable feature state",
+      "trigger": "unresolved numbered phases exist",
+      "to": "ordered phase queue",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/autonomous-implementation-workflow-application.ts",
+      "ownerSymbol": "AutonomousImplementationWorkflowApplication.execute",
+      "rationale": "Select a generic phase path from durable contract state without feature-specific routing.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-implementation-workflow-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.feature"
+      ]
+    },
+    {
+      "id": "WF-QUEUE-LEGACY-GATE",
+      "scope": "recovery",
+      "from": "reconciled durable feature state",
+      "trigger": "a completed legacy phase lacks required quality evidence",
+      "to": "focused quality-gate recovery",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/autonomous-phase-queue-application.ts",
+      "ownerSymbol": "AutonomousPhaseQueueApplication.prepare",
+      "rationale": "Repair migrated durable evidence before ordinary phase selection.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-phase-queue-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-phase-queue.feature"
+      ]
+    },
+    {
+      "id": "WF-QUEUE-HUMAN-REVIEW",
+      "scope": "implementation",
+      "from": "reconciled durable feature state",
+      "trigger": "declared human-review phase is pending",
+      "to": "human review findings execution",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/autonomous-phase-queue-application.ts",
+      "ownerSymbol": "AutonomousPhaseQueueApplication.prepare",
+      "rationale": "Execute an explicitly declared human-review phase without confusing it with code review.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-phase-queue-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-phase-queue.feature"
+      ]
+    },
+    {
+      "id": "WF-QUEUE-COMPLETE",
+      "scope": "implementation",
+      "from": "reconciled durable feature state",
+      "trigger": "all declared phases are resolved",
+      "to": "manual verification readiness",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/autonomous-phase-queue-application.ts",
+      "ownerSymbol": "AutonomousPhaseQueueApplication.prepare",
+      "rationale": "Stop dispatching workers when the phase contract has no unresolved work.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-phase-queue-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-phase-queue.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUE-TERMINAL",
+      "scope": "implementation",
+      "from": "reconciled durable feature state",
+      "trigger": "the authoritative phase-state reconciliation decision is all_terminal",
+      "to": "completed implementation run awaiting Manual Code Review and Manual Tests",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/continue-implementation-run-application.ts",
+      "ownerSymbol": "ContinueImplementationRunApplication.completeTerminal",
+      "rationale": "Finish a resumed run directly when reconciliation has already proved every declared task, required phase gate, and numbered phase terminal. A secondary scanner projection may present evidence but cannot reopen or veto this authoritative terminal decision.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/continue-implementation-run-application.test.ts",
+        "apps/orchestrator/test/phase-quality-projection.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-continue-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUATION-SCHEDULE",
+      "scope": "implementation",
+      "from": "completed non-terminal implementation run",
+      "trigger": "autonomous mode has unresolved phase work and the run changed durable FEAT evidence",
+      "to": "fresh Continue Implementation run",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/autonomous-continuation-scheduler.ts",
+      "ownerSymbol": "AutonomousContinuationScheduler.schedule",
+      "rationale": "Create a successor only after a productive run crossed a durable boundary. Terminal reconciliation never reaches this scheduler.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-continuation-scheduler.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-continuation-scheduling.feature"
+      ]
+    },
+    {
+      "id": "WF-CONTINUATION-NO-PROGRESS",
+      "scope": "recovery",
+      "from": "completed non-terminal implementation run",
+      "trigger": "autonomous mode still has unresolved phase work but the before-and-after durable FEAT fingerprints are identical",
+      "to": "blocked implementation workflow awaiting an explicit user decision",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/autonomous-continuation-scheduler.ts",
+      "ownerSymbol": "AutonomousContinuationScheduler.schedule",
+      "rationale": "Prevent equivalent fresh workflow runs from hiding an outer host loop. Persist the unchanged evidence fingerprints, preserve completed work, and let the user repair then Continue or Cancel without an arbitrary retry count.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/autonomous-continuation-scheduler.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-continuation-scheduling.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-SKIP",
+      "scope": "phase",
+      "from": "selected phase",
+      "trigger": "durable phase evidence says resolved",
+      "to": "next selected phase",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-entry-preparation-application.ts",
+      "ownerSymbol": "PhaseEntryPreparationApplication.prepare",
+      "rationale": "Avoid repeating phase work already proven complete after a restart.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-entry-preparation-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-entry-preparation.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-REVIEW-RESUME",
+      "scope": "phase",
+      "from": "selected phase",
+      "trigger": "durable review state is the next declared task",
+      "to": "review routing",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-worker-entry-application.ts",
+      "ownerSymbol": "PhaseWorkerEntryApplication.enter",
+      "rationale": "Resume at review or fixer state without launching an implementation worker first.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-worker-entry-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-worker-entry.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-WORKER",
+      "scope": "phase",
+      "from": "selected phase",
+      "trigger": "next declared task requires worker execution and its zero-based non-negative phase identity satisfies the plan-bound runtime context",
+      "to": "active phase worker",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-worker-entry-application.ts",
+      "ownerSymbol": "PhaseWorkerEntryApplication.enter",
+      "rationale": "Dispatch exactly the first unresolved declared task and persist its active cursor; phase index zero is a valid contract identity rather than a missing positive identifier.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-worker-entry-application.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/handoff-plan-executor.test.ts",
+        "packages/shared/test/runtime-execution-contracts.test.ts",
+        "packages/shared/test/runtime-evidence-projection-contracts.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-worker-entry.feature",
+        "apps/orchestrator/test/pi-runtime-boundary.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-SAME-RUN-REPAIR",
+      "scope": "recovery",
+      "from": "active phase worker",
+      "trigger": "worker result is recoverably invalid",
+      "to": "same task and same phase worker",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-same-run-repair-application.ts",
+      "ownerSymbol": "PhaseSameRunRepairApplication.prepare",
+      "rationale": "Repair formatting, validation, build, or test failures without failing the whole phase.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-same-run-repair-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-same-run-repair-application.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-TASK-NEXT",
+      "scope": "phase",
+      "from": "successful phase worker",
+      "trigger": "task evidence settled and another task remains",
+      "to": "next declared phase task",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-worker-result-application.ts",
+      "ownerSymbol": "PhaseWorkerResultApplication.process",
+      "rationale": "Advance only after the current task has durable evidence.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-worker-result-application.test.ts",
+        "apps/orchestrator/test/phase-task-document-repository.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-worker-result.feature",
+        "apps/orchestrator/test/generic-phase-contract-task-projection.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-NO-PROGRESS",
+      "scope": "recovery",
+      "from": "same-phase host transition requested after one recovery cycle",
+      "trigger": "the before-and-after phase, route, decision, and durable FEAT evidence fingerprint are identical",
+      "to": "blocked implementation workflow awaiting an explicit user decision",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/phase-no-progress-circuit.ts",
+      "ownerSymbol": "PhaseNoProgressCircuit.observe",
+      "rationale": "Attempt deterministic reconciliation once, then use unchanged before-and-after evidence rather than an arbitrary attempt count to prove no progress. Publish the exact route and fingerprint, preserve completed work, stop resource consumption, and let the user choose Continue Implementation after repair or Cancel.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-no-progress-circuit.test.ts",
+        "apps/orchestrator/test/autonomous-implementation-workflow-application.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-adapter.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-policy.test.ts",
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts",
+        "apps/orchestrator/test/phase-failure-recording-application.test.ts",
+        "apps/orchestrator/test/workflow-failure-brief-presenter.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.feature"
+      ]
+    },
+    {
+      "id": "WF-FINAL-COVERAGE-REPAIR",
+      "scope": "recovery",
+      "from": "declared final checkpoint verification task",
+      "trigger": "Successfully measured FEAT changed-line coverage is below the advisory reference and the project coverage profile still allows another improvement attempt",
+      "to": "same declared verification task after focused repair",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/declared-verification-task-application.ts",
+      "ownerSymbol": "DeclaredVerificationTaskApplication.execute",
+      "rationale": "Improve valuable FEAT-owned tests without expanding into unrelated project code. Percentage improvement attempts use the project-configured limit. Coverage execution or measurement errors record a non-blocking remark and do not enter this repair circuit.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/test-coverage-telemetry.test.ts",
+        "apps/orchestrator/test/declared-verification-task-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature"
+      ]
+    },
+    {
+      "id": "WF-FINAL-COVERAGE-REMARK",
+      "scope": "phase",
+      "from": "declared final checkpoint verification task",
+      "trigger": "coverage command, timeout, baseline, LCOV report, or instrumentation evidence is unavailable",
+      "to": "completed verification task with a non-blocking coverage-unavailable remark",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/declared-verification-task-application.ts",
+      "ownerSymbol": "DeclaredVerificationTaskApplication.execute",
+      "rationale": "Coverage is developer decision-support telemetry. An inability to measure must remain visible without overriding independent green build, lint/typecheck, and test gates or failing the phase.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification-presentation.test.ts",
+        "apps/orchestrator/test/phase-checkpoint-report.test.ts",
+        "apps/orchestrator/test/workflow-evidence-projection.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature"
+      ]
+    },
+    {
+      "id": "WF-FINAL-COVERAGE-PASS",
+      "scope": "phase",
+      "from": "declared final checkpoint verification task",
+      "trigger": "coverage commands and machine reports succeeded, FEAT and overall measurements were recorded, and either the FEAT reached its reference or the configured advisory improvement attempts ended",
+      "to": "completed verification task and normal phase exit",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/declared-verification-task-application.ts",
+      "ownerSymbol": "DeclaredVerificationTaskApplication.execute",
+      "rationale": "Coverage percentages are quality telemetry, not lifecycle gates. The FEAT details retain the exact changed-line value and assessment while overall project coverage remains contextual.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/test-coverage-telemetry.test.ts",
+        "apps/orchestrator/test/test-coverage-receipt.test.ts",
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/phase-checkpoint-report.test.ts",
+        "apps/orchestrator/test/workflow-evidence-projection.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-DISPATCH",
+      "scope": "review",
+      "from": "declared code-review task",
+      "trigger": "review is required and no reusable approval exists",
+      "to": "independent reviewer",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-dispatch-application.ts",
+      "ownerSymbol": "PhaseReviewDispatchApplication.dispatch",
+      "rationale": "Invoke one reviewer for the exact durable scope selected by the phase contract.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-dispatch-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-dispatch.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-REUSE-APPROVAL",
+      "scope": "review",
+      "from": "declared code-review task",
+      "trigger": "matching durable approval exists and rerun is not required",
+      "to": "next declared task or phase exit",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-dispatch-application.ts",
+      "ownerSymbol": "PhaseReviewDispatchApplication.dispatch",
+      "rationale": "Treat an exact-scope approval as authoritative across process restarts.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-dispatch-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-dispatch.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-CONTRACT-REPAIR",
+      "scope": "recovery",
+      "from": "reviewer output",
+      "trigger": "draft review contract is repairable",
+      "to": "validated review contract",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-lifecycle-application.ts",
+      "ownerSymbol": "PhaseReviewLifecycleApplication.execute",
+      "rationale": "Give the model one schema-grounded repair path before rejecting a useful review.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-lifecycle-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-lifecycle-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-CONTRACT-BLOCK",
+      "scope": "blocked",
+      "from": "reviewer output",
+      "trigger": "review contract remains V1 rejected after repair",
+      "to": "blocked workflow",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-lifecycle-application.ts",
+      "ownerSymbol": "PhaseReviewLifecycleApplication.execute",
+      "rationale": "Prevent invalid review evidence from authorizing fixer work or phase exit.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-lifecycle-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-lifecycle-application.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-NEEDS-CHANGES",
+      "scope": "review",
+      "from": "validated review contract",
+      "trigger": "review decision is NEEDS_CHANGES",
+      "to": "fixer task",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-dispatch-application.ts",
+      "ownerSymbol": "PhaseReviewDispatchApplication.dispatch",
+      "rationale": "Route review findings to the fixer before any further reviewer invocation.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-dispatch-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/review-remediation-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-FIXER-REREVIEW",
+      "scope": "review",
+      "from": "fixer task",
+      "trigger": "the existing NEEDS_CHANGES report has a complete Fixer Response and its canonical remediation response and bound verification receipt are durable",
+      "to": "independent reviewer",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-post-worker-review-application.ts",
+      "ownerSymbol": "PhasePostWorkerReviewApplication.prepare",
+      "rationale": "Preserve the reviewer-owned NEEDS_CHANGES report, let the fixer update only its Fixer Response, and require a new independent reviewer report to decide whether remediation is sufficient.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-post-worker-review-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-post-worker-review.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-APPROVED",
+      "scope": "review",
+      "from": "validated review contract",
+      "trigger": "review decision is APPROVED and its exact-scope authoritative gate is terminal APPROVED / approved_terminal_review",
+      "to": "next declared task or phase exit",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-dispatch-application.ts",
+      "ownerSymbol": "PhaseReviewDispatchApplication.dispatch",
+      "rationale": "Advance sequentially only after authoritative terminal approval without inventing another review.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-review-dispatch-application.test.ts",
+        "apps/orchestrator/test/review-resume-route-policy.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-dispatch.feature"
+      ]
+    },
+    {
+      "id": "WF-REVIEW-NONTERMINAL-RECOVERY",
+      "scope": "recovery",
+      "from": "declared code-review task with nonterminal remediation authority",
+      "trigger": "a remediation response lacks its bound verification receipt, or an APPROVED manifest is persisted with PENDING / terminal_remediation_required authority",
+      "to": "fixer evidence recovery on the same declared review task",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-review-publication-application.ts",
+      "ownerSymbol": "PhaseReviewPublicationApplication.publish",
+      "rationale": "An unresolved declared task is a routing state, not a phase failure. Recover the incomplete response/receipt lifecycle before another reviewer or phase exit, preserving exact predecessor authority and task order.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/review-resume-route-policy.test.ts",
+        "apps/orchestrator/test/review-post-ingestion-route-policy.test.ts",
+        "apps/orchestrator/test/phase-review-publication-application.test.ts",
+        "apps/orchestrator/test/phase-remediation-successor-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-review-dispatch.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-EXIT-REPEAT",
+      "scope": "phase",
+      "from": "phase exit",
+      "trigger": "recovered approval completes a declared review task and later tasks remain",
+      "to": "next declared phase task",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-exit-lifecycle-application.ts",
+      "ownerSymbol": "PhaseExitLifecycleApplication.execute",
+      "rationale": "Preserve phase-file task order when approval is not the final declared task.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-exit-lifecycle-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-exit-lifecycle-application.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-GIT-COMPLETE",
+      "scope": "phase",
+      "from": "authorized phase exit",
+      "trigger": "declared git checkpoint succeeds",
+      "to": "completed phase",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-git-checkpoint-application.ts",
+      "ownerSymbol": "PhaseGitCheckpointApplication.execute",
+      "rationale": "Record the immutable commit boundary requested by the phase contract; a retry publishes a previously sealed, reachable checkpoint without staging unrelated worktree changes.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-git-checkpoint-application.test.ts",
+        "apps/orchestrator/test/phase-git-checkpoint.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-git-checkpoint-application.feature",
+        "apps/orchestrator/test/phase-git-checkpoint.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-GIT-PENDING",
+      "scope": "recovery",
+      "from": "authorized phase exit",
+      "trigger": "declared git checkpoint fails",
+      "to": "checkpoint pending",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-git-checkpoint-application.ts",
+      "ownerSymbol": "PhaseGitCheckpointApplication.execute",
+      "rationale": "Keep implementation and gates complete while exposing a retryable git boundary; later unrelated work cannot invalidate a sealed checkpoint retry.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-git-checkpoint-application.test.ts",
+        "apps/orchestrator/test/phase-git-checkpoint.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-git-checkpoint-application.feature",
+        "apps/orchestrator/test/phase-git-checkpoint.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-COMPLETE",
+      "scope": "phase",
+      "from": "authorized phase exit",
+      "trigger": "all declared tasks and required gates are satisfied",
+      "to": "completed phase and next phase selection",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-exit-lifecycle-application.ts",
+      "ownerSymbol": "PhaseExitLifecycleApplication.execute",
+      "rationale": "Make phase completion the consequence of declared work and gates, not filenames, unrelated checklists, sign-off prose, or a continuation shortcut that bypasses phase exit.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-exit-lifecycle-application.test.ts",
+        "apps/orchestrator/test/autonomous-implementation-workflow-application.test.ts",
+        "apps/orchestrator/test/phase-task-ledger.test.ts",
+        "apps/orchestrator/test/phase-status-document-repository.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-phase-exit-lifecycle-application.feature",
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.feature",
+        "apps/orchestrator/test/generic-phase-task-ledger.feature",
+        "apps/orchestrator/test/generic-phase-completion-authorization.feature"
+      ]
+    },
+    {
+      "id": "WF-IMPLEMENTATION-PROGRESS",
+      "scope": "runtime",
+      "from": "active implementation Pi worker",
+      "trigger": "observable current-worker stdout or stderr changes before the stall interval expires",
+      "to": "active implementation Pi worker with a reset stall circuit",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+      "ownerSymbol": "createPiOneShotPromptRunner",
+      "rationale": "Keep productive multi-hour implementation alive without treating an estimated completion duration as a safety boundary; only observable current-worker activity resets liveness.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/orchestrator-runtime-settings.test.ts",
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.feature"
+      ]
+    },
+    {
+      "id": "WF-IMPLEMENTATION-STALL",
+      "scope": "runtime",
+      "from": "active implementation Pi worker",
+      "trigger": "no observable current-worker stdout or stderr changes during the configured stall interval",
+      "to": "terminated implementation attempt with the no-progress stall preserved",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+      "ownerSymbol": "createPiOneShotPromptRunner",
+      "rationale": "Detect a silent or hung worker promptly while refusing to confuse process liveness with progress.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.feature"
+      ]
+    },
+    {
+      "id": "WF-IMPLEMENTATION-MAXIMUM",
+      "scope": "runtime",
+      "from": "active implementation Pi worker",
+      "trigger": "an explicitly configured operator wall-clock maximum expires",
+      "to": "terminated implementation attempt with the maximum-runtime cause preserved",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+      "ownerSymbol": "createPiOneShotPromptRunner",
+      "rationale": "Retain an optional absolute safety policy without imposing a repository-default deadline on productive implementation work.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/orchestrator-runtime-settings.test.ts",
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.feature"
+      ]
+    },
+    {
+      "id": "WF-RECOVERY-DIRECT-FIXER",
+      "scope": "recovery",
+      "from": "implementation failure",
+      "trigger": "failure is an incomplete fixer or code-review finding resolution",
+      "to": "same fixer work retried",
+      "ownerPath": "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+      "ownerSymbol": "ImplementationAutoRecoveryApplication.attempt",
+      "rationale": "Retry remediation before review and preserve the required fixer-to-reviewer ordering.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-auto-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-RECOVERY-FRESH-SESSION",
+      "scope": "recovery",
+      "from": "provider-refused implementation worker session",
+      "trigger": "the model provider rejects the accumulated worker prompt before the active task completes",
+      "to": "same durable task through Continue Implementing in one fresh Pi session",
+      "ownerPath": "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+      "ownerSymbol": "ImplementationAutoRecoveryApplication.attempt",
+      "rationale": "Discard corrupted conversational state without discarding phase progress; one bounded Continue Implementing retry reconstructs the active task from durable evidence and a repeated refusal stops.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts",
+        "apps/orchestrator/test/implementation-failure-classifier.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-auto-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-RECOVERY-HOST",
+      "scope": "recovery",
+      "from": "implementation failure",
+      "trigger": "known deterministic host recovery can make the same task retryable",
+      "to": "same phase retried with failure brief",
+      "ownerPath": "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+      "ownerSymbol": "ImplementationAutoRecoveryApplication.attempt",
+      "rationale": "Resolve known transport or durable-state issues without spending an agent turn.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-auto-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-RECOVERY-ANALYZE",
+      "scope": "recovery",
+      "from": "implementation failure",
+      "trigger": "recoverable failure needs bounded agent diagnosis",
+      "to": "same phase retried or terminal failure",
+      "ownerPath": "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+      "ownerSymbol": "ImplementationAutoRecoveryApplication.attempt",
+      "rationale": "Use the model for diagnosis while keeping machine-owned state mutations guarded.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-implementation-auto-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-RECOVERY-STOP",
+      "scope": "blocked",
+      "from": "implementation failure",
+      "trigger": "failure is fatal, explicitly blocked, non-recoverable, or retry is exhausted",
+      "to": "blocked or failed workflow",
+      "ownerPath": "apps/orchestrator/src/workflows/implementation/continue-implementation-run-application.ts",
+      "ownerSymbol": "ContinueImplementationRunApplication.handleFailure",
+      "rationale": "Stop when another automatic attempt would be unsafe or unsupported and retain a durable brief. This ends the run, not the implementation: WF-CONTINUE-ELIGIBLE remains available when its durable continuation conditions hold.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/continue-implementation-run-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-continue-implementation-run.feature"
+      ]
+    },
+    {
+      "id": "WF-CANCEL",
+      "scope": "cancellation",
+      "from": "running workflow",
+      "trigger": "user cancellation is allowed",
+      "to": "cancelled workflow with settled phase metadata",
+      "ownerPath": "apps/orchestrator/src/application/features/feature-workflow-cancellation-application.ts",
+      "ownerSymbol": "FeatureWorkflowCancellationApplication.cancel",
+      "rationale": "Stop attached agents and settle durable workflow state so restart is safe.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/feature-workflow-cancellation-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-workflow-cancellation.feature"
+      ]
+    },
+    {
+      "id": "WF-CANCEL-REFUSED",
+      "scope": "refusal",
+      "from": "non-running or non-cancellable workflow",
+      "trigger": "user requests cancellation without an allowed active transition",
+      "to": "unchanged durable workflow state",
+      "ownerPath": "apps/orchestrator/src/application/features/feature-workflow-cancellation-application.ts",
+      "ownerSymbol": "FeatureWorkflowCancellationApplication.cancel",
+      "rationale": "Reject cancellation when there is no active run or when its state cannot transition safely.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/feature-workflow-cancellation-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-workflow-cancellation.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-PACK-POST-COMPLETE",
+      "scope": "verification",
+      "from": "completed feature with resolved implementation phases",
+      "trigger": "human generates a manual verification pack",
+      "to": "SQLite-authoritative classified test delivery with executable manual cases or a Not Applicable informational artifact; feature remains completed",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.generate",
+      "rationale": "Treat completion as a lifecycle state rather than a filesystem freeze, so provider-completed and native-completed FEATs retain the same local verification workflow. Every criterion is classified Manual, Automated, Deferred, or Uncovered. Ready means at least one validated human-executable case exists; backend-only work instead receives a Not Applicable evidence artifact, and zero-discovery automated commands never count as passed coverage.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/manual-test-verification-application.test.ts",
+        "apps/orchestrator/test/manual-test-verification-foundations.test.ts",
+        "apps/orchestrator/test/manual-test-verification-policy.test.ts",
+        "apps/orchestrator/test/manual-test-delivery-classification.integration.test.ts",
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification.integration.test.ts",
+        "apps/orchestrator/test/manual-test-verification-routes.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-feature-workflow-summary.feature",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature",
+        "apps/orchestrator/test/generic-manual-test-delivery-classification.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-FAIL",
+      "scope": "verification",
+      "from": "manual verification for an in-progress or completed feature",
+      "trigger": "human records a failed manual test",
+      "to": "finding recorded and feature lifecycle folder remains unchanged",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.recordResult",
+      "rationale": "Turn human-observed failure into durable remediation evidence without implicitly reopening a provider-completed FEAT.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-verification-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-PASS",
+      "scope": "verification",
+      "from": "in-progress manual verification",
+      "trigger": "all manual tests pass and completion gates are satisfied",
+      "to": "complete-feature finalization",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.recordResult",
+      "rationale": "Start completion immediately after the last human gate becomes durable for a feature that is still in progress.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-verification-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-PASS-POST-COMPLETE",
+      "scope": "verification",
+      "from": "completed feature with a reviewed current manual-test pack",
+      "trigger": "all manual tests pass",
+      "to": "manual-tests green evidence recorded; feature remains completed",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.recordResult",
+      "rationale": "Persist post-completion green verification without launching Complete Feature for an already archived FEAT.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-verification-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-INVALID",
+      "scope": "refusal",
+      "from": "manual verification",
+      "trigger": "pack, review, test identity, or current-source binding is invalid",
+      "to": "unchanged manual verification state with validation response",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.recordResult",
+      "rationale": "Keep stale or malformed manual evidence from authorizing remediation or completion.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-verification-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-COMPLETE-START",
+      "scope": "completion",
+      "from": "completion-ready feature",
+      "trigger": "complete-feature readiness accepts current evidence",
+      "to": "detached completion finalizer",
+      "ownerPath": "apps/orchestrator/src/application/features/complete-feature-execution-application.ts",
+      "ownerSymbol": "CompleteFeatureExecutionApplication.start",
+      "rationale": "Create exactly one completion run only after code review and manual gates allow it.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/complete-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-complete-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-COMPLETE-NOT-READY",
+      "scope": "refusal",
+      "from": "in-progress feature",
+      "trigger": "complete-feature readiness rejects current evidence",
+      "to": "unchanged in-progress feature",
+      "ownerPath": "apps/orchestrator/src/application/features/complete-feature-execution-application.ts",
+      "ownerSymbol": "CompleteFeatureExecutionApplication.start",
+      "rationale": "Refuse finalization until its declared completion gates are durable, while keeping those reasons isolated from current Continue Implementing readiness.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/complete-feature-execution-application.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-complete-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-COMPLETE-DONE",
+      "scope": "completion",
+      "from": "detached completion finalizer",
+      "trigger": "completion agent validates and moves the feature",
+      "to": "completed feature",
+      "ownerPath": "apps/orchestrator/src/application/features/complete-feature-execution-application.ts",
+      "ownerSymbol": "CompleteFeatureExecutionApplication.execute",
+      "rationale": "Finalize documentation, lessons, state, and folder movement through one auditable application.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/complete-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-complete-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-COMPLETE-FAIL",
+      "scope": "failed",
+      "from": "detached completion finalizer",
+      "trigger": "completion agent or final state validation fails",
+      "to": "failed completion run with feature not claimed complete",
+      "ownerPath": "apps/orchestrator/src/application/features/complete-feature-execution-application.ts",
+      "ownerSymbol": "CompleteFeatureExecutionApplication.execute",
+      "rationale": "Expose finalization failure without falsely presenting a completed feature.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/complete-feature-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-complete-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WF-ROUTING-INSTALLATION-BOOTSTRAP",
+      "scope": "routing",
+      "from": "registered Web action with no persisted Global policy",
+      "trigger": "the first policy resolution returns ROUTING_BOOTSTRAP_REQUIRED and Pi's explicit installation provider/model maps to one active cataloged connection",
+      "to": "the same registered action resolved through one atomically persisted Global revision",
+      "ownerPath": "apps/orchestrator/src/agent-routing/routing-action-resolver.ts",
+      "ownerSymbol": "RoutingActionResolver.resolvePlan",
+      "rationale": "Honor the zero-interruption bootstrap contract by supplying only Pi's explicit validated installation route after an unset-policy rejection. Never bootstrap display reads, replace invalid or unavailable persisted policy, infer from labels, or select an arbitrary fallback.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/routing-action-resolver.test.ts",
+        "apps/orchestrator/test/pi-installation-default.test.ts",
+        "apps/orchestrator/test/pi-model-catalog-scanner.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-061-routing.feature"
+      ]
+    },
+    {
+      "id": "WF-ROUTING-RESOLVE",
+      "scope": "routing",
+      "from": "registered action request",
+      "trigger": "a future worker requires a route plan",
+      "to": "typed accepted plan or deterministic rejection",
+      "ownerPath": "apps/orchestrator/src/agent-routing/routing-policy-service.ts",
+      "ownerSymbol": "RoutingPolicyService.resolve",
+      "rationale": "Resolve only a registered action through persisted Action, Action Type, and Global policy before any execution boundary can consume a typed plan; a bootstrap conflict rereads the single persisted winner once and rejects absent, invalid, or registry-mismatched rereads without another mutation or execution.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/routing-resolver.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-061-routing.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-PLAN-EXECUTE",
+      "scope": "runtime",
+      "from": "accepted HandoffPlanV1 and guarded worker context",
+      "trigger": "a worker-producing application invokes the required plan-bound runtime host",
+      "to": "one pinned isolated primary Pi attempt with normalized lifecycle evidence",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/handoff-plan-executor.ts",
+      "ownerSymbol": "HandoffPlanExecutor.executeAttempt",
+      "rationale": "Consume the accepted route unchanged, pin connection and authentication versions before spawn, transport only the selected secret through the isolated child environment, and settle cleanup/receipt evidence without any model-key, default, policy, or substitute route lane.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/handoff-plan-executor.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-LAUNCH-REJECT",
+      "scope": "refusal",
+      "from": "malformed runtime input or an accepted plan with unavailable launch preparation",
+      "trigger": "guard, connection, authentication, provider, vault, isolated-context, or process preparation rejects",
+      "to": "sanitized no-spawn rejection or safe normalized preparation failure without an actual route",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/handoff-plan-executor.ts",
+      "ownerSymbol": "HandoffPlanExecutor.executeAttempt",
+      "rationale": "Fail closed before forbidden side effects for malformed input and never invent a route when valid-plan preparation cannot launch. Resolve ambiguous Pi-session endpoints only when exactly one authenticated provider identity matches, and preserve the failed route, durable cause, fallback availability, and routing recovery action in the surfaced error.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/handoff-plan-executor.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/pi-installation-default.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-FALLBACK",
+      "scope": "runtime",
+      "from": "failed primary attempt with durable work state none and an approved second route",
+      "trigger": "RuntimeExecutionCoordinator classifies the persisted primary state as none after failure, then invokes the approved second route with lifecycle hooks rebound to that fallback attempt",
+      "to": "one fallback attempt on the unchanged approved second route; primary failure evidence remains durable and a successful fallback completes the invocation",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
+      "ownerSymbol": "RuntimeExecutionCoordinator.execute",
+      "rationale": "Consume the plan-authorized second route once before substantive work without policy re-resolution, recursive routing, or a third attempt. Preserve the primary failure for explanation, but bind all fallback mutations and checkpoints to the fallback attempt so a successful fallback cannot be failed by stale primary state.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/pi-installation-default.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-RECOVERY",
+      "scope": "runtime",
+      "from": "failed primary attempt with a durable checkpoint and unresolved task cursor",
+      "trigger": "RuntimeExecutionCoordinator validates persisted checkpoint and no-replay facts",
+      "to": "one recovery attempt carrying authorized checkpoint and completed-task identities",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
+      "ownerSymbol": "RuntimeExecutionCoordinator.execute",
+      "rationale": "Resume from durable workflow evidence only; output text, elapsed time, task labels, and IN_PROGRESS alone never authorize recovery or fallback.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-TERMINAL",
+      "scope": "refusal",
+      "from": "failed primary without a legal runtime hop or failed second attempt",
+      "trigger": "the plan is exhausted, work started without a checkpoint, checkpoint evidence is malformed, or the second attempt fails",
+      "to": "settled terminal invocation with no substitute or later workflow advance",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
+      "ownerSymbol": "RuntimeExecutionCoordinator.execute",
+      "rationale": "Make no-step, Global, fail-immediately, unsafe recovery, and exhausted second-hop outcomes terminal instead of inventing a route or replaying work.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-DIRECT-HOST-NO-LAUNCH",
+      "scope": "runtime",
+      "from": "portable skill invoked in an existing Pi, Codex, or Claude Code session",
+      "trigger": "the user invokes the procedure directly without an explicit Hepha launcher or API dispatch",
+      "to": "work remains in the current host with no routing-policy read, model switch, nested transfer, or orchestrated receipt",
+      "ownerPath": "apps/orchestrator/src/portable-asset-contract.ts",
+      "ownerSymbol": "validatePortableAssetSource",
+      "rationale": "Portable procedure admission enforces model-neutral direct-host instructions, while production runtime composition exposes no direct-session route query, transfer adapter, or orchestrated receipt path.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/portable-model-authority-inventory.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/runtime-worker-dispatch.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-071-portable-model-authority.feature"
+      ]
+    },
+    {
+      "id": "WF-DIRECT-HOST-EVIDENCE",
+      "scope": "runtime",
+      "from": "direct-host procedure with an optional deterministic state-sync result",
+      "trigger": "recordDirectHostRuntimeEvidence validates exact mode, project/card membership, registered descriptive action, and trusted model provenance before replay-safe persistence",
+      "to": "one route-incapable direct-host evidence row and guarded mixed-mode FEAT Details projection, or deterministic rejection with no orchestrated receipt",
+      "ownerPath": "apps/orchestrator/src/application/runtime-evidence/direct-host-runtime-evidence-application.ts",
+      "ownerSymbol": "recordDirectHostRuntimeEvidence",
+      "rationale": "Direct evidence records host work honestly without granting routing authority: exact replay is a no-op, collisions reject, untrusted model claims reject, and policy, route, authentication, credential, launch, attempt, and fallback facts are structurally unavailable.",
+      "unitTestPaths": [
+        "packages/db/test/direct-host-runtime-evidence-store.test.ts",
+        "apps/orchestrator/test/direct-host-runtime-evidence-application.test.ts",
+        "apps/orchestrator/test/runtime-evidence-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-runtime-evidence-projection.feature",
+        "apps/orchestrator/test/feat-071-portable-model-authority.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-ACTION-ADMISSION",
+      "scope": "refusal",
+      "from": "dashboard or specialist launch request carrying one explicit agent_action",
+      "trigger": "AgentTaskRuntime.create or SpecialistRuntimeDispatchApplication.execute validates action syntax, registry membership, launch-node equality, and complete registry-plan metadata",
+      "to": "one registry-bound immutable plan, or deterministic rejection before task numbering, persistence, coordinator execution, or spawn",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/specialist-runtime-dispatch-application.ts",
+      "ownerSymbol": "SpecialistRuntimeDispatchApplication.execute",
+      "rationale": "Action identity is serialized authority; command names, filenames, roles, skills, models, and route fields cannot infer or override it.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/specialist-runtime-dispatch-application.test.ts",
+        "apps/orchestrator/test/agent-task-runtime.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-071-portable-model-authority.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-NESTED-DISPATCH",
+      "scope": "runtime",
+      "from": "parent invocation and scoped nested action request",
+      "trigger": "the production review, phase-exit, feature-lessons, or successful post-complete lifecycle entry admits its exact action and a real current-run parent invocation exists",
+      "to": "separate nested chain with primary first attempt and durable parent/root/correlation/input lineage; failed completion starts no curator",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/runtime-worker-dispatch.ts",
+      "ownerSymbol": "NestedRuntimeDispatchAdapter.dispatchResolved",
+      "rationale": "With a real current-run parent, Code Review and all three knowledge workers inherit correlation and scoped artifact references only, never the parent route, retain sorted selected lesson identities, and keep curator effects project-only. The nested adapter requires complete action/type/role/prompt/capability equality with the registry before invocation identity or coordinator work. A resumed specialist with no parent uses WF-RUNTIME-RESUMED-SPECIALIST instead.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/runtime-worker-dispatch.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/runtime-knowledge-worker-lifecycle.test.ts",
+        "apps/orchestrator/test/detached-completion-worker-application.test.ts",
+        "apps/orchestrator/test/phase-review-execution-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-RESUMED-SPECIALIST",
+      "scope": "runtime",
+      "from": "resumed workflow whose first model invocation is a declared specialist action",
+      "trigger": "the production specialist boundary has an independently accepted plan but no real root invocation exists for the current workflow run and card",
+      "to": "one fully scoped root specialist chain carrying the current workflow, card, phase contract, phase, and task identity",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/specialist-runtime-dispatch-application.ts",
+      "ownerSymbol": "SpecialistRuntimeDispatchApplication.execute",
+      "rationale": "Represent the actual resumed topology honestly: use nested dispatch only with a real current-run parent, and never invent a context-free parent receipt merely to satisfy nested lineage.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/specialist-runtime-dispatch-application.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-RUNTIME-RECEIPT-SETTLE",
+      "scope": "persistence",
+      "from": "terminal primary or plan-authorized second attempt",
+      "trigger": "the executor or coordinator commits terminal attempt and route-change evidence",
+      "to": "immutable canonical invocation settlement available after restart",
+      "ownerPath": "packages/db/src/runtime-invocation/runtime-invocation-store.ts",
+      "ownerSymbol": "RuntimeInvocationStore.settleInvocation",
+      "rationale": "Keep the final attempt and event result authoritative, monotonic, conflict-safe, and readable as normalized evidence without legacy telemetry inference.",
+      "unitTestPaths": [
+        "packages/db/test/runtime-invocation-store.test.ts",
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts"
+      ],
+      "gherkinPaths": [
+        "packages/db/test/generic-runtime-invocation-store.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.feature"
+      ]
+    },
+    {
+      "id": "WF-REMEDIATION-SUCCESSOR-VALIDATE",
+      "scope": "review",
+      "from": "completed fixer output after one ## Fixer Response was appended or updated in the existing NEEDS_CHANGES report",
+      "trigger": "the output contains one exact remediation-response block and one verification-receipt block bound to the immutable NEEDS_CHANGES predecessor",
+      "to": "durable remediation response and bound verification receipt, or same-fixer repair with a sanitized validation diagnostic",
+      "ownerPath": "apps/orchestrator/src/workflows/reviews/phase-remediation-successor-publication-application.ts",
+      "ownerSymbol": "PhaseRemediationSuccessorPublicationApplication.publish",
+      "rationale": "The reviewer-owned report and NEEDS_CHANGES decision remain immutable; the fixer updates only the report's single Fixer Response section. A fixer proposal is not review authority. The independent reviewer may run only after the canonical nested response schema and complete receipt are persisted. Invalid model output must return the contract rejection code/message so a retry can change the malformed field instead of repeating an opaque failure.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-remediation-successor-prompt.test.ts",
+        "apps/orchestrator/test/phase-remediation-successor-publication-application.test.ts",
+        "apps/orchestrator/test/authoritative-review-ingestion.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/review-remediation-lifecycle.feature"
+      ]
+    }
+  ]
+}

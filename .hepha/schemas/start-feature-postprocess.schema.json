@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Start Feature Postprocess",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "phaseRouting": { "type": "array" },
+    "effortEstimates": {
+      "type": "array",
+      "description": "One required Human and AI estimate record for every numbered phase; actual execution time is not produced by post-processing."
+    },
+    "resumeLedger": { "type": "object" },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

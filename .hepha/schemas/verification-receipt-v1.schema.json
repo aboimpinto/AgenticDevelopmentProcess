@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verification Receipt v1",
+  "description": "Verifier-owned separate verification evidence for a remediation response. References manifest and response; provides per-item and per-test outcomes.",
+  "type": "object",
+  "required": ["schemaVersion", "artifactKind", "artifactId", "scope", "manifestReference", "responseReference", "itemReceipts", "testReceipts"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "artifactKind": { "type": "string", "const": "verification_receipt" },
+    "artifactId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "scope": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactScope" },
+    "lineage": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactLineage" },
+    "manifestReference": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactReference" },
+    "responseReference": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactReference" },
+    "itemReceipts": {
+      "description": "Exactly one receipt per remediation item from the response.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["findingId", "remediationItemId", "outcome", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "findingId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+          "remediationItemId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+          "outcome": {
+            "type": "string",
+            "enum": ["VERIFIED", "FAILED", "NOT_VERIFIABLE"]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "testReceipts": {
+      "description": "One receipt per test-matrix item from the manifest findings.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["findingId", "testId", "outcome", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "findingId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+          "testId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+          "outcome": {
+            "type": "string",
+            "enum": ["PASSED", "FAILED", "NOT_RUN", "NOT_VERIFIABLE"]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 128
+    }
+  }
+}

@@ -1,0 +1,1672 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "WJ-2026-001",
+      "date": "2026-07-22",
+      "summary": "Establish one diagnostic workflow map and causal change gate",
+      "transitionIds": [
+        "WF-IMPLEMENT-QUEUE",
+        "WF-PHASE-WORKER",
+        "WF-RECOVERY-STOP"
+      ],
+      "whyHappened": "Workflow behavior was documented across command YAML, lifecycle prose, focused architecture notes, production applications, and tests, so an operator could observe a wrong transition without one diagram that identified its owner.",
+      "causalChain": "Incremental workflow changes added correct local documentation and tests -> no repository-wide transition registry connected those fragments -> incident diagnosis required broad code and log searches -> the exact decision boundary was slow to identify.",
+      "testGap": "No test asserted that every documented transition had a real production Class.method owner, unit evidence, Gherkin evidence, and a matching Mermaid edge, or that every declared YAML command node remained represented in the architecture map.",
+      "missingDecision": "The architecture had no explicit decision that one registry and map are the diagnostic authority, and no mandatory causal justification record for future workflow changes.",
+      "codeChanges": [
+        "AGENTS.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification.md",
+        "docs/architecture/workflow-change-justification-log.json",
+        "scripts/workflow-map-policy.ts",
+        "scripts/quality-evaluator.ts",
+        "docs/architecture/system-architecture.md",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "scripts/workflow-map-policy.test.ts",
+        "scripts/generic-workflow-map-policy.feature",
+        "scripts/workflow-map-policy.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-002",
+      "date": "2026-07-22",
+      "summary": "Route unresolved refinement decisions back to interactive Deep-Dive",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-REFINE-DEEP-DIVE",
+        "WF-REFINE-FAIL"
+      ],
+      "whyHappened": "A refinement worker correctly stopped after discovering an unresolved architecture decision, but its plain-text blocker exited successfully. The generic worker labelled the process completed, RefineFeature unconditionally entered promotion, and the missing-artifact validator became the first component able to reject the run.",
+      "causalChain": "Deep-Dive inspected only the current source and validation markers -> refinement later inspected dependency contracts and found a contradiction -> the result contract had no machine-readable blocker branch -> RefineFeature ignored response semantics and ran artifact validation -> the catch boundary recorded failed instead of blocked.",
+      "testGap": "Unit and Gherkin coverage modelled only valid artifacts, invalid artifacts, and recovery from already-valid durable artifacts. No scenario supplied a successful worker process with unresolved user questions, asserted that artifact validation was skipped, created an interactive question session, or repeated Deep-Dive and refinement without a round limit.",
+      "missingDecision": "The workflow lacked the invariant that unresolved user-owned planning decisions are a durable NEEDS_DEEP_DIVE outcome, not an operational failure, and lacked a transition from refinement evaluation to the existing answer/chat session contract.",
+      "codeChanges": [
+        ".workflows/refine-feature.workflow.yaml",
+        ".hepha/commands/refine-feature.md",
+        ".hepha/schemas/refine-feature-result.schema.json",
+        "apps/orchestrator/src/application/features/refine-feature-worker-result.ts",
+        "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+        "apps/orchestrator/src/application/deep-dive/refinement-deep-dive-handoff-application.ts",
+        "apps/orchestrator/src/application/features/feature-preparation-application.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "docs/architecture/refinement-deep-dive-loop.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/refine-feature-worker-result.test.ts",
+        "apps/orchestrator/test/refinement-deep-dive-handoff-application.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature",
+        "apps/orchestrator/test/generic-refine-feature-execution-application.integration.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts",
+        "scripts/generic-workflow-map-policy.feature",
+        "scripts/workflow-map-policy.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-003",
+      "date": "2026-07-22",
+      "summary": "Separate historical phase-contract readability from current refinement authoring",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-REFINE-FAIL"
+      ],
+      "whyHappened": "The canonical Refine Feature command required PhaseExecutionContract V3, but the installed Pi Refine skill still requested V2. The artifact validator used the same permissive parser needed for historical execution and therefore allowed the stale worker output to authorize readiness.",
+      "causalChain": "Two Refine Feature instruction sources diverged -> the invoked Pi skill emitted V2 -> the compatibility parser correctly read V2 -> refinement promotion reused that reader without a current-authoring policy -> a new feature reached Ready without the mandatory V3 phase Git checkpoints.",
+      "testGap": "Contract parser tests proved V2 compatibility and V3 checkpoint structure separately, but no unit or Gherkin scenario asserted that new refinement promotion rejects V1/V2 while historical implementation continues to read them. No parity test compared the command template and installed Pi skill contract version.",
+      "missingDecision": "The architecture had not explicitly separated read compatibility from authoring authority at the Refine Feature promotion boundary, and had no invariant requiring all live Refine instruction sources to name the current contract version.",
+      "codeChanges": [
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "apps/orchestrator/src/refine-artifact-validator.ts",
+        "apps/orchestrator/src/bootstrap/feature-preparation-applications.ts",
+        "apps/orchestrator/src/workflows/prompts/feature-entry-prompts.ts",
+        "docs/architecture/phase-git-checkpoint.md",
+        "docs/architecture/refinement-deep-dive-loop.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature",
+        "apps/orchestrator/test/model-routing.test.ts",
+        "apps/orchestrator/test/feature-entry-prompts.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-004",
+      "date": "2026-07-22",
+      "summary": "Resume provider-refused workers through one fresh Continue Implementing session",
+      "transitionIds": [
+        "WF-RECOVERY-FRESH-SESSION",
+        "WF-RECOVERY-STOP"
+      ],
+      "whyHappened": "A worker's generated tool-call history became corrupted and the model provider rejected the next accumulated prompt. The active implementation task had durable progress, but Hepha classified the provider refusal as non-recoverable and failed the phase instead of discarding only the contaminated session.",
+      "causalChain": "Provider rejected the accumulated worker request -> ImplementationWorkerApplication preserved the provider error -> ImplementationAutoRecoveryApplication consulted the recoverable whitelist before selecting a retry route -> the classifier had no provider-prompt-refusal category -> the run entered terminal phase failure although the durable task was resumable.",
+      "testGap": "Classifier tests did not include provider prompt refusal, automatic-recovery tests mocked every candidate as recoverable and did not assert the Continue Implementing command, worker tests did not prove that successive worker identities receive different session files, and no Gherkin scenario required same-task fresh-session recovery with a one-attempt bound.",
+      "missingDecision": "The workflow lacked the invariant that conversational session state is disposable while phase/task/review state is durable, and lacked an explicit transition from provider input refusal to Continue Implementing at the same unfinished task.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recovery/implementation-failure-classifier.ts",
+        "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+        "apps/orchestrator/src/bootstrap/implementation-recovery-applications.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/workflow/commands.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/implementation-failure-classifier.test.ts",
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/generic-implementation-auto-recovery.feature",
+        "apps/orchestrator/test/generic-implementation-auto-recovery.integration.test.ts",
+        "apps/orchestrator/test/generic-implementation-failure-classification.feature",
+        "apps/orchestrator/test/generic-implementation-failure-classification.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-005",
+      "date": "2026-07-22",
+      "summary": "Preserve Continue eligibility through authoritative V3 inventory selection",
+      "transitionIds": [
+        "WF-CONTINUE-ELIGIBLE",
+        "WF-CONTINUE-REFRESH"
+      ],
+      "whyHappened": "The generic phase-template validator still required a legacy Phase and Status table even when PhaseExecutionContract V3 was authoritative. Its alignment circuit inserted that compatibility table before the V3 inventory, while the execution artifact validator parsed only the first table in the section.",
+      "causalChain": "V3 refinement produced a valid contract inventory -> legacy dispatch validation rejected the absence of a Phase column -> alignment added a legacy table -> execution validation selected the first table positionally -> CONTRACT_INVENTORY_MISMATCH set hasRefinementArtifacts=false -> readiness suppressed Continue after an unrelated provider refusal.",
+      "testGap": "Phase-template unit tests covered only the legacy Phase and Status inventory, artifact-contract tests covered only a single table in the Phase Inventory section, and no Gherkin scenario proved that a current contract inventory remains authoritative when a historical projection is also present.",
+      "missingDecision": "The architecture had not stated that versioned inventory schema outranks Markdown table position, nor that failed-run action eligibility must be recomputed from that authoritative durable contract instead of the presentation order of compatibility projections.",
+      "codeChanges": [
+        "apps/orchestrator/src/markdown-pipe-table-parser.ts",
+        "apps/orchestrator/src/phase-template-validator.ts",
+        "apps/orchestrator/src/refine-artifact-validator.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/markdown-pipe-table-parser.test.ts",
+        "apps/orchestrator/test/phase-template-validator.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/generic-phase-template-dispatch.feature",
+        "apps/orchestrator/test/generic-phase-template-dispatch.integration.test.ts",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-006",
+      "date": "2026-07-22",
+      "summary": "Unify phase-status reconciliation behind the contract inventory projection",
+      "transitionIds": [
+        "WF-CONTINUE-REFRESH",
+        "WF-CONTINUE-RECONCILE"
+      ],
+      "whyHappened": "Readiness and template validation had been migrated to the V3 Contract ID, Document, Role, and Status inventory, but reconciliation, phase scanning, phase entry, completion, and recovery snapshots retained independent numeric Phase table parsers and writers.",
+      "causalChain": "Continue became correctly eligible -> current FeatureTasks contained only its canonical V3 inventory -> pre-run reconciliation searched for a row beginning with the numeric phase -> it returned no FeatureTasks status -> the fail-closed reconciliation policy rejected Phase 2 before any worker dispatch.",
+      "testGap": "Every reconciliation and status-persistence fixture used the legacy numeric Phase table, while V3 contract tests ended at artifact validation. No unit or Gherkin integration test carried a V3 inventory through the production reconciliation read, promotion write, phase-entry write, scanner read, and recovery snapshot path.",
+      "missingDecision": "The architecture defined the V3 contract as authoring authority but did not require all FeatureTasks lifecycle consumers to share one schema-selected status projection with a legacy fallback only when no contract inventory exists.",
+      "codeChanges": [
+        "apps/orchestrator/src/feature-tasks-phase-status.ts",
+        "apps/orchestrator/src/memorybank/phase-document-parser.ts",
+        "apps/orchestrator/src/phase-state-reconciliation-adapter.ts",
+        "apps/orchestrator/src/workflows/phases/phase-status-document-repository.ts",
+        "apps/orchestrator/src/workflows/phases/phase-task-document-repository.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-machine-state-repository.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/feature-tasks-phase-status.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-adapter.test.ts",
+        "apps/orchestrator/test/phase-status-document-repository.test.ts",
+        "apps/orchestrator/test/phase-task-document-repository.test.ts",
+        "apps/orchestrator/test/generic-phase-state-reconciliation-application.feature",
+        "apps/orchestrator/test/generic-phase-state-reconciliation-application.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-007",
+      "date": "2026-07-22",
+      "summary": "Make contracted design documents part of Deep-Dive freshness",
+      "transitionIds": [
+        "WF-DESIGN-EXECUTE",
+        "WF-DEEP-DIVE-MARKER-GATE",
+        "WF-DD-START",
+        "WF-DD-COMPLETE",
+        "WF-REFINE-EXECUTE"
+      ],
+      "whyHappened": "HEPHA recorded and compared Deep-Dive freshness using only FeatureDescription.md. Design Feature was introduced later and created authoritative satellite reports, but the freshness boundary and Deep-Dive prompt remained single-document contracts.",
+      "causalChain": "An initial FEAT Deep-Dive recorded the Feature Description hash -> Design Feature created UX, wireframe, and summary documents containing assumptions and unresolved decisions -> the scanner hashed only the unchanged Feature Description -> HEPHA classified Deep-Dive as current and exposed refinement -> refinement became the first workflow able to discover the unresolved cross-document decisions.",
+      "testGap": "Deep-Dive tests proved that changes to one source string become stale, while Design Feature tests proved only that three artifacts exist. No unit or Gherkin scenario joined the two workflows by creating design output after a completed Deep-Dive, asserting that refinement becomes unavailable, supplying every design document to the next question round, and recording the combined completion hash.",
+      "missingDecision": "The architecture had not classified contracted design artifacts as authoritative preparation inputs and had no deterministic document-set identity shared by scanner freshness, question planning, completion evidence, and continuation recovery.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/deep-dive/deep-dive-preparation-source.ts",
+        "apps/orchestrator/src/memorybank-scanner.ts",
+        "apps/orchestrator/src/bootstrap/project-work-item-applications.ts",
+        "apps/orchestrator/src/work-item-validation.ts",
+        "apps/orchestrator/src/feat-readiness-evaluator.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-question-planner.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-completion-application.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-source-document-repository.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-document-updater.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-continuation-recovery-application.ts",
+        "apps/orchestrator/src/bootstrap/deep-dive-applications.ts",
+        "packages/db/src/contracts/card-contracts.ts",
+        "docs/architecture/design-document-deep-dive-freshness.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-preparation-source.test.ts",
+        "apps/orchestrator/test/deep-dive-question-planner.test.ts",
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts",
+        "apps/orchestrator/test/generic-design-document-deep-dive-freshness.feature",
+        "apps/orchestrator/test/generic-design-document-deep-dive-freshness.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-008",
+      "date": "2026-07-23",
+      "summary": "Enforce changed-code test coverage at declared final checkpoints",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-REFINE-DEEP-DIVE",
+        "WF-REFINE-FAIL",
+        "WF-FINAL-COVERAGE-REPAIR",
+        "WF-FINAL-COVERAGE-PASS",
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE"
+      ],
+      "whyHappened": "The final verification runner proved configured commands returned green but had no coverage intent, no machine-report schema, and no relationship between implementation work and the tests that executed it. RefineFeature therefore could not declare or validate a measurable coverage obligation.",
+      "causalChain": "RefineFeature emitted a full-verification task -> the project profile ran build, typecheck, and unit tests -> green command exits completed the task -> untested changed production lines could reach phase completion because no baseline-aware LCOV decision existed.",
+      "testGap": "Final-verification tests covered profile syntax, required build/test/lint intents, command outcomes, warning detection, and repair loops, but no unit test parsed changed Git lines or LCOV evidence and no generic Gherkin scenario kept a final checkpoint active below a coverage floor.",
+      "missingDecision": "The workflow had not decided that a declared final checkpoint must connect RefineFeature's declarative test-coverage requirement to the durable StartFeature commit and a project-owned machine-readable report. RefineFeature must reuse a valid project profile across FEATs. A project with no configured coverage asks once through Deep-Dive for the command, LCOV report path, source selectors, and multi-stack ownership, then persists that answer in the project profile rather than guessing, failing, or asking every FEAT. Workflows that deliberately declare no final checkpoint remain unmodified.",
+      "codeChanges": [
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "apps/orchestrator/src/workflows/prompts/feature-entry-prompts.ts",
+        "apps/orchestrator/src/refine-artifact-validator.ts",
+        "apps/orchestrator/src/final-checkpoint-coverage-profile-policy.ts",
+        "apps/orchestrator/src/final-verification-types.ts",
+        "apps/orchestrator/src/final-verification-profile-loader.ts",
+        "apps/orchestrator/src/final-verification-policy.ts",
+        "apps/orchestrator/src/final-verification-adapter.ts",
+        "apps/orchestrator/src/test-coverage-telemetry.ts",
+        "apps/orchestrator/src/workflows/phases/declared-verification-task-application.ts",
+        "apps/orchestrator/src/workflows/phases/phase-checkpoint-projection-repository.ts",
+        "apps/orchestrator/src/phase-checkpoint-report.ts",
+        ".hepha/safety/final-verification-profile.yaml",
+        "vitest.config.ts",
+        "apps/web/vitest.config.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/final-checkpoint-coverage-profile-policy.test.ts",
+        "apps/orchestrator/test/test-coverage-telemetry.test.ts",
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification.integration.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/phase-checkpoint-report.test.ts",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-009",
+      "date": "2026-07-23",
+      "summary": "Make test-coverage thresholds advisory and visible at FEAT scope",
+      "transitionIds": [
+        "WF-FINAL-COVERAGE-REPAIR",
+        "WF-FINAL-COVERAGE-PASS",
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE"
+      ],
+      "whyHappened": "The first coverage circuit correctly measured code introduced since StartFeature, but classified a percentage below 80 as a failed required check. That confused a quality-improvement signal with a red test or broken coverage command and could keep an otherwise valid phase in an unlimited repair loop.",
+      "causalChain": "Coverage command and tests exited green -> LCOV successfully measured FEAT changed lines -> one measured file was below 80 percent -> the adapter changed the required check to failed -> the generic verifier repeatedly dispatched repair -> phase completion depended on a percentage even though the engineering policy intended a reminder and aspirational target.",
+      "testGap": "Unit tests asserted that below-reference coverage failed, and Gherkin asserted that it remained unresolved without a retry cap. No acceptance scenario required phase/FEAT completion with a reminder, bounded project-configured improvement attempts, FEAT-only repair scope, separate overall project context, or a details-page assessment.",
+      "missingDecision": "The architecture had not separated three concerns: command/test health is blocking, FEAT changed-line percentage is actionable but advisory, and overall project coverage is contextual only. It also lacked a declared limit and stop result for optional coverage improvement work, a durable UI projection for the latest receipt, and an explicit rule that staged, unstaged, and new production files before the phase git checkpoint belong to the FEAT baseline comparison.",
+      "codeChanges": [
+        "apps/orchestrator/src/test-coverage-telemetry.ts",
+        "apps/orchestrator/src/test-coverage-receipt.ts",
+        "apps/orchestrator/src/final-verification-adapter.ts",
+        "apps/orchestrator/src/final-verification-policy.ts",
+        "apps/orchestrator/src/final-verification-types.ts",
+        "apps/orchestrator/src/final-verification-profile-loader.ts",
+        "apps/orchestrator/src/workflows/phases/declared-verification-task-application.ts",
+        "apps/orchestrator/src/workflows/phases/phase-checkpoint-projection-repository.ts",
+        "apps/orchestrator/src/workflows/prompts/declared-verification-repair-prompt.ts",
+        "apps/orchestrator/src/transport/http/routes/project-work-item-document-route.ts",
+        "apps/web/src/details/test-coverage-panel.tsx",
+        "packages/shared/src/work-items/contracts.ts",
+        ".hepha/safety/final-verification-profile.yaml",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/test-coverage-telemetry.test.ts",
+        "apps/orchestrator/test/test-coverage-receipt.test.ts",
+        "apps/orchestrator/test/declared-verification-task-application.test.ts",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.integration.test.ts",
+        "apps/orchestrator/test/project-work-item-document-route.test.ts",
+        "apps/orchestrator/test/workflow-evidence-projection.test.ts",
+        "apps/web/src/details/test-coverage-panel.test.tsx",
+        "apps/web/src/details/work-item-detail-blade.test.tsx"
+      ]
+    },
+    {
+      "id": "WJ-2026-010",
+      "date": "2026-07-23",
+      "summary": "Require deterministic registered-action routing before a worker-dispatch boundary",
+      "transitionIds": [
+        "WF-ROUTING-RESOLVE"
+      ],
+      "whyHappened": "Routing authority was distributed across static model options, environment defaults, and workflow fields, so a future worker could receive a model selection that was neither policy-revisioned nor validated against the current catalog.",
+      "causalChain": "Static route inputs were read directly by command composition -> labels and environment values could select a route outside the durable policy -> unavailable or incapable catalog facts were not uniformly rejected -> a later execution boundary could receive an accidental model choice.",
+      "testGap": "No public resolver test proved atomic first-route bootstrap, Action to Action Type to Global precedence, exact identity preservation, and rejection-before-plan for unavailable or incapable routes. No backend Gherkin contract described the no-execution result boundary.",
+      "missingDecision": "The workflow lacked the invariant that every worker-producing action first resolves through one registered V1 action and persisted policy, returning only a typed plan or sanitized rejection; no resolver may spawn, inject credentials, write receipts, or advance workflow state.",
+      "codeChanges": [
+        "apps/orchestrator/src/agent-routing/routing-resolver.ts",
+        "apps/orchestrator/src/agent-routing/routing-policy-service.ts",
+        "apps/orchestrator/src/agent-routing/routing-catalog-facts.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/routing-resolver.test.ts",
+        "apps/orchestrator/test/feat-061-routing.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-011",
+      "date": "2026-07-23",
+      "summary": "Resolve a concurrent bootstrap contender through the persisted Global winner",
+      "transitionIds": [
+        "WF-ROUTING-RESOLVE"
+      ],
+      "whyHappened": "The bootstrap mutation was transaction-safe, but the resolver projected a transaction conflict directly even when another valid caller had already persisted the only Global revision.",
+      "causalChain": "Two valid callers observed an unset policy -> one transaction persisted the Global revision -> the other mutation returned a conflict -> the resolver returned that conflict instead of rereading the durable winner -> a safe deterministic plan was unnecessarily withheld.",
+      "testGap": "Resolver tests covered a successful bootstrap and ordinary rejection paths but did not stage a mutation conflict followed by a valid winning policy, no policy, an unreadable reread, or a registry-version mismatch. The backend Gherkin contract did not require conflict resolution without a second mutation.",
+      "missingDecision": "The routing transition lacked the invariant that a bootstrap conflict is resolved by exactly one reread of the persisted current policy, accepting only the active registry version and never retrying mutation, substituting the contender route, or crossing the execution boundary.",
+      "codeChanges": [
+        "apps/orchestrator/src/agent-routing/routing-resolver.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/routing-resolver.test.ts",
+        "apps/orchestrator/test/feat-061-routing.integration.test.ts",
+        "apps/orchestrator/test/feat-061-routing.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-012",
+      "date": "2026-07-23",
+      "summary": "Treat unavailable test-coverage measurement as non-blocking telemetry",
+      "transitionIds": [
+        "WF-FINAL-COVERAGE-REMARK",
+        "WF-FINAL-COVERAGE-REPAIR",
+        "WF-FINAL-COVERAGE-PASS",
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE"
+      ],
+      "whyHappened": "Coverage execution and measurement errors were represented with the same failed or policy-blocked outcomes used by authoritative build, lint/typecheck, and test checks. The generic verification executor therefore treated unavailable coverage evidence as permission to repair or stop the lifecycle even though coverage was introduced as developer decision-support telemetry.",
+      "causalChain": "The coverage command failed or the StartFeature baseline, LCOV report, or instrumentation record was unavailable -> the adapter emitted a blocking outcome -> the generic verification application dispatched repair -> recovery could require an orchestrator restart or exhaust its repair route -> an otherwise green phase or FEAT failed because optional quality telemetry could not be measured.",
+      "testGap": "Tests covered successful measurements, measured below-reference advisory results, and ordinary required-check failures, but no unit or Gherkin scenario required every coverage execution and measurement error to produce an exact visible remark, skip the improvement worker, preserve independent gates, and permit ordinary phase and FEAT completion.",
+      "missingDecision": "The workflow had not explicitly separated three outcomes: independent build, lint/typecheck, and test failures are lifecycle gates; successfully measured below-reference FEAT coverage may enter a bounded improvement loop; and unavailable coverage measurement is a non-gating remark that must never fail or block the phase or FEAT.",
+      "codeChanges": [
+        "apps/orchestrator/src/final-verification-types.ts",
+        "apps/orchestrator/src/final-verification-policy.ts",
+        "apps/orchestrator/src/final-verification-adapter.ts",
+        "apps/orchestrator/src/final-verification-presentation.ts",
+        "apps/orchestrator/src/workflows/prompts/feature-entry-prompts.ts",
+        "apps/orchestrator/src/workflows/prompts/phase-code-review-execution-prompt.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification-presentation.test.ts",
+        "apps/orchestrator/test/final-verification.integration.test.ts",
+        "apps/orchestrator/test/declared-verification-task-application.test.ts",
+        "apps/orchestrator/test/phase-checkpoint-report.test.ts",
+        "apps/orchestrator/test/workflow-evidence-projection.test.ts",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.feature",
+        "apps/orchestrator/test/generic-final-checkpoint-test-coverage.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-013",
+      "date": "2026-07-23",
+      "summary": "Connect the first Web workflow action to Pi's validated installation default",
+      "transitionIds": [
+        "WF-ROUTING-INSTALLATION-BOOTSTRAP",
+        "WF-ROUTING-RESOLVE"
+      ],
+      "whyHappened": "The policy resolver implemented atomic bootstrap when a caller supplied a route, but the generic Web workflow adapter always supplied null. At the same time the Pi catalog scanner parsed its supported command output as JSON even though the installed Pi returns a table, so the required safe catalog fact could not exist.",
+      "causalChain": "Global policy was unset -> Continue Implementing entered the generic route adapter -> the adapter called policy resolution with bootstrap null -> the resolver correctly returned ROUTING_BOOTSTRAP_REQUIRED before launching Pi -> restart repeated the identical call. Independently, Pi catalog discovery ran pi --list-models -> JSON parsing rejected valid table output -> the catalog stayed empty -> even a future supplied installation route would have failed availability validation.",
+      "testGap": "Resolver tests called RoutingPolicyService directly with a handcrafted bootstrap route and therefore bypassed the production RoutingActionResolver and startup catalog composition. Scanner tests used JSON fixtures rather than Pi's real supported table format. No unit or Gherkin scenario started with an empty policy and exercised the generic Web resolver through installation settings, connection identity, catalog validation, persisted Global creation, and runtime provider projection.",
+      "missingDecision": "The routing map described a valid supplied bootstrap context but did not assign ownership for obtaining it. The missing invariant is that the generic Web adapter may retry only ROUTING_BOOTSTRAP_REQUIRED with Pi's explicit provider/model bound to exactly one active code-owned endpoint and exact available catalog identity; all other policy errors remain authoritative and no labels, workflow fields, environment aliases, or static fallbacks may supply a route.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/pi-installation-default.ts",
+        "apps/orchestrator/src/model-catalog/pi-model-catalog-scanner.ts",
+        "apps/orchestrator/src/model-catalog/catalog-discovery-service.ts",
+        "apps/orchestrator/src/agent-routing/routing-action-resolver.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/index.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/routing-action-resolver.test.ts",
+        "apps/orchestrator/test/pi-installation-default.test.ts",
+        "apps/orchestrator/test/pi-model-catalog-scanner.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/feat-061-routing.integration.test.ts",
+        "apps/orchestrator/test/feat-061-routing.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-014",
+      "date": "2026-07-23",
+      "summary": "Replace model-key Pi runners with one guarded plan-bound isolated execution host",
+      "transitionIds": [
+        "WF-RUNTIME-PLAN-EXECUTE",
+        "WF-RUNTIME-LAUNCH-REJECT"
+      ],
+      "whyHappened": "Routing ended at a typed HandoffPlanV1, while one-shot, detached, dashboard-task, and workflow worker runners projected the selected model into a temporary model-ID-keyed map and could fall back through a default key. That projection lost immutable connection identity, authentication version, and normalized runtime evidence at the process boundary.",
+      "causalChain": "FEAT-061 resolved a complete accepted plan -> bootstrap composition reduced it to model strings for legacy runner signatures -> runners looked up a model map/default and inherited broad process environment -> launch-time route/authentication pinning and authoritative receipts were not guaranteed -> duplicate model IDs, credential isolation, and next-worker-only routing could not be proven through the real host path.",
+      "testGap": "Existing runner tests exercised model-string lookup, process output, and detached lifecycle independently. No generic unit and backend Gherkin route passed an accepted plan through guard order, exact connection/authentication binding, launch-scoped vault transport, unique parallel contexts, normalized receipt writes, detached-exit cleanup, and deterministic no-substitute rejection.",
+      "missingDecision": "The workflow lacked the invariant that every Pi launch API requires the complete accepted HandoffPlanV1 and that only HandoffPlanExecutor.executeAttempt may cross from plan to process. Model maps, default keys, optional plans, context-free launches, inherited credentials, and policy re-resolution at execution are forbidden.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/handoff-plan-executor.ts",
+        "apps/orchestrator/src/runtime/pi/isolated-pi-worker-context.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "apps/orchestrator/src/runtime/pi/pi-detached-runner.ts",
+        "apps/orchestrator/src/runtime/pi/agent-task-runtime.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/agent-routing/routing-action-resolver.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/handoff-plan-executor.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/pi-detached-runner.test.ts",
+        "apps/orchestrator/test/pi-runtime-boundary.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-015",
+      "date": "2026-07-23",
+      "summary": "Keep stopped implementation manually continuable from execution authority",
+      "transitionIds": [
+        "WF-CONTINUE-ELIGIBLE",
+        "WF-CONTINUE-REFRESH",
+        "WF-RECOVERY-STOP"
+      ],
+      "whyHappened": "The dashboard reused complete refinement-artifact validation to authorize continuation. An implementation run stopped after a verification-receipt persistence error, and a malformed refinement-only architecture-debt satellite made hasRefinementArtifacts false even though the execution contract, unresolved phase cursor, and task ledger remained usable. The same persistence path also applied the 256-character identifier limit to schema-valid 4096-character verification evidence.",
+      "causalChain": "The worker produced valid explanatory receipt evidence longer than an identifier -> the immutable-store projection rejected it as persistence_failed -> automatic recovery stopped and persisted a durable failure brief -> the workflow summary revalidated every refinement satellite -> one unrelated invalid satellite suppressed canContinueImplementing -> the Web client correctly rendered no button from the incorrect backend decision -> the operator had no manual recovery route.",
+      "testGap": "Tests proved refinement promotion completeness and ordinary continuation from wholly valid artifacts, but no unit or Gherkin matrix covered failed, blocked, and cancelled runs with a valid execution contract plus an invalid refinement-only satellite. No UI test required the manual button in that state, and no storage-boundary test exercised verification evidence between 257 and 4096 characters.",
+      "missingDecision": "The workflow did not explicitly separate refinement promotion authority from implementation continuation authority. WF-RECOVERY-STOP also lacked the explicit invariant that it ends only automatic recovery and cannot remove WF-CONTINUE-ELIGIBLE. Free-text evidence and identifiers shared a default bound despite different schema contracts.",
+      "codeChanges": [
+        "apps/orchestrator/src/refine-artifact-validator.ts",
+        "apps/orchestrator/src/refine-architecture-debt-artifact-validator.ts",
+        "apps/orchestrator/src/application/features/refinement-artifact-policy.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/orchestrator/src/application/features/continue-implementation-application.ts",
+        "apps/orchestrator/src/feat-readiness-evaluator.ts",
+        "apps/orchestrator/src/bootstrap/feature-projection-applications.ts",
+        "packages/shared/src/workflow/runtime-contracts.ts",
+        "packages/db/src/review-governance/review-ingest-validation.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/refinement-artifact-policy.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/continue-implementation-application.test.ts",
+        "apps/orchestrator/test/generic-feature-workflow-summary.feature",
+        "apps/orchestrator/test/generic-feature-workflow-summary.integration.test.ts",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature",
+        "apps/web/src/workflow/workflow-interaction-panel.test.tsx",
+        "packages/db/test/review-ingest-validation.test.ts",
+        "packages/db/test/generic-review-ingest-validation.feature",
+        "packages/db/test/generic-review-ingest-validation.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-016",
+      "date": "2026-07-23",
+      "summary": "Recover an approved but nonterminal review on its unresolved declared task",
+      "transitionIds": [
+        "WF-REVIEW-NONTERMINAL-RECOVERY",
+        "WF-REVIEW-APPROVED",
+        "WF-PHASE-EXIT-REPEAT"
+      ],
+      "whyHappened": "A reviewer persisted a schema-valid APPROVED manifest, but the authoritative gate correctly remained PENDING / terminal_remediation_required because the preceding remediation response had no bound verification receipt. The dispatcher did not complete the declared review task, then still called phase exit, which converted the expected unresolved-task state into REVIEW_CONTRACT_V1_GATE_DENIED and stopped the workflow.",
+      "causalChain": "A fixer response persisted without its verification receipt -> resume routing treated either a response or receipt as sufficient to invoke the reviewer -> the reviewer returned APPROVED -> publication selected phase_exit from the manifest result alone while authoritative ingestion returned PENDING -> dispatch correctly left the review task unchecked but fell through to phase exit -> the exit guard correctly rejected the unresolved task -> the outer workflow incorrectly recorded a terminal phase failure instead of recovering the same task.",
+      "testGap": "Unit tests covered APPROVED-to-phase-exit and PENDING-gate rejection separately, while dispatch tests mocked every APPROVED publication as gateApproved. The Gherkin review-dispatch scenarios had no case combining an APPROVED manifest, PENDING / terminal_remediation_required gate, unchecked declared review task, and a later verification task. No restart scenario distinguished a response without a receipt from a complete response/receipt pair.",
+      "missingDecision": "The workflow lacked the invariant that a review manifest result never completes a declared review task independently of its exact-scope authoritative gate. It also conflated a remediation response with the verification receipt required to hand control back to the reviewer. Nonterminal remediation must reselect the same review task and recover its evidence; only terminal authoritative approval may complete that task and expose the next declared task or phase exit.",
+      "codeChanges": [
+        "apps/orchestrator/src/review-resume-route-policy.ts",
+        "apps/orchestrator/src/authoritative-review-integration.ts",
+        "apps/orchestrator/src/workflows/reviews/phase-review-state-application.ts",
+        "apps/orchestrator/src/workflows/phases/phase-review-resume-planner.ts",
+        "apps/orchestrator/src/workflows/reviews/phase-review-publication-application.ts",
+        "apps/orchestrator/src/workflows/reviews/phase-remediation-successor-application.ts",
+        "docs/architecture/simple-phase-executor.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/review-resume-route-policy.test.ts",
+        "apps/orchestrator/test/review-post-ingestion-route-policy.test.ts",
+        "apps/orchestrator/test/phase-review-publication-application.test.ts",
+        "apps/orchestrator/test/phase-remediation-successor-application.test.ts",
+        "apps/orchestrator/test/generic-phase-review-dispatch.feature",
+        "apps/orchestrator/test/generic-phase-review-dispatch.integration.test.ts",
+        "apps/orchestrator/test/review-resume-routing.feature",
+        "apps/orchestrator/test/review-resume-routing-integration.test.ts",
+        "apps/orchestrator/test/review-remediation-lifecycle-integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-017",
+      "date": "2026-07-23",
+      "summary": "Classify one plan-authorized runtime hop from durable work evidence and preserve independent child lineage",
+      "transitionIds": [
+        "WF-RUNTIME-FALLBACK",
+        "WF-RUNTIME-RECOVERY",
+        "WF-RUNTIME-TERMINAL",
+        "WF-DIRECT-HOST-NO-LAUNCH",
+        "WF-RUNTIME-NESTED-DISPATCH",
+        "WF-RUNTIME-RECEIPT-SETTLE"
+      ],
+      "whyHappened": "The accepted routing provider could describe one optional second route and the isolated executor could run one primary, but no runtime owner classified that second route from durable substantive-work state. The first Phase 4 implementation then added direct and nested adapter classes without production callers, allowed a running source with work state none, wrote the handoff edge only after child completion, and classified persistence-authority failures as if they were safe route failures. The first remediation returned callable knowledge/direct methods and invoked them from tests, but index consumed only Code Review, so four methods remained outside real command and lifecycle paths.",
+      "causalChain": "A primary route failed -> legacy workflow recovery interpreted free-form failure/output and launched another worker -> the first coordinator classified every failed executor result -> a persistence failure or work-state read rejection could reach step 1 -> standalone dispatch and bootstrap tests called adapters and returned methods that production phase/feature/completion/direct paths never consumed -> direct mismatch awaited child completion before recording the edge and could leave the source process live.",
+      "testGap": "The plan provider tests stopped before execution, and initial Phase 4 tests called standalone adapters or returned bootstrap methods rather than DirectImplementationSkillApplication, PhaseReviewExecutionApplication, RuntimeKnowledgeWorkerLifecycleApplication, and detached completion. They lacked a process barrier, late-source and persistence matrices, route-match positive control, index caller audit, post-completion curator barrier, and production lifecycle coverage for all four nested actions.",
+      "missingDecision": "The missing invariant was one chain-level authority plus explicit production entry ownership: RuntimeExecutionCoordinator may classify only terminal non-persistence primary failures; DirectSessionHandoffAdapter runs from the production direct command while the source is preparing and persists its edge before child work; every nested lifecycle method must be consumed in index and reached from review, phase exit, feature lessons, or successful detached completion, not merely returned or test-invoked.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/handoff-plan-execution-contracts.ts",
+        "apps/orchestrator/src/runtime/pi/handoff-plan-executor.ts",
+        "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
+        "apps/orchestrator/src/runtime/pi/runtime-worker-dispatch.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/index.ts",
+        "apps/orchestrator/src/workflows/implementation/autonomous-implementation-workflow-application.ts",
+        "apps/orchestrator/src/workflows/knowledge/runtime-knowledge-worker-lifecycle-application.ts",
+        "apps/orchestrator/src/workflows/phases/detached-completion-worker-application.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "apps/orchestrator/src/workflows/reviews/phase-review-execution-application.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts",
+        "apps/orchestrator/test/runtime-worker-dispatch.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/runtime-knowledge-worker-lifecycle.test.ts",
+        "apps/orchestrator/test/detached-completion-worker-application.test.ts",
+        "apps/orchestrator/test/direct-implementation-skill-application.test.ts",
+        "apps/orchestrator/test/phase-review-execution-application.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-018",
+      "date": "2026-07-23",
+      "summary": "Start resumed specialist work without fabricating parent invocation lineage",
+      "transitionIds": [
+        "WF-RUNTIME-NESTED-DISPATCH",
+        "WF-RUNTIME-RESUMED-SPECIALIST"
+      ],
+      "whyHappened": "The nested-specialist migration assumed every Code Review and knowledge action runs after a root model invocation in the same workflow run. Continue Implementing can instead create a new run and resume directly at an unresolved review task, so no current-run parent exists and the specialist failed before process launch with RUNTIME_PARENT_INVOCATION_REQUIRED.",
+      "causalChain": "A prior implementation run left durable work awaiting review -> Continue created a fresh workflow run and selected the review task -> the production review boundary required nested execution -> findRuntimeParent searched only the new run -> no root invocation existed -> the worker failed before Pi launch and every retry repeated the same topology.",
+      "testGap": "The production-composition test manually launched a synthetic parent prompt before every nested specialist. No unit or Gherkin scenario entered a specialist as the first model invocation of a resumed run, asserted current card/phase/task scope on its receipt, or prohibited a fake parent receipt.",
+      "missingDecision": "The runtime contract defined nested lineage but did not define invocation topology when a durable workflow resumes directly at a specialist in a new run. The missing invariant is that nesting requires a real parent; the first actual model invocation in a resumed run is an independently planned, fully scoped root specialist chain.",
+      "codeChanges": [
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/runtime/pi/specialist-runtime-dispatch-application.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/specialist-runtime-dispatch-application.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-019",
+      "date": "2026-07-24",
+      "summary": "Replace the Refine Feature completion estimate with progress-based liveness and durable artifact resume",
+      "transitionIds": [
+        "WF-REFINE-PROGRESS",
+        "WF-REFINE-INTERRUPT",
+        "WF-REFINE-RESUME",
+        "WF-REFINE-EXECUTE",
+        "WF-REFINE-RECOVER",
+        "WF-RUNTIME-FALLBACK",
+        "WF-RUNTIME-RECOVERY",
+        "WF-RUNTIME-TERMINAL"
+      ],
+      "whyHappened": "Refine Feature originally received a dedicated 15-minute total timeout when refinement was described as one large JSON response. The workflow evolved into a tool-enabled process that writes core planning artifacts and a refinement-defined number of phase files, but the estimated completion duration remained a process-killing safety boundary. A productive worker was terminated while writing phase artifacts, its runtime receipt still said workState none, and route-sequence exhaustion replaced the known timeout in the dashboard.",
+      "causalChain": "A repository example value became the source fallback -> the worker inherited both implementation idle handling and the fixed Refine total timer -> valid writes continued near the deadline -> the wall-clock timer killed the process regardless of recent activity -> write/edit events were not connected to runtime mutation state -> the one-step coordinator returned RUNTIME_ROUTE_SEQUENCE_EXHAUSTED -> the generic failure brief recommended implementation phase-task recovery instead of refinement artifact resume.",
+      "testGap": "The old test asserted only that Refine Feature passed a dedicated timeout value to the worker. No fake-clock/process test proved that productive activity beyond that duration survives, no generic Gherkin route covered stall versus explicit maximum, no test projected arbitrary contract phase counts, and no runtime integration test asserted that a successful artifact write changes workState before a later stop.",
+      "missingDecision": "The missing invariant was that refinement completion time is not a safety contract. Hepha must stop silent work through a resettable stall circuit, apply a wall-clock maximum only when explicitly configured, persist contract-derived artifact progress, move runtime state away from none before mutation, and resume a later run from durable files without automatic clean-start fallback.",
+      "codeChanges": [
+        ".env.example",
+        "apps/orchestrator/src/bootstrap/orchestrator-runtime-settings.ts",
+        "apps/orchestrator/src/bootstrap/feature-preparation-applications.ts",
+        "apps/orchestrator/src/runtime/positive-integer-environment-policy.ts",
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "apps/orchestrator/src/application/features/refinement-artifact-progress.ts",
+        "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "apps/orchestrator/src/index.ts",
+        "docs/architecture/refine-feature-progress-timeout-and-resume.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/refinement-artifact-progress.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/orchestrator-runtime-settings.test.ts",
+        "apps/orchestrator/test/positive-integer-environment-policy.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature",
+        "apps/orchestrator/test/generic-refine-feature-execution-application.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-020",
+      "date": "2026-07-24",
+      "summary": "Recover valid Ready refinement after result-envelope drift and canonicalize architecture-debt query selectors",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-REFINE-RECOVER",
+        "WF-REFINE-FAIL"
+      ],
+      "whyHappened": "A resumed refinement correctly preserved four existing phases, created the four missing phases, validated the complete V3 handoff, and moved the FEAT to Ready, but returned repository-relative files entries instead of feature-relative Result V1 paths. Recovery then failed because a valid touch plan orders symbol records by relative path while the strict architecture-debt store requires the extracted symbol-name array itself to be lexically sorted; the adapter passed those independent query facts unsorted and translated invalid_input to store_unavailable.",
+      "causalChain": "The prompt said durable artifact paths but did not repeat the schema's feature-relative boundary -> the worker included MemoryBank/lifecycle/FEAT prefixes -> the strict result parser rejected the envelope after filesystem success -> recovered completion evaluated architecture debt -> relative-path-ordered plan symbols produced a non-lexical symbol-name list -> the store rejected its query input -> recovery returned false and the dashboard recorded a failed Refine workflow despite valid Ready artifacts.",
+      "testGap": "Parser tests covered unsupported paths and readiness tests covered sorted single-symbol fixtures separately. No execution test supplied an invalid COMPLETED envelope after Ready artifacts existed, and no architecture-debt integration fixture used symbols whose required relative-path order differed from symbol-name lexical order. Progress tests also did not distinguish creation of a missing phase from repair of an existing phase.",
+      "missingDecision": "The missing invariant was that independent strict-boundary query selectors must be canonicalized at the adapter even when their source artifact has another valid ordering contract. Result V1 paths remain feature-relative, while a reporting failure after complete Ready artifacts must enter the existing fail-closed recovery gates rather than invalidate filesystem work. Existing artifact edits must be presented as repairs, not generation.",
+      "codeChanges": [
+        ".hepha/commands/refine-feature.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "apps/orchestrator/src/workflows/prompts/feature-entry-prompts.ts",
+        "apps/orchestrator/src/architecture-debt-integration.ts",
+        "apps/orchestrator/src/application/features/refinement-artifact-progress.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/architecture-debt-future-touch.integration.test.ts",
+        "apps/orchestrator/test/refine-feature-execution-application.test.ts",
+        "apps/orchestrator/test/refinement-artifact-progress.test.ts",
+        "apps/orchestrator/test/feature-entry-prompts.test.ts",
+        "apps/orchestrator/test/workflow-failure-brief-presenter.test.ts",
+        "apps/orchestrator/test/generic-refine-feature-execution-application.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-021",
+      "date": "2026-07-24",
+      "summary": "Admit zero-based first phases at the plan-bound runtime context boundary",
+      "transitionIds": [
+        "WF-PHASE-WORKER"
+      ],
+      "whyHappened": "The V3 phase execution contract correctly declares phases with zero-based order, but the strict runtime attempt-context validator reused a positive-integer rule for phaseNumber. Start Implementing completed post-processing, selected Phase 0 and its first task, then rejected the invocation context before opening a runtime receipt or launching Pi.",
+      "causalChain": "Refinement authored the required order-0 entry phase -> Start Implementing moved the FEAT to In Progress and selected its first unresolved task -> ImplementationWorkerApplication preserved phaseNumber 0 -> the plan-bound runner projected the exact context -> isRuntimeAttemptContextV1 required phaseNumber greater than zero -> RuntimeExecutionCoordinator returned RUNTIME_INVALID_CONTEXT -> the dashboard incorrectly described a host schema mismatch as an Implementation Agent failure.",
+      "testGap": "Runtime executor and implementation-worker tests used only phases 2-4 even though generic phase contracts and production FEATs start at zero. No Gherkin runtime-boundary scenario asserted that a zero-based first phase reaches process launch, and failure-brief tests did not distinguish pre-launch host context rejection from worker failure.",
+      "missingDecision": "The missing invariant was that phase order is a non-negative zero-based index, not a positive business identifier. Strict runtime validation must accept zero while still rejecting negative, fractional, malformed, or unpaired contract/phase context, and pre-launch rejection must be diagnosed as host runtime failure.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/handoff-plan-execution-contracts.ts",
+        "packages/shared/src/runtime-execution/guards.ts",
+        "packages/shared/src/runtime-execution/projection-guards.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/handoff-plan-executor.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/workflow-failure-brief-presenter.test.ts",
+        "apps/orchestrator/test/pi-runtime-boundary.feature",
+        "apps/orchestrator/test/pi-runtime-boundary.integration.test.ts",
+        "packages/shared/test/runtime-execution-contracts.test.ts",
+        "packages/shared/test/runtime-evidence-projection-contracts.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-022",
+      "date": "2026-07-25",
+      "summary": "Route exhausted phase tasks through mandatory exit and scope task authority to the declared ledger",
+      "transitionIds": [
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE",
+        "WF-PHASE-GIT-COMPLETE",
+        "WF-PHASE-GIT-PENDING"
+      ],
+      "whyHappened": "Two independent shortcuts disagreed with the declared phase contract. First, a phase continuation result named phase_completed caused the autonomous loop to advance before PhaseExitLifecycleApplication, so FEAT-069 completed phases without their declared git checkpoints. After that shortcut was removed, FEAT-070 reached phase exit, where hasCheckedTaskLedger counted every Markdown checkbox in the document; unchecked machine sign-offs under Phase Checkpoint were misclassified as unresolved executable tasks even though both explicit Phase Task Ledger items and durable task rows were completed.",
+      "causalChain": "The final declared task settled -> deterministic reconciliation projected the phase document as COMPLETED -> pre-review continuation returned phase_completed -> the old coordinator shortcut skipped phase exit and checkpoint; after routing was corrected -> phase exit refreshed the completed document -> the completion authorization scanned all document checkboxes -> independent checkpoint sign-offs remained unchecked -> authorization threw an unresolved-task failure -> Continue Implementation retried the same contradictory boundary because the contract queue correctly had no task to dispatch.",
+      "testGap": "Coordinator tests exercised review-ready exit but not an advance_phase continuation with a declared checkpoint. Status-repository fixtures contained task checkboxes only, and task-ledger tests had no explicit Phase Task Ledger followed by an independent unchecked checkpoint checklist. No Gherkin scenario asserted that non-ledger checkboxes cannot become executable work, and the generic failure brief blamed a worker instead of the host authority disagreement.",
+      "missingDecision": "The missing invariant was that deterministic task settlement may update durable phase presentation but never bypasses the mandatory phase-exit boundary. When an explicit Phase Task Ledger exists, it is the only Markdown checkbox scope that defines executable task exhaustion; checkpoint sign-offs, acceptance lists, and other checkboxes are evidence or presentation, not task identities. A legacy whole-document fallback is retained only for documents without an explicit ledger.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/implementation/autonomous-implementation-workflow-application.ts",
+        "apps/orchestrator/src/workflows/phases/phase-task-ledger.ts",
+        "apps/orchestrator/src/workflows/phases/phase-status-document-repository.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/autonomous-implementation-workflow-application.test.ts",
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.feature",
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.integration.test.ts",
+        "apps/orchestrator/test/phase-task-ledger.test.ts",
+        "apps/orchestrator/test/phase-status-document-repository.test.ts",
+        "apps/orchestrator/test/generic-phase-task-ledger.feature",
+        "apps/orchestrator/test/generic-phase-task-ledger.integration.test.ts",
+        "apps/orchestrator/test/generic-phase-completion-authorization.feature",
+        "apps/orchestrator/test/generic-phase-completion-authorization.integration.test.ts",
+        "apps/orchestrator/test/workflow-failure-brief-presenter.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-023",
+      "date": "2026-07-25",
+      "summary": "Recover stale implementation authority or pause unchanged host transitions for a user decision",
+      "transitionIds": [
+        "WF-CONTINUE-RECONCILE",
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-NO-PROGRESS",
+        "WF-FINAL-COVERAGE-REMARK"
+      ],
+      "whyHappened": "FEAT-070 Phase 6 completed both declared tasks and passed the repaired full-verification profile, but its Quality Gate Evidence table also contained a non-blocking Test coverage row with a missing outcome. The reconciliation adapter classified every label containing the word test as the blocking Tests gate, so the later coverage row overwrote the valid Tests decision. The policy then selected the already-checked final verification task as a supposed recovery route. Worker entry correctly refused to execute completed work, pre-review selected the same checked task again, and the autonomous coordinator had no no-progress bound tied to durable state.",
+      "causalChain": "Full verification passed and checked the final task -> coverage telemetry remained unavailable/non-blocking -> substring gate normalization mapped Test coverage to Tests -> reconciliation reported a recoverable missing Tests gate -> policy returned select with the last checked task ID without invalidating it -> worker entry observed every task complete -> pre-review requested the same phase -> no FEAT/task/review/checkpoint evidence changed -> the host repeated the route thousands of times, consumed CPU, and grew progress logs without launching Pi.",
+      "testGap": "Adapter tests had no Quality Gate Evidence table containing both blocking Tests and advisory Test coverage rows. Policy tests asserted that a missing gate should select an already-checked task but never proved that the task could actually become executable. Coordinator tests covered individual repeats but had no unchanged before-and-after fingerprint scenario, no blocked-awaiting-user assertion, and no failure-brief classification for host no-progress pausing.",
+      "missingDecision": "The missing invariant was that advisory coverage is not a blocking gate namespace, and a checked task cannot be returned as executable recovery work without an authoritative invalidation mutation. Every repeated host route must demonstrate durable FEAT/task/review/checkpoint progress. If one recovery cycle returns to an identical route, decision, and fingerprint, evidence proves no progress without an arbitrary count: the workflow pauses as blocked, publishes exact guidance, preserves completed work, and waits for the user to choose Continue Implementation or Cancel.",
+      "codeChanges": [
+        "README.md",
+        "apps/orchestrator/src/bootstrap/implementation-run-applications.ts",
+        "apps/orchestrator/src/bootstrap/implementation-worker-applications.ts",
+        "apps/orchestrator/src/phase-state-reconciliation-adapter.ts",
+        "apps/orchestrator/src/phase-state-reconciliation-policy.ts",
+        "apps/orchestrator/src/workflows/implementation/autonomous-implementation-workflow-application.ts",
+        "apps/orchestrator/src/workflows/implementation/phase-durable-progress-fingerprint.ts",
+        "apps/orchestrator/src/workflows/implementation/phase-no-progress-circuit.ts",
+        "apps/orchestrator/src/workflows/phases/phase-failure-recording-application.ts",
+        "apps/orchestrator/src/workflows/recovery/implementation-auto-recovery-application.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/phase-no-progress-circuit.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-adapter.test.ts",
+        "apps/orchestrator/test/phase-state-reconciliation-policy.test.ts",
+        "apps/orchestrator/test/autonomous-implementation-workflow-application.test.ts",
+        "apps/orchestrator/test/implementation-auto-recovery-application.test.ts",
+        "apps/orchestrator/test/phase-failure-recording-application.test.ts",
+        "apps/orchestrator/test/workflow-failure-brief-presenter.test.ts",
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.feature",
+        "apps/orchestrator/test/generic-autonomous-implementation-workflow.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-025",
+      "date": "2026-07-26",
+      "summary": "Separate direct-host model authority from explicit orchestrated action admission",
+      "transitionIds": [
+        "WF-DIRECT-HOST-NO-LAUNCH",
+        "WF-RUNTIME-ACTION-ADMISSION",
+        "WF-RUNTIME-NESTED-DISPATCH",
+        "WF-RUNTIME-RESUMED-SPECIALIST"
+      ],
+      "whyHappened": "The original EPIC-011 runtime treated a direct Pi skill invocation as a candidate orchestrated launch and compared its current route with Hepha policy. Command-name helpers and a command-conditioned implementation route bundle also allowed workflow labels to become action authority before the registered launch boundary. During the corrective cutover, the complete registry-plan predicate was composed into specialist and implementation workers but generic task and nested adapters retained a reduced action-ID-only check.",
+      "causalChain": "A user selected a host model -> invoked a portable skill -> DirectSessionHandoffAdapter queried Hepha policy -> a mismatch created a second worker and orchestrated receipt; separately, a workflow command string entered actionForWorkflowCommand/getImplementationRoutes -> inferred an action bundle -> resolved plans before an explicit dispatch action was admitted. The first cutover then validated complete plans at only two consumers -> another structurally valid plan could conflict in type, role, prompt, or capability metadata -> generic task storage or nested coordinator execution could begin under incomplete registry authority.",
+      "testGap": "FEAT-062 proved pinned Pi routes, secret isolation, fallback, recovery, and direct mismatch transfer, but its direct scenario encoded the wrong transfer requirement. It had no Pi/Codex/Claude direct-host fixture, no complete portable production-asset admission, and no generic missing/unknown/conflicting action control that asserted zero resolver and runtime calls. Initial FEAT-071 tests mutated only plan action ID at generic and nested boundaries; they did not mutate action type, role, prompt version, or each capability independently through both public adapters, and the constructor audit did not require the shared complete predicate at every consumer.",
+      "missingDecision": "Execution mode is selected only by the entry point. Direct-host work never enters orchestrated routing. Every orchestrated root or nested launch admits one explicit top-level agent_action, checks registry and launch-node equality before resolution, and requires action ID, action type, role ID, prompt version, minimum context window, requiresApi, requiresReasoning, and requiresTools to equal one registry entry before storage, coordinator work, or spawn. Command names, filenames, roles, skill metadata, models, and route fields are never action authority.",
+      "codeChanges": [
+        "packages/shared/src/agent-tasks/contracts.ts",
+        "apps/orchestrator/src/agent-routing/routing-action-resolver.ts",
+        "apps/orchestrator/src/runtime/pi/agent-task-runtime.ts",
+        "apps/orchestrator/src/runtime/pi/specialist-runtime-dispatch-application.ts",
+        "apps/orchestrator/src/runtime/pi/runtime-worker-dispatch.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "packages/db/src/runtime-invocation/runtime-invocation-schema.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/agent-task-runtime.test.ts",
+        "apps/orchestrator/test/specialist-runtime-dispatch-application.test.ts",
+        "apps/orchestrator/test/runtime-worker-dispatch.test.ts",
+        "apps/orchestrator/test/agent-runtime-applications.test.ts",
+        "apps/orchestrator/test/feat-071-portable-model-authority.feature",
+        "apps/orchestrator/test/feat-071-portable-model-authority.integration.test.ts",
+        "packages/db/test/runtime-invocation-schema-migration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-026",
+      "date": "2026-07-26",
+      "summary": "Persist direct-host state-sync evidence without creating route authority",
+      "transitionIds": [
+        "WF-DIRECT-HOST-EVIDENCE"
+      ],
+      "whyHappened": "The routed FEAT-062 receipt tables could represent only orchestrated attempts. Direct procedures either had no durable execution record or were forced through the now-removed mismatch-transfer concept, so state sync and honest unrecorded host-model evidence had no route-incapable authority.",
+      "causalChain": "A direct host procedure completed deterministic state sync -> the only runtime store required an approved plan, route, authentication, attempts, and an orchestrated invocation identity -> direct work could not be represented without fabricating policy facts or remaining invisible -> FEAT Details could not distinguish a direct unobserved model from legacy activity.",
+      "testGap": "Earlier unit and browser evidence exercised orchestrated chains and legacy Not recorded presentation but had no generic public composition scenario that persisted direct state-sync evidence, reopened it by identity, joined both authorities, or rejected a direct record contaminated by an orchestrated policy field.",
+      "missingDecision": "Direct-host evidence is a separate exact-key SQLite authority. It may record deterministic state sync and explicitly trusted observed model provenance, but it cannot represent route, policy, launch, authentication, credential, attempt, or fallback facts. Exact replay is a no-op, identity collision rejects, both stores validate independently before membership filtering, and the public phase page uses one explicit ordered execution-mode union.",
+      "codeChanges": [
+        "packages/shared/src/runtime-execution/evidence-contracts.ts",
+        "packages/shared/src/runtime-execution/evidence-projection-contracts.ts",
+        "packages/db/src/runtime-invocation/direct-host-runtime-evidence-store.ts",
+        "apps/orchestrator/src/application/runtime-evidence/direct-host-runtime-evidence-application.ts",
+        "apps/orchestrator/src/application/runtime-evidence/runtime-evidence-application.ts",
+        "apps/web/src/workflow/runtime-evidence-panel.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "packages/db/test/direct-host-runtime-evidence-store.test.ts",
+        "apps/orchestrator/test/direct-host-runtime-evidence-application.test.ts",
+        "apps/orchestrator/test/runtime-evidence-application.test.ts",
+        "apps/orchestrator/test/generic-runtime-evidence-projection.feature",
+        "apps/orchestrator/test/generic-runtime-evidence-projection.integration.test.ts",
+        "apps/web/src/workflow/runtime-evidence-panel.test.tsx",
+        "apps/web/e2e/features/feat-071-portable-model-authority.feature",
+        "apps/web/e2e/feat-071-portable-model-authority.spec.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-027",
+      "date": "2026-07-27",
+      "summary": "Make authoritative fixer successor shape explicit and retries actionable",
+      "transitionIds": [
+        "WF-REMEDIATION-SUCCESSOR-VALIDATE",
+        "WF-FIXER-REREVIEW"
+      ],
+      "whyHappened": "The fixer prompt showed empty findingResponses/itemReceipts/testReceipts arrays and expected the model to infer the nested V1 contract. The fixer repeatedly emitted obsolete summary fields such as fixerDecision, remediatedItemIds, and completedTestIds. Authoritative ingress correctly rejected that payload, but collapsed the validator result to the generic message that the input was invalid, so every same-phase retry reproduced the same payload.",
+      "causalChain": "NEEDS_CHANGES manifest dispatched fixer -> fixer completed code and tests -> fixer emitted a non-canonical remediation response -> V1 validator returned invalid_shape -> integration erased the rejection detail -> repair prompt said only input is invalid -> fixer reused the same report JSON -> repeated fixer attempts never persisted the response/receipt -> independent reviewer was never eligible to run.",
+      "testGap": "Prompt tests asserted headings and placeholders but not the nested response item fields or receipt entry fields. Successor ingestion tests checked refusal codes but did not prove that the safe validator code/message reached the same-fixer repair brief for the obsolete payload shape observed in a real run.",
+      "missingDecision": "The fixer must append or update exactly one Fixer Response section in the existing NEEDS_CHANGES report and must not replace reviewer-owned text or create a fixer-authored review decision. The prompt must publish the complete canonical nested schema and explicitly separate human Markdown Fixer Decision fields from V1 remediation item fields. Authoritative ingress remains strict and performs no normalization, but a validator rejection must retain its sanitized contract code/message so the bounded retry can correct the payload. Only a persisted response plus bound receipt enables the independent reviewer rerun, which creates a new APPROVED or NEEDS_CHANGES report.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/prompts/phase-remediation-successor-prompt.ts",
+        "apps/orchestrator/src/authoritative-review-integration.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/phase-remediation-successor-prompt.test.ts",
+        "apps/orchestrator/test/authoritative-review-ingestion.test.ts",
+        "apps/orchestrator/test/review-remediation-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-028",
+      "date": "2026-07-27",
+      "summary": "Preserve primary provider failure while a mutation-owning fallback completes",
+      "transitionIds": [
+        "WF-RUNTIME-FALLBACK",
+        "WF-RUNTIME-RECEIPT-SETTLE"
+      ],
+      "whyHappened": "A valid active DeepSeek Pi-session connection was cataloged at api.deepseek.com, but runtime provider mapping recognized Pi-session connections only when they were the single installation default. Because OpenAI/Codex was the installation default, DeepSeek resolved to null and the primary attempt safely failed provider_unsupported before spawn. The coordinator then launched the approved GPT fallback without passing attempt lifecycle hooks, so the mutation tracker retained no current fallback attempt identity and rejected the first write with RUNTIME_PERSISTENCE_FAILED.",
+      "causalChain": "DeepSeek route selected -> pi_session was not the OpenAI installation-default connection -> provider mapper returned null -> durable primary failure provider_unsupported with work state none -> coordinator legally selected GPT fallback -> fallback process ran but beforeProcess hook was omitted -> first fallback write could not bind work state to the fallback attempt -> runtime killed a healthy fallback and failed the phase.",
+      "testGap": "The existing fallback integration returned plain text and performed no write/edit event. Coordinator tests proved route selection but did not prove that attempt lifecycle hooks were invoked for the second attempt. Provider tests mapped the DeepSeek endpoint for discovery but did not exercise runtime provider resolution for a non-default Pi-session connection. Presentation tests showed a generic fallback but did not explicitly assert a provider_unsupported primary beside a completed fallback.",
+      "missingDecision": "A unique code-owned Pi-session endpoint is sufficient runtime provider authority even when it is not the installation default; ambiguous endpoints still require explicit default disambiguation. Primary and fallback attempts keep separate lifecycle identities. The primary failure remains durable as the route-change reason, fallback mutations/checkpoints bind only to the fallback attempt, and a completed fallback completes the invocation and phase worker successfully. Only a failed fallback makes the invocation fail.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/pi-installation-default.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-installation-default.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/web/src/workflow/runtime-evidence-panel.test.tsx"
+      ]
+    },
+    {
+      "id": "WJ-2026-029",
+      "date": "2026-07-30",
+      "summary": "Prefer a writable fork for unconfigured phase checkpoint publication",
+      "transitionIds": [
+        "WF-PHASE-GIT-COMPLETE",
+        "WF-PHASE-GIT-PENDING"
+      ],
+      "whyHappened": "A completed phase checkpoint selected origin whenever the feature branch had no configured upstream. In a repository where origin is a read-only upstream and fork is the authenticated contributor remote, the push failed with HTTP 403 and left the phase checkpoint pending despite a valid local commit.",
+      "causalChain": "Phase checkpoint loaded an unconfigured feature branch -> selectPushRemote preferred origin whenever it existed -> push attempted the upstream remote rather than the writable fork -> publication failed -> WF-PHASE-GIT-PENDING stopped later phase selection.",
+      "testGap": "Remote-selection tests covered only repositories with origin as the sole remote. No unit policy matrix represented configured branch remotes, a fork plus upstream-origin topology, or an ambiguous multi-remote topology; no Gherkin route proved that checkpoint publication leaves origin untouched when fork is selected. Recovery coverage also assumed a clean worktree, so an unrelated later-phase edit incorrectly prevented publication of an already sealed checkpoint.",
+      "missingDecision": "The checkpoint contract lacked a generic remote-selection invariant for contributor forks. A valid configured branch remote must remain authoritative; otherwise a named fork is preferred over origin, a sole remote is accepted, and any other multiple-remote topology is rejected rather than guessing a publication target. A sealed checkpoint retry must verify that each immutable commit remains reachable from a current feature branch, then push without staging the worktree; unrelated later work is not checkpoint authority and must remain unstaged.",
+      "codeChanges": [
+        "apps/orchestrator/src/phase-git-checkpoint.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/phase-git-checkpoint.test.ts",
+        "apps/orchestrator/test/phase-git-checkpoint.feature",
+        "apps/orchestrator/test/phase-git-checkpoint.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-030",
+      "date": "2026-07-30",
+      "summary": "Reject contract-to-ledger drift before generic phase dispatch",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-CONTINUE-ELIGIBLE",
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE"
+      ],
+      "whyHappened": "An ordered phase contract declared two executable tasks while its explicit Markdown ledger also contained uncontracted descriptive checkboxes. The worker queue selected only the two contract tasks, but phase completion required every ledger checkbox to be checked, so completed work reached phase exit and was incorrectly rejected as unresolved.",
+      "causalChain": "Refinement/template alignment rendered descriptive work as ledger checkboxes -> contract-task projection ignored entries without a contract ID -> both declared tasks completed durably -> completion read the broader ledger state -> an extra unchecked checkbox denied phase exit after work had already run.",
+      "testGap": "Validation covered missing, unknown, reordered, and incorrectly checked contract markers, while task projection filtered non-contract entries. No unit, Gherkin, or dashboard journey created an extra uncontracted checkbox inside an explicit V3 ledger and required rejection before dispatch, visible blocked readiness, and no lifecycle side effects. The first admission correction also lacked a valid V3 continuation counterpart, which allowed the valid-validator branch to be treated as missing artifacts whenever a contract existed.",
+      "missingDecision": "V3 lacked the explicit invariant that PhaseExecutionContract.json is the machine sequence authority and the Phase Task Ledger is an exact durable projection: same count, order, contract IDs, and executors. The system also trusted a prior artifact-readiness projection instead of revalidating a live V3 contract at Start and Continue admission. Live validation is fail-closed only when invalid: a valid contract must not manufacture a missing-artifact blocker.",
+      "codeChanges": [
+        "apps/orchestrator/src/phase-execution-contract.ts",
+        "apps/orchestrator/src/refine-artifact-validator.ts",
+        "apps/orchestrator/src/feat-readiness-evaluator.ts",
+        "apps/orchestrator/src/phase-template-validator.ts",
+        "apps/orchestrator/src/phase-template-repair-command.ts",
+        "apps/orchestrator/src/workflows/phases/phase-task-document-repository.ts",
+        "apps/orchestrator/src/workflows/prompts/start-feature-post-process-prompt.ts",
+        ".hepha/commands/start-feature-postprocess.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/start-feature/SKILL.md",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "apps/web/src/workflow/workflow-overview-panel.tsx",
+        "docs/architecture/simple-phase-executor.md",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/phase-task-document-repository.test.ts",
+        "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts",
+        "apps/orchestrator/test/start-feature-post-process-prompt.test.ts",
+        "apps/web/src/workflow/workflow-overview-panel.test.tsx",
+        "apps/orchestrator/test/generic-phase-contract-task-projection.feature",
+        "apps/orchestrator/test/generic-phase-contract-task-projection.integration.test.ts",
+        "apps/web/e2e/features/workflow-interactions.feature",
+        "apps/web/e2e/workflow-interactions.spec.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-031",
+      "date": "2026-07-30",
+      "summary": "Enforce data-boundary immutability pattern: validate DTO invariants at construction, not in downstream functions",
+      "transitionIds": [
+        "WF-PHASE-TASK-NEXT",
+        "WF-PHASE-COMPLETE"
+      ],
+      "whyHappened": "PhaseReviewResumePlanningInput allowed awaitingIndependentRerun: true to coexist with nextOrderedTaskKind: \"code_review\" and no prior review evidence. The downstream planner received an impossible state and silently favoured rerun over baseline. The rerun executor then correctly rejected the request because no prior review artifact existed. The defect was not in the rerun executor, which correctly failed closed, but in the DTO boundary that allowed the impossible combination to propagate.",
+      "causalChain": "Session text created rerun state -> no scoped boundary validated the combination -> planner received both rerun and baseline flags true -> rerun precedence made the decision -> rerun executor correctly found no lineage -> phase failed with REVIEW_CONTRACT_V1_RERUN_LINEAGE_UNAVAILABLE",
+      "testGap": "The planner and rerun executor had individual tests. No test proved that awaitingIndependentRerun and nextOrderedTaskKind: code_review cannot be true simultaneously when no prior review evidence exists. The Gherkin invariant was absent.",
+      "missingDecision": "DTOs that carry lifecycle state must validate their invariants at construction. Downstream functions must never correct impossible state \u2014 the DTO boundary must make it structurally impossible. Immutability (readonly fields) and a factory function are the mechanism.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/phases/phase-review-resume-planner.ts",
+        "docs/architecture/data-boundary-immutability-pattern.md",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/phase-review-resume-planner.test.ts",
+        "apps/orchestrator/test/generic-phase-review-resume-planner.feature",
+        "apps/orchestrator/test/generic-phase-review-resume-planner.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-032",
+      "date": "2026-07-31",
+      "summary": "Add an explicit legacy MCP recipe-source compatibility boundary",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Native Hepha attempted to migrate proven DevCycle recipe behavior and deterministic lifecycle authority at the same time. Repeated failures could not distinguish a recipe defect from strict Markdown parsing, V3 artifact projection, phase routing, runtime dispatch, or model execution defects because there was no way to hold every shared runtime variable constant while changing only recipe authority.",
+      "causalChain": "Legacy MCP workflow worked in direct clients -> Hepha copied and expanded its instructions into native applications -> native lifecycle gates and generated document contracts evolved together -> failures crossed several boundaries -> fixes overfit individual observed output instead of isolating whether the recipe or shared executor was responsible.",
+      "testGap": "No unit or Gherkin scenario selected between proven MCP and native recipe authority for the same action identity, asserted that invalid source configuration fails at construction, proved one selected model receives an MCP-enabled invocation, or preserved native Hepha as the default rollback path.",
+      "missingDecision": "Recipe authority must be an explicit validated operation-level input. A compatibility run must bypass native lifecycle post-processing so the MCP/native comparison changes one variable, while model selection, Pi execution, telemetry, project identity, and user-visible action identity remain shared.",
+      "codeChanges": [
+        ".env.example",
+        "apps/orchestrator/src/workflows/recipes/feature-recipe-source-policy.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/runtime/mcp-compatibility-runtime-configuration.ts",
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-target-resolver.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/orchestrator/src/bootstrap/feature-projection-applications.ts",
+        "apps/orchestrator/src/bootstrap/orchestrator-runtime-settings.ts",
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/bootstrap/feature-recipe-source-applications.ts",
+        "apps/orchestrator/src/index.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/mcp-compatibility-runtime-configuration.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/generic-feature-workflow-summary.integration.test.ts",
+        "apps/orchestrator/test/workflow-receipt-policy.test.ts",
+        "apps/orchestrator/test/feature-projection-applications.test.ts",
+        "apps/orchestrator/test/feat-062-projection-composition.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-033",
+      "date": "2026-08-01",
+      "summary": "Make unresolved validation markers the sole Deep-Dive readiness authority",
+      "transitionIds": [
+        "WF-DEEP-DIVE-MARKER-GATE",
+        "WF-CONTINUE-ELIGIBLE"
+      ],
+      "whyHappened": "The dashboard projected implementation and refinement outputs, Deep-Dive receipt history, and source-hash freshness as clarification prerequisites for newly submitted FEATs. Linking phases or making other marker-free lifecycle edits therefore appeared to require another Deep-Dive even though no unresolved decision existed.",
+      "causalChain": "one aggregate readiness evaluator served every lifecycle action -> submitted cards ran future artifact validators -> hash mismatch and absent receipt became blocking Deep-Dive reasons -> dashboard mixed those reasons with explicit validation markers -> users were asked to recreate files or repeat clarification before the operations that produce those files",
+      "testGap": "No acceptance test proved that a submitted FEAT with zero validation markers remains clarification-ready when metadata is absent, its file hash changes, or future refinement artifacts do not exist. Continue also retained an unconditional source-hash recovery call.",
+      "missingDecision": "Deep-Dive is required if and only if the authoritative description contains an unresolved validation marker. Marker-free file changes, phase-link updates, metadata availability, historical receipts, and source hashes are audit context rather than workflow authority. Submitted readiness must not validate outputs of later actions.",
+      "codeChanges": [
+        "apps/orchestrator/src/work-item-validation.ts",
+        "apps/orchestrator/src/feat-readiness-evaluator.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-target-resolver.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/orchestrator/src/application/features/continue-implementation-application.ts",
+        "apps/web/src/app-shell.tsx",
+        "apps/web/src/boards/board-validation.tsx",
+        "apps/web/src/projects/project-runtime-analytics.ts",
+        "apps/web/src/projects/projects-view.tsx",
+        "apps/web/src/workflow/epic-feature-extraction-panel.tsx",
+        "apps/web/src/workflow/workflow-interaction-panel.tsx",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "docs/workflow/commands.md",
+        "docs/workflow/lifecycle.md",
+        "docs/product/dashboard-definition.md",
+        "docs/architecture/design-document-deep-dive-freshness.md",
+        "docs/quality/web-module-inventory.json",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/work-item-validation.test.ts",
+        "apps/orchestrator/test/work-item-deep-dive-validation-contract.test.ts",
+        "apps/orchestrator/test/work-item-deep-dive-validation-policy.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.test.ts",
+        "apps/orchestrator/test/feat-readiness-evaluator.integration.test.ts",
+        "apps/orchestrator/test/feature-workflow-target-resolver.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/continue-implementation-application.test.ts",
+        "apps/orchestrator/test/generic-design-document-deep-dive-freshness.feature",
+        "apps/orchestrator/test/generic-design-document-deep-dive-freshness.integration.test.ts",
+        "apps/orchestrator/test/generic-feature-workflow-target.feature",
+        "apps/orchestrator/test/generic-feature-workflow-target.integration.test.ts",
+        "apps/orchestrator/test/generic-continue-implementation-application.feature",
+        "apps/orchestrator/test/generic-continue-implementation-application.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-034",
+      "date": "2026-08-01",
+      "summary": "Close implementation decisions in Deep-Dive and prohibit deferred human gates",
+      "transitionIds": [
+        "WF-DD-START",
+        "WF-DD-COMPLETE",
+        "WF-REFINE-DEEP-DIVE",
+        "WF-RECIPE-SOURCE-MCP",
+        "WF-CONTINUE-ELIGIBLE"
+      ],
+      "whyHappened": "A DevCycle-refined feature entered Phase 1 with a task requiring product/platform owner attestation and CODEOWNER approval. Autonomous Continue correctly read the task literally and stopped repeatedly, even though implementation should have received all product decisions from Deep-Dive and should own technical decision, automated review, and acceptance execution.",
+      "causalChain": "Deep-Dive question planning used markers plus an arbitrary fallback count and allowed FEAT decisions to be deferred -> Refine had no invariant or artifact check forbidding human-sign-off tasks -> the MCP compatibility wrapper treated provider prose as unconstrained lifecycle authority -> Continue interpreted the generated owner-attestation task as a valid human blocker -> autonomous execution terminated without code work.",
+      "testGap": "No Deep-Dive prompt test required exhaustive implementation-decision closure, no fallback-option test prohibited deferral to refinement, no DevCycle refinement validator rejected a human-sign-off task, no compatibility-prompt test asserted delegated autonomous decision authority, and continuation readiness had no provider-specific in-progress artifact fixture.",
+      "missingDecision": "Deep-Dive owns target ambiguity closure; Refine must publish only tasks executable by an autonomous developer; autonomous and single-phase workers are delegated decision authority and invoke automated review/acceptance; provider ownership selects artifact validation without weakening lifecycle invariants.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/deep-dive/deep-dive-question-planner.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-document-updater.ts",
+        "apps/orchestrator/src/application/features/devcycle-refine-artifact-validator.ts",
+        "apps/orchestrator/src/bootstrap/feature-projection-applications.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-change-justification-log.json",
+        "docs/workflow/commands.md",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-question-planner.test.ts",
+        "apps/orchestrator/test/deep-dive-document-updater.test.ts",
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.integration.test.ts",
+        "apps/orchestrator/test/feat-062-projection-composition.test.ts",
+        "apps/web/src/projects/project-runtime-analytics.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-035",
+      "date": "2026-08-01",
+      "summary": "Separate current-action readiness from Complete Feature readiness",
+      "transitionIds": [
+        "WF-CONTINUE-ELIGIBLE",
+        "WF-COMPLETE-NOT-READY"
+      ],
+      "whyHappened": "An in-progress FEAT in Phase 1 exposed Continue Implementing, but the detail blade labelled the overall workflow blocked and rendered native structural errors from every future phase. A board badge also treated missing evidence from an already completed early phase as a current implementation blocker.",
+      "causalChain": "one readiness field carried preparation, continuation, and structural completion diagnostics -> MCP action availability correctly bypassed native continuation gates -> presentation independently rendered the stale blocking list -> the UI contradicted its enabled Continue action -> completion-only quality evidence appeared as a board-level current blocker.",
+      "testGap": "No projection test required readiness to become ready when MCP Continue is available, no presentation test separated Current workflow from Complete Feature readiness, no mapper test suppressed completion-only blockers during continuation, and no board test limited quality-gap badges to implementation-complete features.",
+      "missingDecision": "Readiness is action-scoped. Current workflow reflects the action that can run now; Complete Feature has an independent finalization projection. Future phase and final quality obligations may block completion later but cannot label an available Continue action blocked.",
+      "codeChanges": [
+        "packages/shared/src/workflow/runtime-contracts.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/web/src/workflow/workflow-mappers.ts",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "apps/web/src/workflow/workflow-interaction-panel.tsx",
+        "apps/web/src/workflow/workflow-overview-panel.tsx",
+        "apps/web/src/workflow/completion-readiness-panel.tsx",
+        "apps/web/src/boards/board-validation.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-change-justification-log.json",
+        "docs/workflow/commands.md",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/generic-feature-workflow-summary.feature",
+        "apps/orchestrator/test/generic-feature-workflow-summary.integration.test.ts",
+        "apps/web/src/workflow/workflow-mappers.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts",
+        "apps/web/src/workflow/workflow-overview-panel.test.tsx",
+        "apps/web/src/workflow/workflow-interaction-panel.test.tsx",
+        "apps/web/src/boards/board-validation.test.tsx"
+      ]
+    },
+    {
+      "id": "WJ-2026-036",
+      "date": "2026-08-01",
+      "summary": "Attribute AI execution time and command models to implementation phases",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "The FEAT timing summary counted DevCycle MCP Start and Continue workers, but each phase row said Legacy activity / Not recorded because compatibility workers were persisted without phase identity. Phase rows also omitted the model selected by the orchestrator command.",
+      "causalChain": "the MCP compatibility boundary dispatched implementation workers with null phase metadata -> agent executions contributed only to the feature aggregate -> phase timing read only phase-run records -> partial Phase 1 work and completed Phase 0 work showed no AI time -> the worker persisted not-recorded instead of the immutable command-plan model -> the operator could not audit which model the orchestrator commanded.",
+      "testGap": "No compatibility application test required Start/Continue dispatch to bind the first unresolved lifecycle phase, no worker test required persistence of the command-plan model, no presentation test summed settled agent attempts for an in-progress phase, and no legacy reconciliation test covered pre-fix MCP records.",
+      "missingDecision": "Every implementation dispatch owns a phase telemetry scope selected from lifecycle state, settled agent attempts accumulate before phase completion, autonomous cross-phase sessions are segmented by durable phase-artifact update boundaries, and completed/in-progress phases retain expandable orchestrator runtime evidence. The command-plan model is displayed as intent while observed/fallback routing remains separate evidence.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "packages/shared/src/workflow/runtime-contracts.ts",
+        "packages/db/src/contracts/workflow-contracts.ts",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "apps/web/src/workflow/phase-execution-telemetry.ts",
+        "apps/web/src/workflow/workflow-phase-list-panel.tsx",
+        "apps/web/src/workflow/workflow-interaction-panel.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json",
+        "docs/product/dashboard-definition.md",
+        "docs/workflow/commands.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.integration.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts",
+        "apps/web/src/workflow/phase-execution-telemetry.test.ts",
+        "apps/web/src/workflow/workflow-phase-list-panel.test.tsx"
+      ]
+    },
+    {
+      "id": "WJ-2026-037",
+      "date": "2026-08-02",
+      "summary": "Replace the implementation completion deadline with progress-based liveness",
+      "transitionIds": [
+        "WF-IMPLEMENTATION-PROGRESS",
+        "WF-IMPLEMENTATION-STALL",
+        "WF-IMPLEMENTATION-MAXIMUM"
+      ],
+      "whyHappened": "Implementation workers inherited a repository-default 30-minute wall-clock maximum even though autonomous feature work can remain productive for several hours. One worker completed multiple phases, entered the next phase, continued emitting tool and Pi output, and was killed at exactly 1,800 seconds despite active progress.",
+      "causalChain": "the implementation profile supplied both a resettable idle timer and a fixed default total timer -> every stdout and stderr event correctly reset idle liveness -> the independent wall-clock timer never reset -> productive work crossed the 30-minute boundary -> Hepha terminated Pi mid-task and projected a recovery-required workflow failure",
+      "testGap": "The runner tests proved that callers could explicitly disable a maximum and that continuing activity did not bypass an explicit maximum, but no test required the implementation profile's repository default itself to disable the maximum. Runtime-settings tests asserted numeric values without distinguishing inactivity from total duration, and no generic Gherkin scenario defined productive multi-hour implementation liveness.",
+      "missingDecision": "Implementation completion duration is not a safety contract. The repository default must use one resettable no-progress stall circuit driven by observable current-worker output, process liveness alone must not reset it, and a wall-clock maximum may exist only as explicit operator policy.",
+      "codeChanges": [
+        ".env.example",
+        "apps/orchestrator/src/bootstrap/orchestrator-runtime-settings.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/orchestrator-runtime-settings.test.ts",
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.feature",
+        "apps/orchestrator/test/generic-implementation-worker-progress-liveness.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-038",
+      "date": "2026-08-02",
+      "summary": "Keep manual verification available after provider-owned feature completion",
+      "transitionIds": [
+        "WF-MANUAL-PACK-POST-COMPLETE",
+        "WF-MANUAL-FAIL",
+        "WF-MANUAL-PASS-POST-COMPLETE"
+      ],
+      "whyHappened": "The native workflow originally kept a feature in 03_IN_PROGRESS until manual review and manual tests were recorded. A compatibility provider now legitimately executes its own Complete Feature procedure and moves the FEAT to 04_COMPLETED before Hepha's local manual verification pack is generated. The workflow projector restricted pack generation and human evidence to 03_IN_PROGRESS, leaving the completed card's Generate Test Pack action disabled even though the adapter and SQLite store could operate on the completed folder.",
+      "causalChain": "manual verification eligibility was coupled to the pre-completion folder -> the provider completed and archived the FEAT in one autonomous call -> implementation evidence remained resolved and the Manual Tests panel remained visible -> the projector returned canGenerateManualTestPack false solely because the folder was 04_COMPLETED -> the user could not create or record post-completion evidence",
+      "testGap": "Manual verification tests covered unresolved rejection and the in-progress all-pass transition into Complete Feature, but no generic scenario projected a completed FEAT or required an all-pass result to avoid starting Complete Feature twice.",
+      "missingDecision": "Feature completion is not a filesystem freeze and manual verification is an independent SQLite-authoritative evidence dimension. Completed FEATs may create derived pack documents, record findings, and become manual-tests green without changing lifecycle folder or depending on the implementation recipe provider.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json",
+        "docs/product/dashboard-definition.md",
+        "docs/workflow/commands.md",
+        "docs/workflow/lifecycle.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/manual-test-verification-application.test.ts",
+        "apps/orchestrator/test/generic-feature-workflow-summary.feature",
+        "apps/orchestrator/test/generic-feature-workflow-summary.integration.test.ts",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-039",
+      "date": "2026-08-02",
+      "summary": "Resolve authenticated Pi providers and explain route exhaustion",
+      "transitionIds": [
+        "WF-RUNTIME-LAUNCH-REJECT"
+      ],
+      "whyHappened": "Refine Feature selected the available OpenAI gpt-5.6-sol route, but the OpenAI endpoint represents both openai and openai-codex while Pi's explicit installation default was DeepSeek. Runtime provider resolution therefore failed closed as provider_unsupported before process spawn. The workflow collapsed the durable attempt cause into RUNTIME_ROUTE_SEQUENCE_EXHAUSTED, so the detail blade showed neither the failed route nor a viable recovery action, and retrying the unchanged route deterministically failed again.",
+      "causalChain": "available catalog route selected -> endpoint exposed multiple code-owned provider identities -> route did not match the installation default -> provider resolver ignored the uniquely authenticated openai-codex identity -> primary preparation failed provider_unsupported with no fallback -> prompt runner discarded the durable attempt cause -> UI showed only sequence exhausted",
+      "testGap": "Provider resolution tests covered installation-default OpenAI and unique DeepSeek endpoints but not an ambiguous endpoint with exactly one authenticated Pi provider. Worker integration tests asserted durable provider_unsupported evidence with a successful fallback but did not require a no-fallback error to expose route, cause, fallback state, and recovery guidance.",
+      "missingDecision": "For a Pi-session endpoint with multiple code-owned provider identities, exactly one identity present in Pi authentication state is sufficient runtime authority when the installation default does not identify that connection. Credential values remain private. Zero or multiple matches fail closed. Exhaustion errors must present durable attempt evidence and an actionable routing recovery rather than only the coordinator's aggregate code.",
+      "codeChanges": [
+        "apps/orchestrator/src/bootstrap/agent-runtime-applications.ts",
+        "apps/orchestrator/src/runtime/pi/pi-installation-default.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/runtime/pi/runtime-route-failure-presentation.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-installation-default.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-040",
+      "date": "2026-08-02",
+      "summary": "Turn incomplete MCP refinement into interactive Deep-Dive recovery",
+      "transitionIds": [
+        "WF-MCP-REFINE-POSTCONDITION-BLOCK"
+      ],
+      "whyHappened": "Two MCP Refine workers correctly refused to publish artifacts because the generated FEAT still lacked concrete scope and acceptance criteria. The compatibility application treated a zero-exit Pi process as action completion, populated refineCompletedAt, and projected every workflow node completed even though the FEAT remained submitted with no artifacts. The worker summary contained actionable Deep-Dive questions, but no open Deep-Dive session or recovery action was exposed because the earlier fallback had consumed the source markers.",
+      "causalChain": "placeholder FEAT entered Deep-Dive -> failed document rewrite appended generic Accept current decisions and consumed markers -> MCP Refine discovered unresolved target decisions -> worker exited normally without artifacts -> compatibility boundary equated process success with lifecycle completion -> completed metadata hid the blocked result transition -> marker-only recovery presentation offered Refine again instead of Deep-Dive",
+      "testGap": "Compatibility tests asserted only worker dispatch and process completion; they did not require Ready To Develop state plus complete provider artifacts before recording refinement complete. Projection tests did not reconcile false completed metadata, and presentation tests required source markers even when the current Refine action had discovered a new target decision.",
+      "missingDecision": "Model-process completion and workflow-action completion are separate. MCP refinement completes only when provider-independent postconditions are true. A current blocked Refine result may authorize the normal Deep-Dive recovery after earlier source markers were consumed; historical receipts and hashes still do not create readiness requirements.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/bootstrap/feature-recipe-source-applications.ts",
+        "apps/orchestrator/src/application/features/feature-workflow-summary-projector.ts",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-041",
+      "date": "2026-08-02",
+      "summary": "Keep productive Deep-Dive question discovery alive and reject synthetic fallback rounds",
+      "transitionIds": [
+        "WF-DD-START",
+        "WF-DD-FAIL"
+      ],
+      "whyHappened": "A comprehensive FEAT question worker spent three minutes reading the target, parent EPIC, related features, architecture, design baselines, and source code, but the generic 180-second prompt maximum killed it while productive. DeepDiveQuestionPlanner caught that failure and silently replaced the unfinished analysis with three generic User workflow, Acceptance criteria, and Feature boundaries questions whose recommended option was Accept current. Those questions repeated the earlier invalid fallback and could falsely close an underspecified target.",
+      "causalChain": "comprehensive question discovery required broad evidence -> worker emitted continuing tool progress -> absolute generic prompt timeout ignored that progress -> model process was killed before its JSON manifest -> planner treated failure as permission to synthesize generic questions -> UI presented the synthetic round as agent-finished authoritative decisions",
+      "testGap": "Question-planner tests expected local fallback after every model failure and asserted a fixed timeoutMs option. No test required no absolute maximum, a progress inactivity circuit, or visible failure instead of synthetic clarification authority.",
+      "missingDecision": "Deep-Dive question discovery follows progress-based liveness. Productive work may exceed the old generic duration; inactivity still stops a stalled worker. Failed, empty, or malformed model analysis cannot be replaced by generic decisions and must follow the durable Deep-Dive failure path for explicit retry.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/deep-dive/deep-dive-question-planner.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-question-planner.test.ts",
+        "apps/orchestrator/test/generic-deep-dive-question-planning.feature",
+        "apps/orchestrator/test/generic-deep-dive-question-planning.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-042",
+      "date": "2026-08-02",
+      "summary": "Discover ordered acceptance criteria and keep TestPack failures visible",
+      "transitionIds": [
+        "WF-MANUAL-PACK-POST-COMPLETE"
+      ],
+      "whyHappened": "FEAT-002 completed with twenty-seven concrete numbered acceptance criteria. TestPack source discovery recognized only dash or asterisk list items, so generation found no source items and returned HTTP 400. The action controller swallowed the rejected request after sending the error to a global surface hidden behind the modal, refreshed the unchanged missing status, and made the button appear to do nothing. Missing pack status also projected a PDF link because optional chaining produced undefined and the policy compared it only with null.",
+      "causalChain": "provider authored ordered acceptance criteria -> unordered-only extractor returned an empty manifest -> generation failed before durable pack creation -> HTTP response exposed message but not the web client's safe error field -> controller consumed the exception -> modal retained only missing status -> undefined PDF path compared unequal to null -> invalid PDF links remained visible",
+      "testGap": "Source-discovery tests covered only unordered acceptance criteria. Missing-status tests asserted the message but not artifact-link flags. Panel integration asserted that the generation button existed but never exercised a failed click or required its reason to remain inside the dialog.",
+      "missingDecision": "Supported acceptance sections may use ordered, unordered, or checkbox criteria and each item is extracted exactly once. Failed manual-verification actions must return a safe actionable error, reject through the controller, and render that reason inside the still-open dialog. Missing packs project no artifact links.",
+      "codeChanges": [
+        "apps/orchestrator/src/manual-test-verification/source-discovery.ts",
+        "apps/orchestrator/src/manual-test-verification-policy.ts",
+        "apps/orchestrator/src/transport/http/routes/manual-test-verification-routes.ts",
+        "apps/web/src/manual-tests/use-manual-test-actions.ts",
+        "apps/web/src/manual-tests/manual-test-verification-panel.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/manual-test-verification-foundations.test.ts",
+        "apps/orchestrator/test/manual-test-verification-policy.test.ts",
+        "apps/orchestrator/test/manual-test-verification-routes.test.ts",
+        "apps/web/src/manual-tests/generic-manual-test-actions.integration.test.ts",
+        "apps/web/src/manual-tests/generic-manual-test-verification.integration.test.tsx",
+        "apps/web/src/manual-tests/generic-manual-test-verification.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-043",
+      "date": "2026-08-02",
+      "summary": "Preserve complete Deep-Dive manifests and expose long-running generation honestly",
+      "transitionIds": [
+        "WF-DD-START"
+      ],
+      "whyHappened": "The FEAT-003 question worker performed productive research for about eight minutes and returned twenty-eight concrete vault, cryptography, lifecycle, compatibility, and acceptance decisions. The parser silently sliced every valid manifest to eight questions, contradicting the prompt's no-arbitrary-count contract and discarding twenty decisions. During research the overlay showed only an indefinite spinner, so productive output looked frozen even while the worker stream grew continuously.",
+      "causalChain": "question prompt required complete decision closure -> worker inspected authoritative dependencies and emitted 28 valid questions -> parser retained only the first 8 through a legacy presentation cap -> SQLite persisted the truncated round -> UI represented the 8 as complete authority -> generation overlay exposed neither elapsed time nor safe background continuation",
+      "testGap": "The parser test explicitly required truncation to eight rather than proving complete coverage preservation. The overlay test asserted only a generating label and disabled button, not elapsed/background liveness guidance.",
+      "missingDecision": "Question-count limits cannot override decision closure. Every structurally valid model-generated question must be persisted. Long productive generation remains progress-monitored and the dialog must show elapsed time, explain background continuation, and distinguish a progress stall from duration alone.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/deep-dive/deep-dive-question-parser.ts",
+        "apps/web/src/deep-dive/deep-dive-overlay.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-question-parser.test.ts",
+        "apps/orchestrator/test/generic-deep-dive-question-planning.feature",
+        "apps/web/src/deep-dive/generic-deep-dive-overlay.integration.test.tsx",
+        "apps/web/src/deep-dive/generic-deep-dive-overlay.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-044",
+      "date": "2026-08-02",
+      "summary": "Evaluate every Deep-Dive answer with an adaptive follow-up turn",
+      "transitionIds": [
+        "WF-DD-ADAPTIVE-FOLLOW-UP"
+      ],
+      "whyHappened": "The direct FEAT-003 interview reached thirty-nine questions because each answer exposed dependent cryptographic, credential-admission, record-layout, and lifecycle decisions. Hepha generated a broad initial manifest but treated it as a closed queue, so saving an option could never ask the next answer-dependent question and the final static answer could authorize document update without an adaptive closure audit.",
+      "causalChain": "initial source analysis generated independent and anticipated decisions -> user selected a concrete option -> session application marked only that static row answered -> no model evaluated the answer consequence -> dependent decisions remained absent -> all static rows could become ready_for_update despite an incomplete interview branch",
+      "testGap": "Session tests required the final static answer to become ready immediately and had no follow-up planner, parent linkage, insertion ordering, no-tools follow-up route, failure boundary, or adaptive UI state.",
+      "missingDecision": "The default Hepha interview starts with exactly one highest-priority opening question rather than waiting for a static complete batch. Every saved answer is durable before evaluation and then receives one immediate no-tools adaptive interviewer turn using the authoritative source and full transcript. A dependent question is inserted directly after its parent and traced by parentQuestionId. The final pending answer is also a closure audit. Follow-up failure fails closed and cannot authorize document update.",
+      "codeChanges": [
+        "packages/shared/src/deep-dive/contracts.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-follow-up-planner.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-question-planner.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-session-application.ts",
+        "apps/orchestrator/src/bootstrap/deep-dive-applications.ts",
+        "apps/web/src/deep-dive/use-deep-dive-controller.ts",
+        "apps/web/src/deep-dive/deep-dive-overlay.tsx",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-follow-up-planner.test.ts",
+        "apps/orchestrator/test/deep-dive-session-application.test.ts",
+        "apps/orchestrator/test/generic-deep-dive-session.feature",
+        "apps/orchestrator/test/generic-deep-dive-session.integration.test.ts",
+        "apps/web/src/deep-dive/generic-deep-dive-overlay.feature",
+        "apps/web/src/deep-dive/generic-deep-dive-overlay.integration.test.tsx",
+        "apps/web/src/deep-dive/generic-deep-dive-controller.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-045",
+      "date": "2026-08-03",
+      "summary": "Keep Refine Feature documentation-only and statically discover quality commands",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "FEAT-005 refinement was collecting repository and dependency context when the planning worker emitted cargo search and cargo version probes in one shell turn. Hepha correctly blocked multiple Cargo commands, but the action then exhausted its route despite refinement requiring only documents, manifests, lockfiles, and a plan.",
+      "causalChain": "refinement recipe requested technology and command discovery -> worker treated discovery as permission to execute package-manager probes -> one turn emitted multiple Cargo commands -> implementation command-safety policy blocked the call -> no refinement artifacts were created -> runtime route sequence exhausted even though the FEAT had no unresolved decisions",
+      "testGap": "The MCP compatibility prompt tested decision ownership and postconditions but did not prohibit executing builds, tests, compilers, package registries, or toolchain probes during documentation-only refinement.",
+      "missingDecision": "Refine Feature discovers stack and quality commands statically from manifests, lockfiles, workflows, source, and documentation. It records commands without running them, does not mutate product implementation repositories, and may use documentation research when static evidence is insufficient.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-046",
+      "date": "2026-08-03",
+      "summary": "Put Cargo serialization and zero-warning authority in every implementation dispatch",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "The FEAT-005 implementation worker twice described a single Cargo command but appended cargo --version or cargo test to the same shell call. Hepha blocked both requests correctly, yet each violation terminated an otherwise productive autonomous run. The same worker also marked thirteen lint warnings and a static-build warning green as pre-existing or benign despite the configured zero-warning contract.",
+      "causalChain": "Cargo discipline existed in repository lessons and the runtime safety monitor -> implementation dispatch prompt did not repeat the exact turn-scoped shape -> model generated two Cargo invocations in one shell tool call -> monitor prevented execution -> run stopped at a recovery checkpoint -> quality narration separately treated warning-bearing exit-zero commands as green",
+      "testGap": "Compatibility prompt tests covered autonomy and human-gate removal but did not require exactly one Cargo invocation per assistant turn or assert that warning-bearing exit-zero gates remain red.",
+      "missingDecision": "Every implementation dispatch explicitly states that one assistant turn may contain one tool call with exactly one Cargo invocation, whose result must be inspected before a later Cargo command. Every configured warning remains red regardless of exit code, age, or worker classification.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-047",
+      "date": "2026-08-03",
+      "summary": "Move Cargo sequencing authority from unconditional dispatch to conditional refinement output",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "The first correction repeated Cargo instructions in every implementation dispatch. That protected FEAT-005 but exposed non-Rust projects to an irrelevant technology-specific recommendation and bypassed Refine Feature's responsibility to derive execution constraints from the actual target stack.",
+      "causalChain": "FEAT-005 used the existing Tauri Rust target -> Cargo commands required serialized execution -> the rule was added globally to compatibility dispatch -> every project received Cargo prose regardless of its stack -> the overfitting was identified -> Cargo activation moved to static refinement evidence and inherited phase artifacts",
+      "testGap": "Dispatch tests asserted unconditional Cargo wording and did not prove that non-Cargo projects avoid Cargo-specific instructions or that refinement requires both a target Cargo.toml and feature-level Cargo usage.",
+      "missingDecision": "Refine Feature emits the Rust/Cargo sequential profile only when both activation conditions are proven, writes activation evidence to FeatureTasks and every phase, and splits Cargo gates into ordered commands. Implementation dispatch applies only inherited stack constraints and remains technology-neutral. Universal zero-warning authority is unchanged.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-048",
+      "date": "2026-08-03",
+      "summary": "Permit sequential foreground Cargo invocations while retaining concurrency protection",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "FEAT-005 workers repeatedly followed the one-invocation rule for many commands and later combined two read-only Cargo diagnostics sequentially in one shell call. The host guard terminated the productive worker even though no Cargo processes would have overlapped, showing that the one-invocation policy was stricter than the underlying shared-target safety requirement.",
+      "causalChain": "Cargo target contention motivated serialization -> serialization was implemented as one invocation per tool call -> a worker emitted sequential foreground Cargo commands -> the guard treated sequencing as concurrency -> the run terminated despite no background process -> policy narrowed to actual background, sibling, active-call, and timeout hazards",
+      "testGap": "Tool-safety tests treated every multi-invocation shell command as unsafe and did not distinguish `&&` or `;` sequencing from `&` background execution or sibling tool-call concurrency.",
+      "missingDecision": "Sequential Cargo invocations are permitted in one foreground shell tool call. Cargo may not be backgrounded, emitted through sibling tool calls that Pi executes concurrently, or started while a prior Cargo call remains active. Timeout process inspection and zero-warning authority remain mandatory.",
+      "codeChanges": [
+        "apps/orchestrator/src/cargo-safety.ts",
+        "apps/orchestrator/src/runtime/pi/pi-tool-safety-policy.ts",
+        "apps/orchestrator/src/workflows/phases/phase-worker-prompt-policies.ts",
+        "apps/orchestrator/src/workflows/recovery/known-workflow-recovery-preparer.ts",
+        "apps/orchestrator/src/workflows/recovery/workflow-failure-brief-presenter.ts",
+        "docs/architecture/autonomous-implementation-runner.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-tool-safety-policy.test.ts",
+        "apps/orchestrator/test/known-workflow-recovery-preparer.test.ts",
+        "apps/orchestrator/test/model-routing.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-049",
+      "date": "2026-08-04",
+      "summary": "Separate implementation completion from external release readiness",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "FEAT-007 completed every client-owned task and all executable client gates, but the compatibility worker kept Phase 8 incomplete because separately owned server hardening, future server TwinTests, and physical-platform qualification evidence were unavailable. Repeated Continue actions deterministically rediscovered the same findings and stopped without actionable in-scope recovery work.",
+      "causalChain": "refinement copied release dependencies into the final checkpoint -> implementation completed its owned work -> final worker treated missing external evidence as implementation failure authority -> Hepha projected implementation stopped and offered Continue -> Continue re-read unchanged external findings -> the run stopped again despite no in-scope red gate",
+      "testGap": "Compatibility prompt tests enforced clean configured commands and autonomous decision ownership but did not state that implementation completion and release readiness are independent or prohibit external release findings from keeping a phase incomplete.",
+      "missingDecision": "Only unresolved in-scope tasks and configured executable gates owned by the current feature can block implementation acceptance. Separately owned repository work, future suites, physical qualification, deployment certification, and organizational release evidence are recorded in the final report, FeatureDescription, linked epic, and Lessons Learned with recommended follow-up EPIC/FEAT work. A feature may be Implementation COMPLETED while Release Readiness remains BLOCKED_BY_EXTERNAL_DEPENDENCIES.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json",
+        "docs/architecture/workflow-change-justification-log.json",
+        "docs/workflow/commands.md",
+        "docs/workflow/lifecycle.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/continue-implementation/SKILL.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/complete-feature/SKILL.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-050",
+      "date": "2026-08-06",
+      "summary": "Defer non-automatable tasks into mandatory Manual TestPack obligations",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-RECIPE-SOURCE-MCP",
+        "WF-PHASE-SKIP",
+        "WF-MANUAL-PACK-POST-COMPLETE"
+      ],
+      "whyHappened": "A physical-platform qualification task could not execute in the autonomous environment. The worker first treated unavailable targets as a phase blocker and a later repair incorrectly marked the task COMPLETED, even though no physical test had run. That erased the audit distinction between implemented automation, skipped autonomous work, and pending user verification.",
+      "causalChain": "Refinement authored physical qualification as an executable implementation gate -> Start preserved it as PENDING -> Continue could not supply the physical target -> provider stopped the phase -> one-off recovery changed the task to COMPLETED -> no durable skip receipt or generated Manual TestPack obligation proved that user testing remained pending",
+      "testGap": "Refinement tests did not classify automation feasibility, phase-worker settlement had no immutable manual-deferral result, MCP recipes allowed direct status mutation, and Manual TestPack discovery did not consume skipped implementation tasks.",
+      "missingDecision": "Refine classifies each test as AUTOMATABLE or MANUAL_TEST_REQUIRED. Manual-only tasks are SKIPPED with the exact canonical reason and a durable ManualTestObligations.json procedure. Runtime discovery uses HEPHA_MANUAL_TEST_DEFERRAL_V1; HEPHA alone writes SQLite and Markdown state. The generated pack must contain every obligation. Pending manual results block release readiness, never implementation completion, while actually executed red commands remain blocking.",
+      "codeChanges": [
+        "apps/orchestrator/src/manual-test-obligation.ts",
+        "apps/orchestrator/src/manual-test-verification/pack-generation.ts",
+        "apps/orchestrator/src/manual-test-verification/source-discovery.ts",
+        "apps/orchestrator/src/application/features/start-implementation-application.ts",
+        "apps/orchestrator/src/workflows/phases/phase-worker-task-settlement-application.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-manual-test-deferral-application.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "apps/orchestrator/src/workflows/recovery/legacy-manual-test-recovery.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/workflow/lifecycle.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/start-feature/SKILL.md",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/continue-implementation/SKILL.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/manual-test-obligation.test.ts",
+        "apps/orchestrator/test/legacy-manual-test-recovery.test.ts",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/manual-test-pack-review-binding.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-051",
+      "date": "2026-08-06",
+      "summary": "Bind DevCycle manual-test obligations to durable phase-ledger identity before Start",
+      "transitionIds": [
+        "WF-REFINE-EXECUTE",
+        "WF-RECIPE-SOURCE-MCP",
+        "WF-START-PREPARE",
+        "WF-START-FAIL"
+      ],
+      "whyHappened": "A DevCycle refinement correctly classified two physical qualification tasks as SKIPPED and emitted ManualTestObligations.json, but represented the tasks only through numbered Markdown headings and status prose. Start correctly refused to seed either obligation because neither task ID resolved to a HEPHA phase-ledger item.",
+      "causalChain": "DevCycle prompt requested a stable phase/task source but no durable checkbox binding -> worker invented phase-7-task identifiers in ManualTestObligations.json -> provider-specific refinement validation checked phase files and statuses but not obligation-to-ledger traceability -> FEAT moved to Ready -> Start fail-closed seeding found zero matching ledger tasks -> no implementation workflow started",
+      "testGap": "V3 refinement tests covered execution-contract task identity and Start tests covered an injected seeding failure, but no generic DevCycle refinement test paired a legacy contract-marked checkbox with ManualTestObligations.json or rejected an orphaned obligation before Ready promotion. Seeding tests also did not prove that persistence preserves the stable contract task ID instead of replacing it with the derived Markdown ledger ID.",
+      "missingDecision": "Provider choice cannot weaken manual-test traceability. Every DevCycle manual-only task must project one durable checkbox beginning with [contract:<taskId>], and the obligation must reuse that exact unique ID and phase projection. Provider-specific refinement validation rejects missing, duplicate, ambiguous, or cross-phase bindings. Start records the derived SQLite ledger task separately while preserving contract identity in the durable obligation.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/features/devcycle-refine-artifact-validator.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-manual-test-deferral-application.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-change-justification-log.json",
+        "pi-packages/pi-skill-hepha-continue-implementation/skills/refine-feature/SKILL.md"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
+        "apps/orchestrator/test/manual-test-obligation.test.ts",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.feature",
+        "apps/orchestrator/test/generic-manual-test-lifecycle.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-052",
+      "date": "2026-09-03",
+      "summary": "Classify test delivery and reject fabricated manual-test readiness",
+      "transitionIds": [
+        "WF-MANUAL-PACK-POST-COMPLETE"
+      ],
+      "whyHappened": "Manual-pack generation treated every discovered acceptance criterion as a request for a human test and synthesized the same generic navigation/workflow/check instruction even for backend-only domain work. The dashboard independently treated the presence of a generated PDF as readiness, while automated command outcomes treated exit code zero as passing without checking whether any test matched.",
+      "causalChain": "Acceptance discovery found 26 FEAT-012 domain criteria -> the generator manufactured one placeholder manual case per criterion -> coverage could not bind those cases and reported every criterion Missing -> PDF generation still created a current artifact -> the dashboard equated current artifact state with Manual Test Pack Ready -> a non-executable package appeared releasable despite having no valid manual surface",
+      "testGap": "Tests asserted deterministic generation and artifact lifecycle but did not cover a backend-only feature, a mixed manual/automated feature, placeholder rejection, the invariant that readiness requires a valid case, or an exit-zero command reporting no matching tests.",
+      "missingDecision": "The workflow lacked a criterion-level Manual/Automated/Deferred/Uncovered classification and a single readiness invariant shared by generation, validation, review, and presentation. Manual cases now require explicit obligations with a named interface, preconditions, setup data, executable actions, and observable results. No valid case means Not Applicable when all criteria have automated or deferred evidence, otherwise Incomplete. Automated execution separately records passed, failed, zero tests discovered, and not executed.",
+      "codeChanges": [
+        "apps/orchestrator/src/manual-test-verification/delivery-model.ts",
+        "apps/orchestrator/src/manual-test-verification-policy.ts",
+        "apps/orchestrator/src/manual-test-verification/pack-generation.ts",
+        "apps/orchestrator/src/manual-test-verification/pack-status-query.ts",
+        "apps/orchestrator/src/manual-test-verification/review-recording.ts",
+        "apps/orchestrator/src/manual-test-verification-presentation.ts",
+        "apps/orchestrator/src/final-verification-policy.ts",
+        "apps/orchestrator/src/final-verification-adapter.ts",
+        "apps/web/src/manual-tests/manual-test-verification-panel.tsx",
+        "apps/web/src/workflow/workflow-presentation.ts",
+        "docs/architecture/workflow-control-flow-map.md",
+        "docs/architecture/workflow-transition-registry.json"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/generic-manual-test-delivery-classification.feature",
+        "apps/orchestrator/test/manual-test-delivery-classification.integration.test.ts",
+        "apps/orchestrator/test/manual-test-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification-policy.test.ts",
+        "apps/orchestrator/test/final-verification.integration.test.ts"
+      ]
+    }
+  ]
+}

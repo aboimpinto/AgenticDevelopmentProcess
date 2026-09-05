@@ -1,0 +1,25 @@
+name: feature-completion
+description: Context pack for final FEAT completion and raw LessonsLearned generation.
+required:
+  - project
+  - final_feature_state
+  - phase_documents
+  - review_evidence
+  - manual_acceptance
+  - active_lessons
+optional:
+  - git_state
+  - verification_summary
+selectors:
+  final_feature_state:
+    include:
+      - MemoryBank/Features/**/FeatureTasks.md
+      - MemoryBank/Features/**/Phases/*.md
+  active_lessons:
+    include:
+      - MemoryBank/LessonsLearned/Active/common.md
+      - MemoryBank/LessonsLearned/Active/code-review-recovery.md
+constraints:
+  - do not invent verification evidence
+  - produce raw LessonsLearned for later curation
+  - block when review or manual acceptance evidence is missing

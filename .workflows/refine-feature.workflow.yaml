@@ -1,0 +1,30 @@
+name: refine-feature
+description: Create the execution contract, touch plan, FeatureTasks.md, phase documents, and durable planning handoff, then promote the FEAT to Ready To Develop.
+nodes:
+  - id: collect-context
+    action: collect-feature-workflow-context
+    status: Collecting refinement context
+    summary: Reading the FEAT, linked EPICs, design artifacts, acceptance tests, and LessonsLearned.
+
+  - id: generate-artifacts
+    depends_on: [collect-context]
+    prompt: refine-feature
+    agent_action: refine-feature
+    command: commands/refine-feature.md
+    agent: agents/feature-refiner.agent.yaml
+    context: context/feature-refinement.context.yaml
+    output_schema: schemas/refine-feature-result.schema.json
+    status: Generating refinement artifacts
+    summary: Creating the execution contract, architecture-debt touch plan, FeatureTasks.md, phase files, final-checkpoint coverage obligation when declared, and planning handoff instructions.
+
+  - id: evaluate-result
+    depends_on: [generate-artifacts]
+    action: route-refinement-outcome
+    status: Evaluating refinement outcome
+    summary: Routing completed artifacts to promotion or unresolved decisions to an interactive FEAT Deep-Dive.
+
+  - id: promote-ready
+    depends_on: [evaluate-result]
+    action: move-feature-to-ready
+    status: Moving FEAT to Ready To Develop
+    summary: Moving the refined FEAT to the Ready To Develop folder.

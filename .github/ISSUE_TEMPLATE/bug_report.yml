@@ -1,0 +1,57 @@
+name: Bug report
+description: Report reproducible incorrect HEPHA behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Remove credentials, private project content, local paths, and raw agent
+        transcripts before submitting.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened, and what impact did it have?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should HEPHA have done instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest safe sequence that reproduces the problem.
+      placeholder: |
+        1. Register a synthetic project...
+        2. Move FEAT-001 to...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe evidence
+      description: Add redacted logs, screenshots, test results, or a minimal repository.
+  - type: input
+    id: version
+    attributes:
+      label: HEPHA version or commit
+      placeholder: v0.1.0-alpha or commit SHA
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, personal paths, and private project material.
+          required: true
+        - label: This report is not a security vulnerability.
+          required: true

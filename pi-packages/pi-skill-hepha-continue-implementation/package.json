@@ -1,0 +1,32 @@
+{
+  "name": "@aboimpinto/pi-skill-hepha-continue-implementation",
+  "version": "0.1.0",
+  "description": "Pi skills for running HEPHA submit-epic plus Deep-Dive, design, refine, start, continue, and complete FEAT workflows directly from a workspace checkout.",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "skill",
+    "hepha",
+    "submit-epic",
+    "epic",
+    "deep-dive",
+    "design-feature",
+    "refine-feature",
+    "implementation",
+    "start-feature",
+    "complete-feature",
+    "memorybank"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ]
+}

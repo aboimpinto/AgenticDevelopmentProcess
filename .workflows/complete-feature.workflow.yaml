@@ -1,0 +1,30 @@
+name: complete-feature
+description: Finalize implementation, audit evidence and LessonsLearned, then move the FEAT to Completed.
+nodes:
+  - id: collect-context
+    action: collect-feature-workflow-context
+    status: Collecting completion context
+    summary: Reading final FEAT state, linked EPICs, review evidence, and LessonsLearned.
+
+  - id: finalize-feature
+    depends_on: [collect-context]
+    prompt: complete-feature
+    agent_action: complete-feature
+    command: commands/complete-feature.md
+    agent: agents/documentation-agent.agent.yaml
+    context: context/feature-completion.context.yaml
+    output_schema: schemas/complete-feature-result.schema.json
+    status: Running complete-feature finalization
+    summary: Finalizing FEAT after user code review and manual tests.
+
+  - id: verify-completed-state
+    depends_on: [finalize-feature]
+    action: verify-completed-state
+    status: Verifying completed FEAT state
+    summary: Confirming the FEAT moved to Completed and produced LessonsLearned.
+
+  - id: sync-linked-epic-state
+    depends_on: [verify-completed-state]
+    action: sync-linked-epic-state
+    status: Updating linked EPIC state
+    summary: Persisting linked EPIC State after FEAT completion.

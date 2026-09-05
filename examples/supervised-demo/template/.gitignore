@@ -1,0 +1,7 @@
+node_modules/
+.env
+.hepha/*.sqlite
+.hepha/*.sqlite-*
+.hepha/logs/
+.hepha/runs/
+.hepha/sessions/

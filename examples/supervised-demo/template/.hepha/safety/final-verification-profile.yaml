@@ -1,0 +1,10 @@
+version: "2.0"
+description: "Verification profile for the documentation-only supervised demo."
+checks:
+  - id: "product-artifact-contract"
+    description: "Validate the synthetic EPIC and FEAT document structure."
+    intent: "test"
+    command: ["node", "scripts/verify-demo.mjs"]
+    workingDirectory: "."
+    timeout: 30000
+    required: true

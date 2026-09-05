@@ -1,0 +1,22 @@
+{
+  "name": "@hepha/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@hepha/shared": "workspace:*",
+    "pg": "^8.21.0"
+  }
+}

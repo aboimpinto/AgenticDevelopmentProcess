@@ -1,0 +1,27 @@
+name: design-feature
+description: Context pack for UI/UX design artifact generation.
+required:
+  - project
+  - feature_document
+  - linked_epics
+  - active_lessons
+optional:
+  - ui_language_documents
+  - project_design_guidance
+  - deep_dive_answers
+selectors:
+  feature_document:
+    include:
+      - MemoryBank/Features/**/FeatureDescription.md
+  ui_language_documents:
+    include:
+      - MemoryBank/Overview/**/*.md
+      - MemoryBank/Architecture/**/*.md
+      - MemoryBank/CodeGuidelines/**/*.md
+  active_lessons:
+    include:
+      - MemoryBank/LessonsLearned/Active/common.md
+      - MemoryBank/LessonsLearned/Active/design.md
+constraints:
+  - output design artifacts only
+  - do not edit source code

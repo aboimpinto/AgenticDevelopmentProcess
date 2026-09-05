@@ -1,0 +1,28 @@
+{
+  "name": "@aboimpinto/pi-skill-hepha-companion",
+  "version": "0.1.0",
+  "description": "Companion package for the Hepha workflow orchestrator — approved stable skills for Pi Coding Agent integration. Contains only approved, pinned components with documented local install/update flows and no workflow-state authority.",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "skill",
+    "hepha",
+    "companion",
+    "serialized-build-commands",
+    "build-commands",
+    "continue-implementation"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "files": [
+    "skills",
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ]
+}

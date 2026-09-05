@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Review Manifest v1",
+  "description": "Reviewer-owned immutable structured review decision set. Contains common envelope, result, rule snapshots, and findings.",
+  "type": "object",
+  "required": ["schemaVersion", "artifactKind", "artifactId", "scope", "result", "ruleSnapshots", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "artifactKind": { "type": "string", "const": "review_manifest" },
+    "artifactId": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/kebabCaseIdentifier" },
+    "scope": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactScope" },
+    "lineage": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/artifactLineage" },
+    "result": {
+      "type": "string",
+      "enum": ["APPROVED", "NEEDS_CHANGES", "BLOCKED"]
+    },
+    "blockerReason": {
+      "description": "Required when result is BLOCKED; forbidden otherwise.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "ruleSnapshots": {
+      "description": "Ordered unique array of active rule snapshots. Every active_rule finding must bind to exactly one matching snapshot.",
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/activeRuleSnapshotContainer" },
+      "minItems": 0,
+      "maxItems": 64
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "common-review-contract-types-v1.schema.json#/$defs/reviewFinding" },
+      "minItems": 0,
+      "maxItems": 64,
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "description": "BLOCKED result requires blockerReason; APPROVED result requires zero blocking/expansion findings.",
+      "if": {
+        "properties": { "result": { "const": "BLOCKED" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["blockerReason"]
+      }
+    },
+    {
+      "description": "NEEDS_CHANGES result requires at least one finding.",
+      "if": {
+        "properties": { "result": { "const": "NEEDS_CHANGES" } },
+        "required": ["result"]
+      },
+      "then": {
+        "minProperties": { "findings": { "minItems": 1 } }
+      }
+    }
+  ]
+}

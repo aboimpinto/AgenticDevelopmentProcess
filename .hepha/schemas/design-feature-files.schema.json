@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Design Feature Files",
+  "type": "object",
+  "required": ["files"],
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["relativePath", "content"],
+        "additionalProperties": false,
+        "properties": {
+          "relativePath": {
+            "type": "string",
+            "enum": ["UX-research-report.md", "Wireframes-design.md", "design-summary.md"]
+          },
+          "content": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

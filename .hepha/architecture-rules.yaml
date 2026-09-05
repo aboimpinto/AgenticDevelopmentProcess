@@ -1,0 +1,38 @@
+# Hepha Architecture Rule Catalog
+# Canonical path: .hepha/architecture-rules.yaml
+# schemaVersion: 1 — additive evolution of the existing v1 root and flat rules array.
+# Changes to this file are architecture-steward decisions.
+
+catalogId: hepha-architecture-rules
+schemaVersion: 1
+rules:
+  - id: secret-safe-governance-artifacts
+    version: "1.0.0"
+    status: active
+    category: security
+    scope: review-governance
+    title: Secret-Safe Governance Artifacts
+    description: >-
+      Any review artifact, finding, response, receipt, or prompt projection
+      must be validated for secret-bearing content before hashing, logging,
+      rendering, or persistence. Secret-like content is rejected pre-hash
+      with a sanitized refusal; proven secrets that reach a persistence
+      boundary after validation trigger a quarantine/purge incident.
+    source:
+      document: docs/architecture/code-review-remediation-and-architecture-debt-overview.md
+      section: Secret Safety
+
+  - id: deterministic-phase-authority
+    version: "1.0.0"
+    status: active
+    category: architecture
+    scope: review-governance
+    title: Deterministic Phase Authority
+    description: >-
+      Phase advancement requires a persisted, approved review manifest
+      with a terminal remediation or replan state. Markdown review reports,
+      progressive retry fingerprints, and mutable fixer-response prose
+      are legacy diagnostic evidence and not authoritative phase decisions.
+    source:
+      document: docs/architecture/code-review-remediation-and-architecture-debt-overview.md
+      section: Phase Authority

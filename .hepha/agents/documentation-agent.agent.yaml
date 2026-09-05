@@ -1,0 +1,24 @@
+name: documentation-agent
+description: Finalizes completed FEAT documentation, completion evidence, and raw LessonsLearned for later curation into active rules.
+responsibilities:
+  - audit final FEAT and phase state
+  - verify review and acceptance evidence is present
+  - produce completion documentation
+  - produce raw LessonsLearned
+tools:
+  read: true
+  write_memorybank: true
+  write_source: false
+  git: false
+domains:
+  read:
+    - MemoryBank/Features/**
+    - MemoryBank/EPICs/**
+    - MemoryBank/LessonsLearned/Active/**
+  write:
+    - MemoryBank/Features/**
+    - MemoryBank/LessonsLearned/*.md
+stop_conditions:
+  - missing_review_evidence
+  - missing_manual_acceptance
+  - incomplete_phase_state

@@ -1,0 +1,47 @@
+name: deep-dive-feature
+description: Clarify a FEAT with an interactive human answer gate, then rewrite the FEAT for design, refinement, and implementation planning.
+nodes:
+  - id: create-session
+    action: create-deep-dive-session
+    status: Preparing FEAT Deep-Dive for {{cardId}}
+    summary: Creating a persisted Deep-Dive session for {{cardId}}.
+
+  - id: generate-questions
+    depends_on: [create-session]
+    prompt: deep-dive-questions
+    agent_action: deep-dive
+    command: commands/deep-dive-questions.md
+    agent: agents/requirements-agent.agent.yaml
+    context: context/deep-dive.context.yaml
+    output_schema: schemas/deep-dive-questions.schema.json
+    status: Generating FEAT Deep-Dive questions for {{cardId}}
+    summary: Asking the Requirements Agent to inspect the FEAT and produce clarification questions.
+
+  - id: wait-for-answers
+    depends_on: [generate-questions]
+    kind: gate
+    status: Waiting for FEAT Deep-Dive answers for {{cardId}}
+    summary: The workflow is paused until every Deep-Dive question has a saved answer.
+
+  - id: answers-ready
+    depends_on: [wait-for-answers]
+    action: validate-deep-dive-answers
+    status: FEAT Deep-Dive answers ready for {{cardId}}
+    summary: All Deep-Dive answers are saved and the FEAT can be updated.
+
+  - id: update-document
+    depends_on: [answers-ready]
+    prompt: deep-dive-document-update
+    agent_action: deep-dive
+    command: commands/deep-dive-document-update.md
+    agent: agents/requirements-agent.agent.yaml
+    context: context/deep-dive.context.yaml
+    output_schema: schemas/deep-dive-document-update.schema.json
+    status: Updating FEAT document for {{cardId}}
+    summary: Rewriting the FEAT Markdown from the original document and answered Deep-Dive transcript.
+
+  - id: record-completion
+    depends_on: [update-document]
+    action: record-hepha-deep-dive
+    status: Recording FEAT Deep-Dive completion for {{cardId}}
+    summary: Recording the updated FEAT hash and marking the Deep-Dive current in SQLite.

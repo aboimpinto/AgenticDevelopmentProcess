@@ -1,0 +1,118 @@
+# FEAT-027: Path Policy Definitions
+#
+# Defines file-system read/write boundaries per tool profile.
+# Path roots use symbolic tokens resolved at runtime from project
+# configuration — never hardcoded absolute machine paths.
+#
+# This file is the durable source of truth. It must be loaded and validated
+# by apps/orchestrator/src/path-policy-validator.ts before use.
+
+version: "1.0"
+description: "FEAT-027 path policy definitions for Hepha workspace boundaries."
+
+# ---------------------------------------------------------------------------
+# Default policy — applies to any profile not explicitly listed below.
+# The default is conservative: read project and MemoryBank, write only
+# MemoryBank. This prevents unintended source or git mutations.
+# ---------------------------------------------------------------------------
+defaultPolicy:
+  read:
+    - "projectRoot/**"
+    - "memoryBank/**"
+    - "hephaAssets/**"
+  write:
+    - "memoryBank/**"
+
+# ---------------------------------------------------------------------------
+# Per-profile policies
+#
+# Each profile references a FEAT-026 tool profile id. Read and write
+# allowlists are separate. Denied patterns override allow rules.
+#
+# Supported symbolic tokens:
+#   projectRoot       — Active project repository root
+#   memoryBank        — Configured MemoryBank path
+#   hephaAssets       — .hepha/ configuration directory
+#   worktrees         — Approved worktree roots
+#   approvedSiblings  — Explicitly configured sibling project roots
+#   logs              — Runtime log/session directory
+#   tempFixtures      — Temporary test fixture root
+#
+# Pattern syntax: standard glob patterns (**, *, ?).
+# Order: deny patterns evaluated before allow patterns.
+# ---------------------------------------------------------------------------
+profiles:
+  - profileId: "read-only-discovery"
+    description: "Read-only — no write access to any root."
+    read:
+      - "projectRoot/**"
+      - "memoryBank/**"
+      - "hephaAssets/**"
+    write: []
+
+  - profileId: "documentation-writer"
+    description: "Documentation and MemoryBank write access. No source or git writes."
+    read:
+      - "projectRoot/**"
+      - "memoryBank/**"
+      - "hephaAssets/**"
+    write:
+      - "memoryBank/**"
+      - "hephaAssets/commands/**"
+      - "hephaAssets/agents/**"
+      - "hephaAssets/context/**"
+      - "hephaAssets/schemas/**"
+
+  - profileId: "test-runner"
+    description: "Test/build validation execution. Read-only for project state."
+    read:
+      - "projectRoot/**"
+      - "memoryBank/**"
+      - "hephaAssets/**"
+    write:
+      - "logs/**"
+
+  - profileId: "source-editor"
+    description: "Full source-code editing. Reads and writes project, MemoryBank, siblings, and worktrees."
+    read:
+      - "projectRoot/**"
+      - "memoryBank/**"
+      - "hephaAssets/**"
+      - "approvedSiblings/**"
+      - "worktrees/**"
+    write:
+      - "projectRoot/src/**"
+      - "projectRoot/apps/**"
+      - "projectRoot/packages/**"
+      - "projectRoot/scripts/**"
+      - "memoryBank/**"
+      - "hephaAssets/**"
+      - "approvedSiblings/**"
+      - "worktrees/**"
+
+  - profileId: "git-writer"
+    description: "Git write operations. Read project state and write git metadata."
+    read:
+      - "projectRoot/**"
+      - "memoryBank/**"
+    write:
+      - "projectRoot/.git/**"
+
+  - profileId: "privileged-executor"
+    description: "High-risk operations with full read/write authority. Requires human gate."
+    read:
+      - "**"
+    write:
+      - "**"
+
+# ---------------------------------------------------------------------------
+# Explicit global deny patterns
+# These paths are blocked for every profile regardless of allow rules.
+# ---------------------------------------------------------------------------
+globalDeny:
+  - "projectRoot/.env"
+  - "projectRoot/.env.*"
+  - "projectRoot/.hepha/hepha.sqlite*"
+  - "projectRoot/.hepha/backups/**"
+  - "projectRoot/node_modules/**"
+  - "projectRoot/.git/objects/**"

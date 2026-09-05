@@ -1,0 +1,53 @@
+name: deep-dive-epic
+description: Clarify an EPIC with an interactive human answer gate, then rewrite the EPIC for FEAT extraction.
+nodes:
+  - id: create-session
+    action: create-deep-dive-session
+    status: Preparing EPIC Deep-Dive for {{cardId}}
+    summary: Creating a persisted Deep-Dive session for {{cardId}}.
+
+  - id: generate-questions
+    depends_on: [create-session]
+    prompt: deep-dive-questions
+    agent_action: deep-dive
+    command: commands/deep-dive-questions.md
+    agent: agents/requirements-agent.agent.yaml
+    context: context/deep-dive.context.yaml
+    output_schema: schemas/deep-dive-questions.schema.json
+    status: Generating EPIC Deep-Dive questions for {{cardId}}
+    summary: Asking the Requirements Agent to inspect the EPIC and produce clarification questions.
+
+  - id: wait-for-answers
+    depends_on: [generate-questions]
+    kind: gate
+    status: Waiting for EPIC Deep-Dive answers for {{cardId}}
+    summary: The workflow is paused until every Deep-Dive question has a saved answer.
+
+  - id: answers-ready
+    depends_on: [wait-for-answers]
+    action: validate-deep-dive-answers
+    status: EPIC Deep-Dive answers ready for {{cardId}}
+    summary: All Deep-Dive answers are saved and the EPIC can be updated.
+
+  - id: update-document
+    depends_on: [answers-ready]
+    prompt: deep-dive-document-update
+    agent_action: deep-dive
+    command: commands/deep-dive-document-update.md
+    agent: agents/requirements-agent.agent.yaml
+    context: context/deep-dive.context.yaml
+    output_schema: schemas/deep-dive-document-update.schema.json
+    status: Updating EPIC document for {{cardId}}
+    summary: Rewriting the EPIC Markdown from the original document and answered Deep-Dive transcript.
+
+  - id: sync-epic-state
+    depends_on: [update-document]
+    action: sync-epic-state
+    status: Updating EPIC state for {{cardId}}
+    summary: Persisting EPIC State after the EPIC document changed.
+
+  - id: record-completion
+    depends_on: [sync-epic-state]
+    action: record-hepha-deep-dive
+    status: Recording EPIC Deep-Dive completion for {{cardId}}
+    summary: Recording the updated EPIC hash and marking the Deep-Dive current in SQLite.

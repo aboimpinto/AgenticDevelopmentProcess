@@ -1,0 +1,43 @@
+{
+  "name": "agentic-development-process",
+  "version": "0.1.0",
+  "description": "HEPHA is a local-first, human-supervised agentic software development platform.",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aboimpinto/AgenticDevelopmentProcess.git"
+  },
+  "homepage": "https://github.com/aboimpinto/AgenticDevelopmentProcess#readme",
+  "bugs": {
+    "url": "https://github.com/aboimpinto/AgenticDevelopmentProcess/issues"
+  },
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=11"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:all": "node scripts/dev.mjs --poll",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "demo:create": "node scripts/create-supervised-demo.mjs",
+    "release:audit": "node scripts/public-release-audit.mjs",
+    "release:prepare": "node scripts/prepare-public-release.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

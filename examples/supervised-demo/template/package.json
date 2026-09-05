@@ -1,0 +1,9 @@
+{
+  "name": "hepha-supervised-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A synthetic project for HEPHA's supervised Deep-Dive walkthrough.",
+  "scripts": {
+    "verify": "node scripts/verify-demo.mjs"
+  }
+}

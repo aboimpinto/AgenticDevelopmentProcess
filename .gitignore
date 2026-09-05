@@ -1,0 +1,53 @@
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.key
+*.pem
+*.token
+
+# Node/TypeScript
+node_modules/
+dist/
+dist-types/
+
+# Playwright test output
+test-results/
+build/
+coverage/
+*.tsbuildinfo
+
+# Logs and runtime state
+logs/
+*.log
+.pi/sessions/
+.pi/cache/
+.hepha/*.sqlite
+.hepha/*.sqlite-*
+**/.hepha/*.sqlite
+**/.hepha/*.sqlite-*
+.hepha/bin/
+.hepha/backups/
+.hepha/cache/
+.hepha/logs/
+.hepha/projects.json
+.hepha/runs/
+.hepha/sessions/
+
+# Temporary files
+tmp/
+temp/
+_*.ps1
+_*.py
+
+# Local captures withheld from public documentation
+docs/images/screenshots/04-feature-phases-and-tasks.png
+docs/images/screenshots/07-manual-test-delivery.png

@@ -1,0 +1,18 @@
+name: design-feature
+description: Generate UI research, wireframes, and design summary for FEATs that require UI work.
+nodes:
+  - id: collect-context
+    action: collect-feature-workflow-context
+    status: Collecting design context
+    summary: Reading the FEAT, linked EPICs, UI language documents, and design guidance.
+
+  - id: generate-design-artifacts
+    depends_on: [collect-context]
+    prompt: design-feature
+    agent_action: design-feature
+    command: commands/design-feature.md
+    agent: agents/design-agent.agent.yaml
+    context: context/design-feature.context.yaml
+    output_schema: schemas/design-feature-files.schema.json
+    status: Generating design artifacts
+    summary: Creating UX research, wireframes, and design summary files.
