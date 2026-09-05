@@ -156,6 +156,12 @@ this initial one-maintainer policy:
 The maintainer can deliberately relax the rule in an emergency, but ordinary
 changes should go through a short-lived branch and a green pull request.
 
+Gate 5 completed on 2026-09-06 after explicit maintainer approval. The
+repository is public, private vulnerability reporting and automated security
+updates are enabled, and `master` has the documented one-maintainer protection
+policy. The live supervised walkthrough remains an accepted alpha limitation,
+not an unreported verification claim.
+
 ## Rollback
 
 Before public visibility, rollback means force-restoring the private remote
