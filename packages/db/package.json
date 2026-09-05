@@ -11,7 +11,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.4.1",
     "@types/pg": "^8.20.0",
     "typescript": "^5.9.3"
   },
