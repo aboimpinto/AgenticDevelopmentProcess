@@ -3,3 +3,14 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
+
+# Remove these targeted security overrides when their direct parents adopt the
+# patched versions. Each value is the first patched release reported by the
+# GitHub advisory that prompted the public-alpha security review.
+overrides:
+  browserslist: "4.28.7"
+  dompurify: "3.4.13"
+  "esbuild@>=0.27.3 <0.28.1": "0.28.1"
+  postcss: "8.5.23"
+  shell-quote: "1.9.0"
+  undici: "7.29.0"
