@@ -206,24 +206,21 @@ Feature: Workflow And Phase Interaction Decomposition
     And the blocking reasons are displayed
 
   @deterministic
-  Scenario: Existing refresh recovers confirmed coverage without repeating human verification
+  Scenario: Existing refresh validates approved coverage without repeating human verification
     Given implementation gaps have been repaired and existing manual results have passed
-    And the user code review is recorded but acceptance coverage is unresolved
+    And the user code review and manual acknowledgement are recorded
     When the user selects Refresh Completion Readiness
-    Then existing evidence links are proposed without recording results or completing the feature
-    And readiness shows a compact phase quality gap summary without a criterion list
-    And its recovery link focuses a working repair button on the owning phase
-    And repair and confirmation buttons remain outside the collapsed evidence details
-    When the user explicitly confirms the current coverage proposal
-    Then Complete Feature becomes available
+    Then validated approved coverage makes Complete Feature available
+    And no extra evidence-confirmation button is required
     And no new manual-test result or code-review approval is sent
+    And the feature is not completed automatically
 
   @deterministic
   Scenario: Phase-owned recovery dispatches a real repair without a finding or automatic completion
     Given fourteen uncovered criteria grouped into one phase quality gap
     And current manual results and user code review are already recorded
-    When the user follows the compact readiness link to the owning phase
-    Then the repair button is focused outside the collapsed criterion details
+    When the user opens the owning phase
+    Then the repair button is available outside the collapsed criterion details
     And the button is spaced away from the guidance field
     When the user requests phase quality repair with no additional guidance
     Then the phase repair endpoint receives the completion recovery gate

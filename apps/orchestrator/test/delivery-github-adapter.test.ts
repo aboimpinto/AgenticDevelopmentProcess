@@ -12,7 +12,24 @@
  * the temp file writing (which is a thin wrapper).
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// The adapter writes real temporary files. Give every test its own repository
+// instead of relying on the checkout's .git being a directory (worktrees use a file).
+let repository: string;
+let cwd: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  repository = mkdtempSync(join(tmpdir(), "hepha-delivery-adapter-"));
+  mkdirSync(join(repository, ".git"));
+  cwd = vi.spyOn(process, "cwd").mockReturnValue(repository);
+});
+afterEach(() => {
+  cwd.mockRestore();
+  rmSync(repository, { recursive: true, force: true });
+});
 
 const { mockExecSync } = vi.hoisted(() => ({
   mockExecSync: vi.fn(),

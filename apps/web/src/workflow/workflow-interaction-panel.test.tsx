@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BatchPreviewPlan, FeatureWorkflowSummary, WorkItemCard } from "@hepha/shared";
 import type { WorkflowApiAdapter } from "./workflow-api.js";
@@ -167,7 +167,7 @@ describe("WorkflowInteractionPanel", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Scanner unavailable")));
     render(<WorkflowInteractionPanel item={makeItem()} projectId="project-1" />);
     fireEvent.click(screen.getByRole("button", { name: "Refresh Completion Readiness" }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Scanner unavailable"));
+    await waitFor(() => expect(within(screen.getByRole("region", { name: "Complete Feature readiness" })).getByRole("alert").textContent).toContain("Scanner unavailable"));
     expect(screen.getByRole("button", { name: "Complete Feature" })).toHaveProperty("disabled", true);
   });
 
