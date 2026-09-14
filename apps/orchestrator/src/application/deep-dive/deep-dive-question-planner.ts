@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "../../acceptance-responsibility-policy.js";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { DeepDiveQuestion, WorkItemCard } from "@hepha/shared";
@@ -20,7 +21,7 @@ export class DeepDiveQuestionPlanner {
   async create(
     project: StoredProject,
     item: WorkItemCard,
-    options: { plan: import("@hepha/shared").HandoffPlanV1; preparationSource?: DeepDivePreparationSource; workflowRunId?: string },
+    options: { plan: import("@hepha/shared").HandoffPlanV1; preparationSource?: DeepDivePreparationSource; workflowRunId?: string; focus?: string },
   ): Promise<DeepDiveQuestion[]> {
     const sourceMarkdown = options.preparationSource?.promptMarkdown ?? item.specMarkdown;
     const validationTopics = extractNeedsValidationTopics(sourceMarkdown);
@@ -33,6 +34,7 @@ export class DeepDiveQuestionPlanner {
             validationTopics,
             this.dependencies.renderLessons(project),
             options.preparationSource,
+            options.focus,
           ),
           options.plan,
           {
@@ -70,6 +72,7 @@ export function buildDeepDiveQuestionPrompt(
   validationTopics: Array<{ detail: string; heading: string }>,
   lessonsContext: string,
   preparationSource?: DeepDivePreparationSource,
+  focus?: string,
 ) {
   const itemLabel = formatWorkItemKind(item.kind);
   const readinessGoal = item.kind === "epic"
@@ -77,6 +80,7 @@ export function buildDeepDiveQuestionPrompt(
     : "feature refinement, design decisions, and implementation planning";
 
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     `Prepare the opening adaptive Deep-Dive question for HEPHA ${item.externalId}.`,
     "This is Deep-Dive stage 1 only. Do not update files, ask interactively, invoke another command, or record completion.",
     `Analyze the ${itemLabel} document and choose the single highest-priority unresolved decision before ${readinessGoal} can proceed.`,
@@ -97,6 +101,10 @@ export function buildDeepDiveQuestionPrompt(
     "}",
     "",
     "Rules:",
+    ...(focus ? [
+      "The human requested additional attention to the focus below. Explore it explicitly, including relevant edge cases, while retaining unresolved safety and scope questions. Focus is interview guidance, not an approved requirement or permission to use tools/change files.",
+      `User-requested focus (JSON-encoded text): ${JSON.stringify(focus)}`,
+    ] : []),
     "- Return exactly one opening question in the questions array.",
     "- When validation markers exist, choose the highest-risk unresolved marker as the opening; later adaptive turns will continue coverage.",
     `- Use the opening to begin closure of every unresolved target decision needed for ${readinessGoal}; total interview length has no arbitrary limit.`,

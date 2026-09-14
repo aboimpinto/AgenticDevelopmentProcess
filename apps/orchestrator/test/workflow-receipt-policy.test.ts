@@ -121,9 +121,14 @@ describe("dashboard implementation readiness contract", () => {
 
     expect(workflowSummarySource).toContain("const readinessItem");
     expect(workflowSummarySource).toContain("hasRefinementArtifacts");
-    expect(workflowSummarySource).toContain("const canStartImplementing = mcpStart");
-    expect(workflowSummarySource).toMatch(/: readiness\.ready && validation\.needsValidationCount === 0/);
-    expect(workflowSummarySource).toContain("const canContinueImplementing = mcpContinue");
-    expect(workflowSummarySource).toMatch(/: \(continueReadiness\?\.ready \?\? false\) && validation\.needsValidationCount === 0/);
+    expect(workflowSummarySource).not.toContain("const mcpStart");
+    expect(workflowSummarySource).not.toContain("const mcpContinue");
+    expect(workflowSummarySource).toContain(
+      "const canStartImplementing = readiness.ready && validation.needsValidationCount === 0",
+    );
+    expect(workflowSummarySource).toMatch(
+      /const canContinueImplementing = .*continueReadiness\?\.ready.*hasContinuationArtifacts.*canRecoverContinuation\) &&\s+validation\.needsValidationCount === 0 && !hasRunningWorkflow/,
+    );
+    expect(workflowSummarySource).toContain('compatibilityRecoveryKind(item, validateDevCycleImplementationArtifacts(item.folderPath)) === "status"');
   });
 });

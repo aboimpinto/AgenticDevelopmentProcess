@@ -1,10 +1,11 @@
 import type { FeaturePhaseQualitySummary, WorkItemCard } from "@hepha/shared";
+import { isUnresolvedQualityGate } from "@hepha/shared";
 import type { StoredProject } from "../../projects/stored-project.js";
 
 export function countMissingPhaseQualityGates(feature: WorkItemCard): number {
   return (feature.implementationEvidence?.phaseQualityGates ?? []).reduce(
     (count, phase) => isResolvedPhaseQualitySummary(phase)
-      ? count + phase.gates.filter((gate) => gate.status === "missing").length
+      ? count + phase.gates.filter(isUnresolvedQualityGate).length
       : count,
     0,
   );
@@ -23,19 +24,19 @@ export function getObservedPhaseChangedFiles(
 export function getPhaseQualityGates(feature: WorkItemCard, phaseNumber: number) {
   return (feature.implementationEvidence?.phaseQualityGates ?? [])
     .find((phase) => phase.phaseNumber === phaseNumber)
-    ?.gates.map((gate) => ({ gate: gate.gate, status: gate.status })) ?? [];
+    ?.gates.map((gate) => ({ gate: gate.gate, status: gate.status, justification: gate.justification })) ?? [];
 }
 
 export function getMissingPhaseQualityGates(feature: WorkItemCard, phaseNumber: number): string[] {
   return getPhaseQualityGates(feature, phaseNumber)
-    .filter((gate) => gate.status === "missing")
+    .filter(isUnresolvedQualityGate)
     .map((gate) => gate.gate);
 }
 
 export function getFirstMissingPhaseQualityGate(feature: WorkItemCard) {
   for (const phase of feature.implementationEvidence?.phaseQualityGates ?? []) {
     if (!isResolvedPhaseQualitySummary(phase)) continue;
-    const missingGates = phase.gates.filter((gate) => gate.status === "missing");
+    const missingGates = phase.gates.filter(isUnresolvedQualityGate);
     if (missingGates.length > 0) {
       return {
         gates: missingGates.map((gate) => gate.gate),

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync, lstatSync } from "node:fs";
+import { basename, relative, resolve } from "node:path";
 import type {
   FeatureCodeReviewResult,
   FeatureImplementationEvidenceSource,
@@ -104,7 +104,7 @@ export function scanFeatureImplementationEvidence(
   }
 
   const codeReviews = scanFeatureCodeReviews(project, featureFolderPath, phases);
-  const phaseQualityGates = scanFeaturePhaseQualityGates(phases, codeReviews);
+  const phaseQualityGates = scanFeaturePhaseQualityGates(phases, codeReviews, project.rootPath);
 
   for (const review of codeReviews) {
     for (const reviewedFile of review.reviewedFiles) {
@@ -145,12 +145,16 @@ function scanFeatureCodeReviews(
     return [];
   }
 
-  return safeReadDirectory(codeReviewsPath)
-    .filter((fileName) => fileName.toLowerCase().endsWith(".md"))
-    .map((fileName) => {
-      const reportPath = resolve(codeReviewsPath, fileName);
+  return listReviewReports(codeReviewsPath)
+    .map((reportPath) => {
+      const fileName = basename(reportPath);
       const markdown = safeReadTextFile(reportPath);
-      const phaseNumber = extractPhaseNumber(fileName, markdown);
+      const pathPhase = extractPhaseNumber(relative(codeReviewsPath, reportPath), markdown);
+      const declaredPhase = extractMarkdownField(markdown, ["Phase"])?.match(/^Phase\s+(\d+)\b/i);
+      const declaredNumber = declaredPhase?.[1] ? Number(declaredPhase[1]) : null;
+      // Contradictory path/header ownership cannot approve either phase.
+      const phaseNumber = pathPhase !== null && declaredNumber !== null && pathPhase !== declaredNumber
+        ? null : declaredNumber ?? pathPhase;
 
       return {
         fileName,
@@ -173,6 +177,17 @@ function scanFeatureCodeReviews(
 
       return left.fileName.localeCompare(right.fileName);
     });
+}
+
+function listReviewReports(folder: string): string[] {
+  try {
+    if (lstatSync(folder).isSymbolicLink()) return [];
+    return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
+      const path = resolve(folder, entry.name);
+      if (entry.isDirectory()) return listReviewReports(path);
+      return entry.isFile() && entry.name.toLowerCase().endsWith(".md") ? [path] : [];
+    });
+  } catch { return []; }
 }
 
 function listFeatureEvidenceArtifacts(featureFolderPath: string) {
@@ -230,7 +245,9 @@ function extractCodeReviewPhaseTitle(
 }
 
 function extractCodeReviewResult(markdown: string): FeatureCodeReviewResult {
-  const result = extractMarkdownField(markdown, ["Review Result", "Verdict", "Result", "Decision"]);
+  const header = markdown.split(/^##\s/m)[0] ?? "";
+  const result = extractMarkdownField(markdown, ["Review Result", "Verdict", "Result", "Decision"])
+    ?? extractMarkdownField(header, ["Status"]);
 
   if (!result) {
     return "unknown";
@@ -246,11 +263,11 @@ function extractCodeReviewResult(markdown: string): FeatureCodeReviewResult {
     return "blocked";
   }
 
-  if (normalized.includes("APPROVED_WITH_NOTES") || (normalized.includes("APPROVED") && normalized.includes("NOTES"))) {
+  if (/^APPROVED_WITH_NOTES(?:_|$)/.test(normalized) || (/^APPROVED(?:_|$)/.test(normalized) && normalized.includes("NOTES"))) {
     return "approved_with_notes";
   }
 
-  if (normalized.includes("APPROVED")) {
+  if (/^APPROVED(?:_|$)/.test(normalized)) {
     return "approved";
   }
 

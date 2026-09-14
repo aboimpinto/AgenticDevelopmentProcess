@@ -30,12 +30,12 @@ describe("final checkpoint coverage profile policy", () => {
     })).toBeNull();
   });
 
-  it("rejects promotion when a declared final checkpoint has no executable profile", () => {
+  it("does not require numeric instrumentation for a declared final checkpoint", () => {
     expect(getFinalCheckpointCoverageProfileIssue(contract("final_checkpoint"), {
       valid: false,
       profile: null,
       issues: [{ kind: "missing-file", message: "profile absent" }],
-    })).toContain("no executable coverage profile");
+    })).toBeNull();
   });
 
   it("accepts a required final-only LCOV check with the generic advisory reference and target", () => {

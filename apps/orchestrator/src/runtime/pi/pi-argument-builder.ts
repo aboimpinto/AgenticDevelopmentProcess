@@ -1,5 +1,7 @@
 import type { AgentTask } from "@hepha/shared";
 import type { PiJsonEvent } from "./pi-event-parser.js";
+import { MODEL_REQUEST_GUARD_PATH } from "./model-request-guard.js";
+export { MODEL_REQUEST_GUARD_PATH } from "./model-request-guard.js";
 
 export interface PiModelSelection {
   readonly model: string;
@@ -7,6 +9,7 @@ export interface PiModelSelection {
 }
 
 export interface PiPromptRunOptions {
+  maxOutputTokens?: number;
   cwd?: string;
   implementationProfile?: boolean;
   mcpProfile?: boolean;
@@ -34,6 +37,8 @@ export function buildPiArgs(task: AgentTask, model: PiModelSelection): string[] 
     "--provider", model.provider,
     "--model", model.model,
     "--mode", "json",
+    "--thinking", "high",
+    "--extension", MODEL_REQUEST_GUARD_PATH,
     "--print",
     "--no-tools",
     "--no-extensions",
@@ -57,6 +62,8 @@ export function buildPiPromptArgs(
     "--provider", model.provider,
     "--model", model.model,
     "--mode", "json",
+    "--thinking", "high",
+    "--extension", MODEL_REQUEST_GUARD_PATH,
     "--print",
   ];
   if (!options.implementationProfile) {

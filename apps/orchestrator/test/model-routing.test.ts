@@ -628,9 +628,17 @@ describe("model routing", () => {
     expect(featureProjectionApplicationsSource).toContain("new RefinementArtifactPolicy");
     expect(refinementArtifactPolicySource).toContain("getMissingPaths");
     expect(refinementArtifactPolicySource).toContain('feature.stateFolder === "03_IN_PROGRESS"');
-    expect(featureProjectionApplicationsSource).toContain("validateInProgress: devCycleContinuation");
+    expect(featureProjectionApplicationsSource).toContain("const validateInProgress = devCycleContinuation");
+    expect(featureProjectionApplicationsSource).toContain(
+      'const validateStartAdmission = dependencies.recipeSourceFor("startImplementing")',
+    );
     expect(featureProjectionApplicationsSource).toContain("? validateDevCycleImplementationArtifacts");
     expect(featureProjectionApplicationsSource).toContain(": validatePhaseExecutionArtifacts");
+    expect(featureProjectionApplicationsSource).toContain("validateInProgress,");
+    expect(featureProjectionApplicationsSource).toContain("validateContinuation,");
+    expect(featureProjectionApplicationsSource).toContain(
+      'item.stateFolder === "03_IN_PROGRESS" ? validateInProgress : validateStartAdmission',
+    );
     expect(orchestratorSource).not.toContain("function getRefinementPhaseFileNames");
     expect(executeRefineSource).toContain("this.dependencies.validateArtifacts");
     expect(featurePreparationApplicationsSource).toContain("validateArtifacts: validateRefinePromotionArtifacts");
@@ -672,16 +680,14 @@ describe("model routing", () => {
       expect(normalizedRefineContract).toContain("machine-readable `Status` column");
       expect(refineContract).toContain("## Quality Gate Evidence");
       expect(refineContract).toContain("| Changed files | missing |");
-      expect(refineContract).toContain("| Tests | missing |");
-      expect(refineContract).toContain("| Gherkin/Playwright E2E | missing |");
+      expect(refineContract).toContain("| Tests | <test-decision> |");
+      expect(refineContract).toContain("| Gherkin/Playwright E2E | <e2e-decision> |");
       expect(refineContract).toContain("| Code review | <code-review-decision> |");
       expect(normalizedRefineContract).toContain("The Code review gate must be initialized from the ordered tasks, not guessed");
       expect(normalizedRefineContract).toContain("must never appear in a generated phase file");
-      expect(normalizedRefineContract).toContain("Production code changes require automated tests or a precise waiver");
-      expect(normalizedRefineContract).toContain(
-        "Browser/UI behavior changes require Gherkin/Playwright E2E evidence or a precise waiver",
-      );
-      expect(normalizedRefineContract).toContain("Code-relevant phases require a persisted code-review report");
+      expect(normalizedRefineContract).toContain("Tests, integration tests and code review are independent phase applicability choices");
+      expect(normalizedRefineContract).toContain("Phase TwinTests do not waive that workflow obligation");
+      expect(normalizedRefineContract).not.toContain("Browser/UI behavior changes require Gherkin/Playwright E2E evidence or a precise waiver");
     }
 
     expect(normalizeSourceText(refineFeatureSkill)).toContain("Do not mark gate rows `satisfied` during refinement");
@@ -809,7 +815,7 @@ describe("model routing", () => {
       '...collectMarkdownDocuments(resolve(project.memoryBankPath, "LessonsLearned")',
     );
     expect(lessonsContextSource).toContain("MemoryBank LessonsLearned path");
-    expect(lessonsContextSource).toContain("Previous code-review suggestions are prevention rules");
+    expect(lessonsContextSource).toContain("Proposed-for-future-planning observations are suggestions");
     expect(lessonsContextSource).toContain("collectProjectActiveLessonDocuments");
     expect(lessonsContextSource).toContain("Active Rule Documents Selected For This Run");
     expect(lessonsContextSource).toContain("Raw lesson documents are fallback audit context");
@@ -900,10 +906,8 @@ describe("model routing", () => {
     expect(activeCollectorSource).toContain('basename(document.path).toLowerCase() === "common.md"');
     expect(activeCollectorSource).toContain("selected.size >= maxDocuments");
     expect(activeScorerSource).toContain('fileName === "common.md"');
-    expect(activeScorerSource).toContain('fileName === "rust.md"');
-    expect(activeScorerSource).toContain('fileName === "rust-cargo.md"');
-    expect(activeScorerSource).toContain('fileName === "code-review-recovery.md"');
-    expect(activeScorerSource).toContain('fileName === "codewhale-command-extraction.md"');
+    expect(activeScorerSource).toContain('scoreProjectLessonText(text, focus)');
+    expect(activeScorerSource).toContain('fileName === "index.md"');
     expect(rawCollectorSource).toContain('resolve(lessonsRoot, "Active")');
     expect(rawCollectorSource).toContain("!isPathInsideDirectory(path, activeRoot)");
     expect(normalizerSource).toContain('replace(/^#+\\s*/, "")');
@@ -1070,7 +1074,7 @@ describe("model routing", () => {
       "Use the complete-feature skill for ${options.projectSkillTarget}",
     );
     expect(getFunctionSource("buildCompleteFeaturePrompt")).toContain(
-      "explicit acceptance that code review and manual tests have been completed or accepted",
+      "Manual acknowledgement is a separate human step, never a coverage link",
     );
     expect(getFunctionSource("buildCompleteFeaturePrompt")).toContain(
       "Workflow run id for HEPHA metadata sync",
@@ -1120,8 +1124,8 @@ describe("model routing", () => {
 
   it("injects the Cargo validation ladder into implementation workers", () => {
     expect(phaseWorkerPromptPoliciesSource).toContain("cargoValidationLadderRule");
-    expect(phaseWorkerPromptPoliciesSource).toContain("focused changed-file/exact tests first");
-    expect(phaseWorkerPromptPoliciesSource).toContain("broad full-suite commands");
+    expect(phaseWorkerPromptPoliciesSource).toContain("focused changed-code tests first");
+    expect(phaseWorkerPromptPoliciesSource).toContain("Execute broader suites when the explicit phase contract");
     expect(phaseWorkerApplicationsSource).toContain("cargoValidationLadder: cargoValidationLadderRule");
     expect(phaseExecutionSafetyPromptSource).toContain("full-verification phase must resolve every configured-profile failure");
     expect(getFunctionSource("buildCompleteFeaturePrompt")).toContain("cargoValidationLadderRule");

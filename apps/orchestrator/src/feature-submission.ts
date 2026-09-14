@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "./acceptance-responsibility-policy.js";
 /**
  * Standalone FEAT submission data-layer helpers.
  *
@@ -102,6 +103,8 @@ export function renderSubmitFeatureDocument(input: RenderSubmitFeatureDocumentIn
   }
 
   lines.push("");
+
+  lines.push(ACCEPTANCE_RESPONSIBILITY_POLICY, "");
 
   // Acceptance criteria
   if (acceptanceCriteria.length > 0) {

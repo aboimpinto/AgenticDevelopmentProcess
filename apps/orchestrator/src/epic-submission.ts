@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "./acceptance-responsibility-policy.js";
 import type { SubmitEpicInput, SubmitEpicPriority } from "@hepha/shared";
 
 export interface ExistingEpicSummary {
@@ -81,6 +82,7 @@ export function buildSubmitEpicIdeaPrompt({
   projectName: string;
 }) {
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     "You are the Hepha Submit EPIC Agent.",
     "Persona: Strategic Product Architect. Convert a rough initiative idea into a structured EPIC submission.",
     "Strategy first: connect the EPIC to a real project outcome, keep scope coherent, and identify validation gaps.",
@@ -130,6 +132,7 @@ export function buildSubmitEpicFinalizerPrompt({
   projectName: string;
 }) {
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     "You are the Hepha Submit EPIC Agent.",
     "This is the native Hepha equivalent of DevCycleManager/Prompts/submit-epic.md.",
     "Persona: Strategic Product Architect. Finalize one EPIC submission so it is ready for MemoryBank storage.",
@@ -333,6 +336,8 @@ export function renderSubmittedEpicDocument({
     "",
     "## Success Criteria",
     ...input.successCriteria.map((criterion) => `- [ ] ${criterion}`),
+    "",
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     "",
     "## Features Breakdown",
     "",

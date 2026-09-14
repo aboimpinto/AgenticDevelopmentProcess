@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Declared phase gates and evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "phaseId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "needCodeReview": {
+          "type": "boolean",
+          "description": "Whether the implemented phase scope requires code review. Independent of test coverage and configured health checks."
+        },
+        "needTestCoverage": {
+          "type": "boolean",
+          "description": "Whether phase acceptance requires assessment of meaningful test coverage against behavior and acceptance criteria. This is not numeric coverage measurement: absent percentage thresholds or instrumentation never disable this flag. Set false only when that assessment is inapplicable to the implemented scope, with a scope reason. Preserve any existing acceptance mappings when reconciling legacy numeric coverage N/A."
+        }
+      },
+      "required": [
+        "needCodeReview",
+        "needTestCoverage"
+      ]
+    },
+    "criteria": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "id",
+          "description"
+        ]
+      }
+    },
+    "checks": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "gate": {
+            "enum": [
+              "tests",
+              "gherkin_e2e",
+              "build",
+              "lint"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "outcome": {
+            "enum": [
+              "pending",
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                },
+                "toolCallId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                }
+              },
+              "required": [
+                "path"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "id",
+          "gate",
+          "required",
+          "command",
+          "cwd",
+          "outcome",
+          "evidence"
+        ]
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {
+          "enum": [
+            "pending",
+            "approved",
+            "changes_required",
+            "not_applicable"
+          ]
+        },
+        "reportPath": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "outcome"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {
+          "enum": [
+            "pending",
+            "sufficient",
+            "missing",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "criteria": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "criterionId": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "checkIds": {
+                "type": "array",
+                "maxItems": 10000,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                }
+              },
+              "testPaths": {
+                "type": "array",
+                "maxItems": 10000,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                }
+              },
+              "assertions": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "required": [
+              "criterionId",
+              "checkIds",
+              "testPaths",
+              "assertions"
+            ]
+          }
+        }
+      },
+      "required": [
+        "outcome",
+        "criteria"
+      ],
+      "description": "The active acceptance-coverage assessment, not an instrumentation or percentage report. If needTestCoverage is false, outcome is not_applicable with a scope reason and criteria is empty. A populated assessment requires reconciliation with the flag; do not delete mappings merely to bypass coverage."
+    },
+    "revisions": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "needCodeReview": {
+                "type": "boolean"
+              },
+              "needTestCoverage": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "needCodeReview",
+              "needTestCoverage"
+            ]
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "needCodeReview": {
+                "type": "boolean"
+              },
+              "needTestCoverage": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "needCodeReview",
+              "needTestCoverage"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "implementedScope": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "evidencePaths": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        "required": [
+          "before",
+          "after",
+          "reason",
+          "implementedScope",
+          "evidencePaths"
+        ]
+      }
+    }
+  },
+  "required": [
+    "phaseId",
+    "flags",
+    "criteria",
+    "checks",
+    "review",
+    "coverage"
+  ]
+}

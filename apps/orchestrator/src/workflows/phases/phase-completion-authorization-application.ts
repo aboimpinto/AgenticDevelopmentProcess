@@ -1,3 +1,4 @@
+import { persistDocumentationApplicability } from "../../exchanges/phase-verification-repository.js";
 import type { PhaseSummary, WorkItemCard } from "@hepha/shared";
 
 type NumberedPhase = PhaseSummary & { number: number };
@@ -43,6 +44,7 @@ export class PhaseCompletionAuthorizationApplication {
         `${this.dependencies.formatPhase(phase)} cannot become COMPLETED while a declared task remains unresolved.`,
       );
     }
+    persistDocumentationApplicability(feature.folderPath, phase);
     this.dependencies.markCompleted(feature.folderPath, phase);
   }
 }

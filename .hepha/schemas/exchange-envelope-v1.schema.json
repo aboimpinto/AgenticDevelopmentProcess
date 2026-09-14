@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HEPHA exchange envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "payload"],
+  "properties": {
+    "schemaVersion": { "const": "hepha-exchange/v1" },
+    "kind": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" },
+    "audit": { "description": "Optional non-authoritative metadata, normalized separately." }
+  }
+}

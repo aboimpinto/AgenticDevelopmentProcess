@@ -11,8 +11,10 @@ const implementationWorker = readFileSync(fileURLToPath(new URL("../src/workflow
 
 describe("generic DevCycle MCP compatibility Gherkin integration", () => {
   it("defines identity-blind recipe-source behavior", () => {
-    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(10);
+    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(12);
     expect(feature).toContain("human sign-off and owner-attestation tasks are rejected");
+    expect(feature).toContain("refinement run fails with deterministic artifact diagnostics");
+    expect(feature).toContain("rejected before a workflow run or manual-test mutation is recorded");
     expect(feature).toContain("External release findings do not block implementation completion");
     expect(feature).toContain("release readiness records the external dependency separately");
     expect(feature).toContain("target product workspace contains Cargo.toml");

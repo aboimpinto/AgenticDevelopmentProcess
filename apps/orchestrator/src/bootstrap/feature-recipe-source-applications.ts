@@ -6,7 +6,13 @@ import { createWorkItemCardKey } from "../application/work-items/work-item-card-
 import type { WorkItemQueryApplication } from "../application/work-items/work-item-query-application.js";
 import type { RoutingActionResolver } from "../agent-routing/routing-action-resolver.js";
 import type { ImplementationWorkerApplication } from "../workflows/phases/implementation-worker-application.js";
+import {
+  validateDevCycleImplementationArtifacts,
+  validateDevCycleCompletedArtifacts,
+  validateDevCycleRefineArtifacts,
+} from "../application/features/devcycle-refine-artifact-validator.js";
 import { DevCycleMcpCompatibilityApplication } from "../workflows/recipes/devcycle-mcp-compatibility-application.js";
+import { canonicalizeCompatibilityFeatureStatus } from "../workflows/recipes/compatibility-lifecycle-state.js";
 import {
   applyCompatibilityManualTestDeferrals,
   seedRefinedManualTestSkips,
@@ -57,6 +63,14 @@ export function createFeatureRecipeSourceApplications(
     }),
     summarizeOutput: summarizeWorkflowOutput,
     summarizeProject: toProjectSummary,
+    isWorkflowActive: async (input) => {
+      const current = await dependencies.metadataStore.getCardMetadata(input.projectId, input.cardKey);
+      return current?.workflowRunId === input.runId && current.workflowStatus === "running";
+    },
+    reconcileImplementationState: canonicalizeCompatibilityFeatureStatus,
+    validateCompletedArtifacts: validateDevCycleCompletedArtifacts,
+    validateImplementationArtifacts: validateDevCycleImplementationArtifacts,
+    validateRefinementArtifacts: validateDevCycleRefineArtifacts,
   });
   return Object.freeze(Object.fromEntries(Object.entries(dependencies.native).map(([operation, native]) => [
     operation,

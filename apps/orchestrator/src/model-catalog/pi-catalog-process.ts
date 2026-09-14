@@ -1,14 +1,17 @@
 import { spawn } from "node:child_process";
+import { PI_SDK_CATALOG_SCRIPT } from "./pi-sdk-catalog-script.js";
 import type { PiCatalogProcess, PiCatalogProcessResult } from "./catalog-ports.js";
 
-/** Executes only Pi's supported catalog command without a shell or extra env. */
+/** Bounded, read-only discovery through the installed Pi SDK, without a shell. */
 export class NodePiCatalogProcess implements PiCatalogProcess {
+  constructor(private readonly executablePath?: string) {}
   async listModels(input: { readonly timeoutMs: number; readonly maxStdoutBytes: number }): Promise<PiCatalogProcessResult> {
     return new Promise((resolve) => {
       let settled = false;
       let stdout = "";
       let stdoutBytes = 0;
-      const child = spawn("pi", ["--list-models"], {
+      const child = spawn(process.execPath, ["--input-type=module", "--eval", PI_SDK_CATALOG_SCRIPT,
+        ...(this.executablePath ? [this.executablePath] : [])], {
         shell: false,
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,

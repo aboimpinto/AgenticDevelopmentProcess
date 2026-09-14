@@ -85,6 +85,9 @@ export class RuntimeExecutionCoordinator {
       attemptKind: "primary",
     }, hooks);
     if (primary.ok) return { ok: true, classification: "primary", attemptResult: primary };
+    if (primary.attempt?.failureCode === "safety_rejected") {
+      return this.terminal(primary, "RUNTIME_ROUTE_SEQUENCE_EXHAUSTED");
+    }
     if (primary.code === "RUNTIME_PERSISTENCE_FAILED") {
       return this.terminal(primary, "RUNTIME_PERSISTENCE_FAILED");
     }
@@ -136,13 +139,14 @@ export class RuntimeExecutionCoordinator {
     if (!primary.attempt || !primary.receipt || !isTerminalAttempt(primary.attempt)) {
       return failure(code === "RUNTIME_PERSISTENCE_FAILED" ? code : "RUNTIME_PERSISTENCE_FAILED", "terminal", primary);
     }
-    if (!this.dependencies.receipts.settleAttempt(primary.attempt).ok) {
-      return failure("RUNTIME_PERSISTENCE_FAILED", "terminal", primary);
-    }
+    // The executor already persisted this terminal attempt. Re-settling an
+    // already closed single-route invocation is rejected by the store and
+    // previously hid a genuine policy stop behind a persistence error.
     const current = this.dependencies.receipts.getInvocation(primary.receipt.invocationId);
     if (!current.ok || current.value === null) return failure("RUNTIME_PERSISTENCE_FAILED", "terminal", primary);
     const attempt = current.value.attempts.find((candidate) => candidate.attemptId === primary.attempt!.attemptId);
     if (!attempt || !isTerminalAttempt(attempt)) return failure("RUNTIME_PERSISTENCE_FAILED", "terminal", primary);
+    if (current.value.receipt.status !== "running") return failure(code, "terminal", { ...primary, attempt, receipt: current.value.receipt });
     const settled = settleFromAttempt(current.value.receipt, attempt, this.dependencies.now());
     if (!isRuntimeInvocationReceiptV1(settled) || !this.dependencies.receipts.settleInvocation(settled).ok) {
       return failure("RUNTIME_PERSISTENCE_FAILED", "terminal", primary);

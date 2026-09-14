@@ -47,13 +47,15 @@ describe("feature planning artifact policy", () => {
     expect(() => current.policy.assertPresent(current.feature)).toThrow(rootPath);
   });
 
-  it("uses the declared role and retains the legacy first-phase fallback", () => {
+  it("uses the declared planning responsibility without a numbered fallback", () => {
     const declared = fixture("planning");
     expect(declared.policy.isPlanningPhase(declared.feature, declared.phase)).toBe(true);
     const implementation = fixture("implementation");
     expect(implementation.policy.isPlanningPhase(implementation.feature, implementation.phase)).toBe(false);
     const legacy = fixture(null);
-    expect(legacy.policy.isPlanningPhase(legacy.feature, { ...legacy.phase, number: 1 })).toBe(true);
+    for (const number of [1, 4, 27]) {
+      expect(legacy.policy.isMissing(legacy.feature, { ...legacy.phase, number })).toBe(false);
+    }
   });
 
   it("does not require an artifact from a skipped planning phase", () => {

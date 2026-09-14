@@ -1,4 +1,5 @@
 import type { AgentActionId, FeatureWorkflowCommand } from "@hepha/shared";
+import { verificationContract } from "../prompts/verification-contract.js";
 import type { FeatureRecipeOperation } from "./feature-recipe-source-policy.js";
 
 interface CompatibilityMapping {
@@ -64,7 +65,10 @@ export function createDevCycleMcpCompatibilityRequest(input: {
 }
 
 /** Gives one selected Pi model the legacy client contract without importing native Hepha recipe prose. */
-export function renderDevCycleMcpCompatibilityPrompt(request: DevCycleMcpCompatibilityRequest): string {
+export function renderDevCycleMcpCompatibilityPrompt(
+  request: DevCycleMcpCompatibilityRequest,
+  refinementDiagnostics: readonly string[] = [],
+): string {
   return [
     "You are Hepha's DevCycle MCP compatibility worker.",
     "The MCP response supplies the recipe; Hepha retains lifecycle invariants. Do not use a native Hepha skill as the recipe source.",
@@ -80,6 +84,13 @@ export function renderDevCycleMcpCompatibilityPrompt(request: DevCycleMcpCompati
     "```",
     "A successful recipe response has structuredContent where status == \"pending_execution\", action == \"execute_procedure\", execution_owner == \"client_llm\", and retry_same_tool == false.",
     "When that contract is present, execute the returned instructions locally with your normal Pi file, shell, Git, and editing tools. Do not retry the same recipe call.",
+    ...(refinementDiagnostics.length > 0
+      ? [
+          "",
+          "HEPHA found these deterministic validation errors in the existing refinement artifacts. Repair every item before reporting COMPLETED:",
+          ...refinementDiagnostics.slice(0, 50).map((diagnostic) => `- ${diagnostic}`),
+        ]
+      : []),
     "Apply the following Hepha lifecycle invariants to the returned recipe. They define lifecycle safety and decision ownership; they do not replace the provider's implementation procedure:",
     ...renderOperationInvariants(request),
     "Preserve the selected workflow mode across every explicit handoff returned by the procedure. Autonomous mode continues end-to-end; single_phase mode accepts one phase and then stops. Call each handed-off DevCycle MCP command once in this same Pi session and model.",
@@ -95,11 +106,14 @@ export function renderDevCycleMcpCompatibilityPrompt(request: DevCycleMcpCompati
 function renderOperationInvariants(request: DevCycleMcpCompatibilityRequest): readonly string[] {
   if (request.operation === "refineFeature") {
     return [
+      verificationContract(true),
       "- Deep-Dive owns clarification. Refine Feature consumes resolved target decisions and MUST NOT create human-sign-off, owner-attestation, CODEOWNER-approval, manual-acceptance, or user-choice tasks.",
       "- If the target FeatureDescription still has an unresolved implementation decision, stop before publishing any refinement artifacts and route that target decision through Deep-Dive.",
       "- Validation markers or uncertainty in linked or contextual documents must not block the target feature; they are read-only context unless the target explicitly imports the unresolved decision.",
       "- Classify every test/qualification item statically as AUTOMATABLE or MANUAL_TEST_REQUIRED. A user-provided physical device, qualified GUI/session, hardware capability, external ceremony, or inherently manual interaction is MANUAL_TEST_REQUIRED.",
       "- Do not turn MANUAL_TEST_REQUIRED work into a blocking executable implementation gate. Create it only for a real human-operable surface, never for internal models, architecture, static catalogues, schema/digest/startup validation, immutable structures, unit tests, or source properties. Record its task as SKIPPED with reason 'This test cannot be automated and the user needs to test it manually.' and create ManualTestObligations.json (hepha-manual-test-obligations/v1) with a concrete application/interface as the first action, exact preconditions, account/test-data requirements, specific actions, observable expected result, and evidence requirements. Placeholder workflows are invalid.",
+      "- Every ManualTestObligations.json taskId must bind to exactly one durable unchecked item in that phase's `## Phase Task Ledger`. The item must begin `- [ ] [contract:<taskId>]` and the same stable taskId must appear in the obligation. A numbered `### Task` heading or status prose is descriptive and is never task identity.",
+      "- Before reporting COMPLETED, validate the complete provider-owned refinement set as one contract: FeatureTasks.md, all nine referenced phase files, phase statuses, durable task ledgers, and manual-obligation traceability. Existing files from an earlier attempt must be repaired rather than merely reported as present.",
       "- Every generated non-skipped task must be executable by an autonomous developer from the target specification, completed Deep-Dive decisions, repository evidence, and automated quality gates.",
       "- Refine Feature is a documentation-only planning action. Do not execute package-manager, compiler, build, test, lint, audit, dependency-search, or version-probe commands, including cargo, rustc, npm, pnpm, yarn, dotnet, or their equivalents.",
       "- Discover technology and configured commands statically from manifests, lockfiles, workflows, source, and project documentation. Use documentation research when static evidence is insufficient; record commands in the plan without running them.",
@@ -119,6 +133,7 @@ function renderOperationInvariants(request: DevCycleMcpCompatibilityRequest): re
         ]
         : [];
     return [
+      verificationContract(true),
       "- In autonomous and single_phase execution, NEVER stop to request human sign-off, owner attestation, CODEOWNER approval, product/technical choice, review approval, phase acceptance, or permission to continue.",
       "- The implementation worker has delegated decision authority. Apply the target specification, completed Deep-Dive decisions, canonical planning artifact, repository evidence, project conventions, security-first defaults, and downstream compatibility constraints.",
       "- If a phase contains a human approval/sign-off/attestation task, treat it as a refinement defect: replace it with an evidence-based automated decision or validation, record the rationale, add tests where applicable, and continue.",

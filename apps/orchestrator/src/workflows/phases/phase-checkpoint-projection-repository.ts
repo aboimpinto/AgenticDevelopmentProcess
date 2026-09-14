@@ -1,4 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { persistPhaseVerification } from "../../exchanges/phase-verification-repository.js";
+import type { PhaseExecutionRole } from "../../phase-execution-contract.js";
 import type { PhaseSummary } from "@hepha/shared";
 import type { AggregateVerificationResult } from "../../final-verification-types.js";
 import {
@@ -14,17 +16,23 @@ export class PhaseCheckpointProjectionRepository {
     phase: PhaseSummary & { number: number },
     verification: AggregateVerificationResult,
     reviewArtifactHash: string | null,
+    role: PhaseExecutionRole = "implementation",
+    runId?: string,
   ): void {
     if (!existsSync(phase.documentPath)) return;
+    let executedAt: string | undefined;
+    try { executedAt = this.now(); } catch { /* Audit time is optional. */ }
+    persistPhaseVerification(phase, verification, role, { runId, testExecutionTimestamp: executedAt });
     const markdown = readFileSync(phase.documentPath, "utf8");
     const report = renderPhaseCheckpointReport({
       completedTasks: false,
-      executedAt: this.now(),
+      executedAt: executedAt ?? "unavailable",
       reviewArtifactHash,
       reviewSatisfied: true,
       verification,
     });
-    const withCoverageGate = applyCoverageMeasurementGate(markdown, verification);
+    const marker = "<!-- hepha:phase-verification:json-v1 -->";
+    const withCoverageGate = applyCoverageMeasurementGate(markdown.includes(marker) ? markdown : `${markdown.trimEnd()}\n\n${marker}\n`, verification);
     writeFileSync(phase.documentPath, upsertPhaseCheckpointReport(withCoverageGate, report), "utf8");
   }
 }

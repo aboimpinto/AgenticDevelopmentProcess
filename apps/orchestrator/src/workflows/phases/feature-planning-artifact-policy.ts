@@ -33,7 +33,7 @@ export class FeaturePlanningArtifactPolicy {
     phase: Pick<PhaseSummary, "documentPath" | "number">,
   ): boolean {
     const contract = this.dependencies.getContractPhase(feature, phase);
-    return contract ? contract.role === "planning" : phase.number === 1;
+    return contract?.role === "planning";
   }
 
   isMissing(

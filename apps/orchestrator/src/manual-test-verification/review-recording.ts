@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ManualTestVerificationReviewRecord } from "@hepha/db";
 import type { ManualTestAdapterContext } from "./adapter-context.js";
-import { getExactCurrentManualTestPack, readStoredPackReadiness } from "./current-pack.js";
+import { getExactCurrentManualTestPack, readStoredPackCases } from "./current-pack.js";
 
 // ---------------------------------------------------------------------------
 // Review Recording
@@ -10,6 +10,7 @@ import { getExactCurrentManualTestPack, readStoredPackReadiness } from "./curren
 export interface RecordReviewOptions {
   readonly context: ManualTestAdapterContext;
   readonly packId: string;
+  readonly testId?: string;
 }
 
 export interface RecordReviewResult {
@@ -39,22 +40,23 @@ export async function recordPackReview(
     };
   }
 
-  const readiness = readStoredPackReadiness(context.projectRoot, pack.markdownPath);
-  if (!readiness.isReady) {
-    return {
-      success: false,
-      reviewId: null,
-      message: readiness.applicability === "not_applicable"
-        ? "Manual Tests: Not Applicable. The informational delivery cannot be reviewed as a manual test pack."
-        : "The manual test package is incomplete and cannot be reviewed as ready.",
-      errors: ["At least one validated executable manual test is required."],
-    };
+  // Reviewing the stored executable cases does not approve acceptance coverage.
+  try {
+    const cases = readStoredPackCases(context.projectRoot, pack.markdownPath, true);
+    if (options.testId && !cases.some(test => test.id === options.testId)) throw new Error("Test ID is not in the current pack.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, reviewId: null, message, errors: [message] };
   }
 
   // Verify no existing current review for this pack
   const existingReview = await context.store.getCurrentManualTestReview(context.projectId, context.cardKey);
   if (existingReview && existingReview.packId === packId) {
-    return { success: true, reviewId: existingReview.id, message: "Pack already reviewed.", errors: [] };
+    if (existingReview.reviewedTestIds != null) {
+      await context.store.recordManualTestReview({ ...existingReview, reviewedAt: new Date().toISOString(),
+        reviewedTestIds: options.testId ? [...new Set([...existingReview.reviewedTestIds, options.testId])] : null });
+    }
+    return { success: true, reviewId: existingReview.id, message: options.testId ? `Case ${options.testId} reviewed. Other cases and coverage requirements are unchanged.` : "Pack reviewed.", errors: [] };
   }
 
   const reviewId = `review-${randomUUID()}`;
@@ -80,6 +82,7 @@ export async function recordPackReview(
     state: "current",
     invalidatedAt: null,
     invalidatedReason: null,
+    reviewedTestIds: options.testId ? [options.testId] : null,
   };
 
   await context.store.recordManualTestReview(review);
@@ -87,7 +90,8 @@ export async function recordPackReview(
   return {
     success: true,
     reviewId,
-    message: `Pack ${packId} reviewed successfully. Manual tests can now be recorded.`,
+    message: options.testId ? `Case ${options.testId} reviewed. Record its result only after execution; this does not approve the whole pack.`
+      : `Pack ${packId} reviewed successfully. Manual tests can now be recorded.`,
     errors,
   };
 }

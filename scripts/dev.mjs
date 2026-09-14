@@ -1,8 +1,11 @@
 import { spawn } from "node:child_process";
 import http from "node:http";
+import { assertPortAvailable, stopProcessTree } from "./dev-processes.mjs";
 
-const orchestratorUrl = "http://127.0.0.1:4317/api/health";
-const children = new Set();
+const orchestratorPort = Number(process.env.HEPHA_ORCHESTRATOR_PORT ?? "4318");
+const webPort = Number(process.env.HEPHA_WEB_PORT ?? "5176");
+const orchestratorUrl = `http://127.0.0.1:${orchestratorPort}/api/health`;
+const processTrees = new Set();
 const usePolling = process.argv.includes("--poll");
 let isShuttingDown = false;
 
@@ -12,6 +15,9 @@ main().catch((error) => {
 });
 
 async function main() {
+  await assertPortAvailable(orchestratorPort);
+  await assertPortAvailable(webPort);
+  if (isShuttingDown) return;
   const orchestrator = startProcess("orchestrator", [
     "--filter",
     "@hepha/orchestrator",
@@ -20,6 +26,7 @@ async function main() {
 
   await waitForHealth(orchestratorUrl, orchestrator, 20000);
 
+  if (isShuttingDown) return;
   startProcess("web", ["--filter", "@hepha/web", "dev"]);
 }
 
@@ -31,25 +38,21 @@ function startProcess(label, args) {
     shell: false,
     stdio: "inherit",
     windowsHide: true,
+    detached: process.platform !== "win32",
   });
 
-  children.add(child);
+  processTrees.add(child);
 
   child.on("exit", (code, signal) => {
-    children.delete(child);
-
     if (isShuttingDown) {
       return;
     }
 
-    if (children.size > 0 && code !== 0 && signal !== "SIGINT") {
-      console.error(`${label} stopped unexpectedly.`);
-      shutdown(code ?? 1);
-    }
+    console.error(`${label} stopped; shutting down the development session.`);
+    shutdown(signal === "SIGINT" ? 0 : code ?? 1);
   });
 
   child.on("error", (error) => {
-    children.delete(child);
     console.error(`${label} failed to start: ${error.message}`);
     shutdown(1);
   });
@@ -72,7 +75,7 @@ async function waitForHealth(url, child, timeoutMs) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
-    if (child.exitCode !== null) {
+    if (isShuttingDown || child.exitCode !== null || child.signalCode !== null) {
       throw new Error("orchestrator exited before becoming healthy.");
     }
 
@@ -120,13 +123,14 @@ function getPnpmArgs(args) {
 }
 
 function shutdown(code) {
+  if (isShuttingDown) return;
   isShuttingDown = true;
 
-  for (const child of children) {
-    if (!child.killed) {
-      child.kill();
-    }
-  }
+  for (const child of processTrees) stopProcessTree(child);
+  if (processTrees.size) setTimeout(() => {
+    for (const child of processTrees) stopProcessTree(child, "SIGKILL");
+    processTrees.clear();
+  }, 2000);
 
   process.exitCode = code;
 }

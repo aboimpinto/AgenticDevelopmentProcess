@@ -120,6 +120,27 @@ function harness(options: {
 }
 
 describe("deep-dive start application", () => {
+  it.each([42, "x".repeat(4001)])("rejects invalid focus before scanning or persisting", async (focus) => {
+    const current = harness();
+    await expect(current.application.start({ cardId: item.id, projectId: project.id, focus: focus as string })).rejects.toThrow("4000 characters");
+    expect(current.dependencies.scanProject).not.toHaveBeenCalled();
+    expect(current.store.createDeepDiveSession).not.toHaveBeenCalled();
+  });
+  it("persists user focus independently from source and passes it to question generation", async () => {
+    const current = harness();
+    await current.application.start({ cardId: item.id, projectId: project.id, focus: "  Explore accessibility  " });
+    await vi.waitFor(() => expect(current.dependencies.planQuestions).toHaveBeenCalled());
+    expect(current.store.createDeepDiveSession).toHaveBeenCalledWith(expect.objectContaining({ focus: "Explore accessibility", originalDocument: item.specMarkdown, originalDocumentHash: "source-hash" }));
+    expect(current.dependencies.planQuestions).toHaveBeenCalledWith(project, item, expect.objectContaining({ focus: "Explore accessibility" }));
+  });
+
+  it("rejects another running workflow without overwriting its metadata", async () => {
+    const current = harness();
+    vi.mocked(current.dependencies.scanProject).mockResolvedValue([{ ...item, featureWorkflow: { activeRun: { status: "running", command: "refine-feature" } } } as WorkItemCard]);
+    await expect(current.application.start({ cardId: item.id, projectId: project.id })).rejects.toThrow(/running workflow/);
+    expect(current.store.createDeepDiveSession).not.toHaveBeenCalled();
+  });
+
   it("rejects an unknown project before scanning work items", async () => {
     const current = harness({ projectAvailable: false });
     await expect(current.application.start({ cardId: item.id, projectId: project.id })).rejects.toThrow("Project not found");

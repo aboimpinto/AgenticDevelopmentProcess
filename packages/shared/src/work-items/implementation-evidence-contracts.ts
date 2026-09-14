@@ -22,7 +22,20 @@ export type FeatureQualityGateStatus =
   | "not_applicable"
   | "unknown";
 
-export type FeatureQualityGateKind = "tests" | "gherkin_e2e" | "code_review";
+export type FeatureQualityGateKind = "tests" | "gherkin_e2e" | "code_review" | "build" | "lint";
+
+export interface PhaseQualityResolutionInput {
+  projectId: string;
+  cardId: string;
+  phaseNumber: number;
+  gate: FeatureQualityGateKind | "completion_recovery";
+  action: "repair" | "waive";
+  note: string;
+  confirmWaiver?: boolean;
+  /** Human reports setup is available; this never establishes execution or coverage. */
+  confirmExecutionPrerequisites?: boolean;
+  expectedUpdatedAt: string;
+}
 
 export interface FeatureChangedFileSummary {
   path: string;
@@ -48,6 +61,19 @@ export interface FeaturePhaseQualityGateDecision {
   gate: FeatureQualityGateKind;
   justification: string | null;
   status: FeatureQualityGateStatus;
+}
+
+/** Build/lint findings are advisory, never fabricated passing results.
+ * Required test/review evidence and unjustified waivers remain blocking. */
+export function isUnresolvedQualityGate(gate: { readonly status: string; readonly justification: string | null; readonly gate?: string }): boolean {
+  if (gate.gate === "build" || gate.gate === "lint") return false;
+  return gate.status === "missing" || gate.status === "unknown" ||
+    (gate.status === "waived" && !gate.justification?.trim());
+}
+
+export function isPhaseQualityWarning(gate: { readonly gate: string; readonly status: string; readonly justification: string | null }): boolean {
+  return (gate.gate === "build" || gate.gate === "lint") &&
+    (gate.status === "missing" || gate.status === "unknown" || (gate.status === "waived" && !gate.justification?.trim()));
 }
 
 export interface FeaturePhaseQualitySummary {

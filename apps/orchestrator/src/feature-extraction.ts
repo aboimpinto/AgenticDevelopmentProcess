@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "./acceptance-responsibility-policy.js";
 export interface ExistingFeatureSummary {
   externalId: string;
   summary: string;
@@ -24,6 +25,7 @@ export function buildUnnamedFeatureDiscoveryPrompt({
   existingFeatures: ExistingFeatureSummary[];
 }) {
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     "You are the Hepha Feature Extraction Agent.",
     "The EPIC has a current Hepha deep-dive and no [NEEDS VALIDATION] markers.",
     "Inspect the EPIC and identify concrete planned FEATs that are described without a FEAT-### ID.",
@@ -146,6 +148,8 @@ export function renderSubmittedFeatureDocument({
     "## Acceptance Criteria",
     "",
     ...acceptanceCriteria,
+    "",
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     ...dependencyLines,
     "",
     "## Validation",

@@ -276,6 +276,14 @@ describe("mapAvailableActions", () => {
     expect(mapAvailableActions(null, false)).toEqual([]);
   });
 
+  it("preserves Design permission without recovery errors and does not authorize Refine", () => {
+    const actions = mapAvailableActions(makeWorkflow({ canCreateUiRequirements: true, canRefineFeature: false,
+      readiness: { ready: true, reasons: [] }, uiRequirementDecision: "requires_ui",
+    }), false);
+    expect(actions.find(action => action.id === "create-ui-requirements")?.available).toBe(true);
+    expect(actions.find(action => action.id === "refine-feature")?.available).toBe(false);
+  });
+
   it("includes check-ui-requirement when canCreateUiRequirements is true", () => {
     const workflow = makeWorkflow({ canCreateUiRequirements: true });
     const actions = mapAvailableActions(workflow, false);

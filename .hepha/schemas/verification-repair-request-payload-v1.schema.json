@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verification repair request v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["phaseId", "taskId", "allowAdvisoryAcceptance", "responseKind"],
+  "properties": {
+    "phaseId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "taskId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "allowAdvisoryAcceptance": { "type": "boolean" },
+    "responseKind": { "const": "verification.repair" }
+  }
+}

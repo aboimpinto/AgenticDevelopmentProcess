@@ -26,7 +26,7 @@ export function planPhaseReviewRequirement(input: {
     && input.nextOrderedTask === null;
   const orderedReviewRequired = input.contract !== null
     && orderedTaskWorkflow
-    && input.contract.tasks.some((task) => task.kind === "code_review"
+    && input.contract.tasks.some((task) => task.kind === "code_review" && task.required
       && (task.condition === "always"
         || (task.condition === "when_production_code_changes" && productionCodeChanged)));
   const reviewRequiredNow = input.contract && orderedTaskWorkflow

@@ -135,6 +135,14 @@ function createFixture(options: {
 }
 
 describe("RuntimeExecutionCoordinator", () => {
+  it.each([1, 2])("MR-04 preserves a policy stop with %s routes without buying a fallback or reporting persistence failure", async routes => {
+    const fixture = createFixture({ selectedPlan: plan(routes), process: async () => ({ status: "failed", exitCode: 78, failureCode: "safety_rejected" }) });
+    try {
+      const result = await fixture.coordinator.execute({ plan: fixture.selectedPlan, invocationId: "invocation-1", context: context(), inputRef: "prompt:1" });
+      expect(result).toMatchObject({ ok: false, classification: "terminal", code: "RUNTIME_ROUTE_SEQUENCE_EXHAUSTED" });
+      expect(fixture.calls).toHaveLength(1);
+    } finally { fixture.store.close(); }
+  });
   it("binds the generic failure and recovery scenarios to the public coordinator", () => {
     const feature = readFileSync(featurePath, "utf8");
     for (const tag of ["E011-FAIL-001", "E011-FAIL-002", "E011-FAIL-003", "E011-FAIL-004", "E011-FAIL-005", "WF-RUNTIME-FALLBACK", "WF-RUNTIME-RECOVERY", "WF-RUNTIME-TERMINAL"]) {
@@ -260,8 +268,8 @@ describe("RuntimeExecutionCoordinator", () => {
       expect(read).not.toHaveBeenCalled();
       expect(executeAttempt).toHaveBeenCalledOnce();
       if (primary.attempt) {
-        expect(settleAttempt).toHaveBeenCalledOnce();
-        expect(settleInvocation).toHaveBeenCalledOnce();
+        expect(settleAttempt).not.toHaveBeenCalled();
+        expect(settleInvocation).not.toHaveBeenCalled();
       }
     }
   });

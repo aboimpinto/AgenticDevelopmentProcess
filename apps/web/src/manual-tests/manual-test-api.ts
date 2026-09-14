@@ -7,10 +7,10 @@ import type {
 import { apiGet, apiPost } from "../api/http-client.js";
 
 export const manualTestApi = {
-  generate: (projectId: string, cardId: string) =>
-    apiPost<ManualTestVerificationGenerateResponse>("/api/manual-test-verification/generate", { cardId, projectId }),
-  review: (projectId: string, cardId: string, packId: string) =>
-    apiPost<ManualTestVerificationReviewResponse>("/api/manual-test-verification/review", { cardId, packId, projectId }),
+  generate: (projectId: string, cardId: string, packId?: string, guidance?: string) =>
+    apiPost<ManualTestVerificationGenerateResponse>("/api/manual-test-verification/generate", { cardId, projectId, packId, guidance }),
+  review: (projectId: string, cardId: string, packId: string, testId?: string) =>
+    apiPost<ManualTestVerificationReviewResponse>("/api/manual-test-verification/review", { cardId, packId, projectId, ...(testId ? { testId } : {}) }),
   record: (
     projectId: string,
     cardId: string,

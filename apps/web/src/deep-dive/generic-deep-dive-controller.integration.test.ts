@@ -68,6 +68,15 @@ afterEach(() => {
 });
 
 describe("generic deep-dive controller Gherkin integration", () => {
+  it("sends focus and never resumes an unrelated workflow after voluntary exploration", async () => {
+    api.post.mockResolvedValue({ session: session({ focus: "Explore accessibility" }) });
+    const { result, options } = renderController();
+    act(() => result.current.openRecoverySession(session(), { id: "old-item" } as WorkItemCard));
+    await act(async () => result.current.start({ id: "item" } as WorkItemCard, " Explore accessibility "));
+    expect(api.post).toHaveBeenCalledWith("/api/deep-dive-sessions", { cardId: "item", projectId: "project", focus: "Explore accessibility" });
+    await act(async () => result.current.complete());
+    expect(options.onResume).not.toHaveBeenCalled();
+  });
   it("specifies four product-blind session behaviors", () => {
     expect(specification.match(/^\s*Scenario:/gm)).toHaveLength(4);
     expect(specification).not.toMatch(/FEAT-\d+|EPIC-\d+|Phase \d+|project-\d+/i);

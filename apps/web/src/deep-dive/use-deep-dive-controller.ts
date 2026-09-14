@@ -68,15 +68,17 @@ export function useDeepDiveController({
     onError(null);
   }
 
-  async function start(item: WorkItemCard) {
+  async function start(item: WorkItemCard, focus?: string) {
     if (!projectId) return;
     onPendingAction(`start-${item.id}`);
     try {
       const response = await apiPost<DeepDiveSessionResponse>("/api/deep-dive-sessions", {
         cardId: item.id,
         projectId,
+        ...(focus?.trim() ? { focus: focus.trim() } : {}),
       });
       setSession(response.session);
+      setResumeItem(null);
       setIsOpen(true);
       onError(null);
     } catch (error: unknown) {

@@ -9,6 +9,7 @@ import { useFeatureEpicLink } from "./relationships/use-feature-epic-link.js";
 import { useEpicSubmission } from "./submissions/use-epic-submission.js";
 import { useFeatureSubmission } from "./submissions/use-feature-submission.js";
 import { useFeatureActions } from "./workflow/use-feature-actions.js";
+import { uiClassificationAttemptKey } from "./workflow/ui-classification-attempt-key.js";
 import { useDashboardLiveActivity } from "./workspace/use-dashboard-live-activity.js";
 import { useWorkspaceController } from "./workspace/use-workspace-controller.js";
 import "./styles.css";
@@ -125,13 +126,16 @@ export default function AppShell() {
 
   useEffect(() => {
     const item = workspace.selectedItem;
+    const attemptKey = item && workspace.selectedProject
+      ? uiClassificationAttemptKey(workspace.selectedProject.id, item) : "";
     if (
       !workspace.selectedProject || !item || item.kind !== "feature" ||
+      (item.stateFolder !== "01_SUBMITTED" && item.stateFolder !== "02_READY_TO_DEVELOP") ||
       item.validation.needsValidationCount > 0 ||
       item.featureWorkflow?.uiRequirementDecision !== "unknown" || workspace.pendingDeepDiveAction ||
-      uiDecisionAttemptedIds.has(item.id)
+      Boolean(item.featureWorkflow?.activeRun) || uiDecisionAttemptedIds.has(attemptKey)
     ) return;
-    setUiDecisionAttemptedIds((current) => new Set(current).add(item.id));
+    setUiDecisionAttemptedIds((current) => new Set(current).add(attemptKey));
     void featureActions.evaluateFeatureUiRequirement(item);
   }, [workspace.pendingDeepDiveAction, workspace.selectedItem, workspace.selectedProject, uiDecisionAttemptedIds]);
 

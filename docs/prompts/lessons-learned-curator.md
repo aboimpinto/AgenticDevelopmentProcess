@@ -345,3 +345,6 @@ Project MemoryBanks remain the source of project truth. The global second brain
 contains sanitized reusable knowledge. Hepha should select global active rules by
 agent role, command, phase, stack, tools, project type, and task vocabulary, then
 record selected knowledge IDs in the run receipt.
+
+
+Readiness observations marked `proposed-for-future-planning` are proposals, not active rules. Consider them during Deep-Dive and refinement; incorporate them only through the authorized plan. Do not promote them automatically or add them to the current implementation scope.

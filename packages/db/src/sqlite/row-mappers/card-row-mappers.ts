@@ -4,6 +4,7 @@ import type { FeatureWorkflowCommand } from "../../contracts/workflow-contracts.
 import { normalizeJsonArray, toIsoString } from "../value-normalizers.js";
 
 export interface StoredDeepDiveSessionRow {
+  focus?: string | null;
   agent_connection_status: string;
   card_external_id: string;
   card_id: string;
@@ -25,6 +26,7 @@ export interface StoredDeepDiveSessionRow {
 
 export function mapDeepDiveSessionRow(row: StoredDeepDiveSessionRow): StoredDeepDiveSession {
   return {
+    ...(row.focus ? { focus: row.focus } : {}),
     agentConnectionStatus: row.agent_connection_status,
     cardExternalId: row.card_external_id,
     cardId: row.card_id,

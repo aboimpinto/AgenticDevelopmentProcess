@@ -41,6 +41,10 @@
       "sourceDirectory": ".hepha/schemas",
       "destinationDirectory": ".hepha/schemas",
       "files": [
+        "exchange-envelope-v1.schema.json",
+        "phase-verification-payload-v1.schema.json",
+        "verification-repair-payload-v1.schema.json",
+        "verification-repair-request-payload-v1.schema.json",
         "architecture-rules-v1.schema.json",
         "common-review-contract-types-v1.schema.json",
         "complete-feature-result.schema.json",
@@ -53,7 +57,12 @@
         "replan-plan-v1.schema.json",
         "review-manifest-v1.schema.json",
         "start-feature-postprocess.schema.json",
-        "verification-receipt-v1.schema.json"
+        "verification-receipt-v1.schema.json",
+        "phase-gates-payload-v1.schema.json",
+        "verification-inventory-commands-v1.schema.json",
+        "verification-execution-receipt-v1.schema.json",
+        "feature-acceptance-assessment-v1.schema.json",
+        "feature-acceptance-assessment-v2.schema.json"
       ]
     },
     {

@@ -161,7 +161,7 @@ export function mapAvailableActions(
 
   // Readiness recovery actions
   actions.push(
-    descriptor("check-ui-requirement", "Check UI Requirement", !!workflow.canCreateUiRequirements, false, null),
+    descriptor("check-ui-requirement", "Check UI Requirement", !isActive && (workflow.uiRequirementDecision === "unknown" || !!workflow.canCreateUiRequirements), false, null),
     descriptor("create-ui-requirements", "Create UI Requirements", !!workflow.canCreateUiRequirements, false, null),
     descriptor("refine-feature", "Refine Feature", !!workflow.canRefineFeature, false, null),
   );

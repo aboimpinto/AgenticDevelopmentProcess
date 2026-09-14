@@ -1,3 +1,4 @@
+import { verificationContract } from "./verification-contract.js";
 export interface PhasePlanningAcceptancePromptInput {
   epicAcceptanceTestsFileName: string;
   featurePlanningArtifactFileName: string;
@@ -7,6 +8,7 @@ export interface PhasePlanningAcceptancePromptInput {
 /** Renders cross-phase planning handoff and Product Owner acceptance traceability rules. */
 export function renderPhasePlanningAcceptanceRules(input: PhasePlanningAcceptancePromptInput) {
   return [
+    verificationContract(true),
     `- Feature planning artifact: \`${input.featurePlanningArtifactFileName}\` in the FEAT folder.`,
     `- Always use the exact canonical filename \`${input.featurePlanningArtifactFileName}\`. Do not invent alternatives such as phase-1-plan.md, implementation-plan.md, planning.md, or analysis-report.md.`,
     `- If a legacy planning file with a different name already exists, consolidate useful content into \`${input.featurePlanningArtifactFileName}\` and continue using only the canonical file.`,

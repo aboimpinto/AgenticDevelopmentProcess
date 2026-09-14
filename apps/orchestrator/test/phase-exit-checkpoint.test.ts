@@ -176,3 +176,7 @@ describe("phase exit checkpoint", () => {
     ).toMatchObject({ allowed: true, missingGates: [] });
   });
 });
+
+it.each(["missing", "unknown"])("health %s outcomes do not block generic phase exit", status => {
+  expect(assessPhaseExitCheckpoint({ completionEvidencePresent: true, phaseNumber: 41, phaseStatus: "COMPLETED", qualityGates: [{ gate: "tests", status: "not_applicable" }, { gate: "code_review", status: "not_applicable" }, { gate: "build", status }, { gate: "lint", status }] })).toMatchObject({ allowed: true, missingGates: [] });
+});

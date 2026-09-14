@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPiOneShotPromptRunner, type PiOneShotRunnerConfig } from "../src/runtime/pi/pi-one-shot-runner.js";
 
 const roots: string[] = [];
-const launch = { environment: { PATH: process.env.PATH }, model: { model: "test", provider: "test" } };
+const launch = { environment: { PATH: process.env.PATH }, model: { model: "gpt-5", provider: "openai" } };
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
@@ -42,6 +42,17 @@ function createRunner(script: string, overrides: Partial<PiOneShotRunnerConfig> 
 }
 
 describe("Pi one-shot prompt runner", () => {
+  it("preserves request telemetry in logs but returns only the actionable budget failure", async () => {
+    const { root, run } = createRunner(`
+console.error('HEPHA_MODEL_REQUEST {"inputTokens":40000}');
+console.error('HEPHA_INPUT_USAGE_BUDGET_EXCEEDED: scope=attempt; consumed=480963; next=74000; limit=512000. No request was sent.');
+process.exitCode=78;
+`);
+    const message = await run("prompt", launch, { workflowRunId: "workflow-budget" }).catch(e => e.message);
+    expect(message).toContain("limit=512000"); expect(message).not.toContain("HEPHA_MODEL_REQUEST {");
+    const log = readdirSync(root).find(name => name.endsWith("-stream.log"));
+    expect(readFileSync(resolve(root, log!), "utf8")).toContain('HEPHA_MODEL_REQUEST {"inputTokens":40000}');
+  });
   it("returns recovered terminal assistant output and records a bounded stream log", async () => {
     const { register, root, run, unregister } = createRunner(`
 console.log(JSON.stringify({type:"error",message:"temporary"}));
@@ -96,7 +107,7 @@ process.exitCode = 7;
     expect(unregister).toHaveBeenCalledOnce();
   });
 
-  it("allows productive work beyond the former wall-clock boundary when the maximum is disabled", async () => {
+  it.each([false, true])("MC-03: allows productive work beyond the former boundary with no maximum (implementation=%s)", async (implementationProfile) => {
     const { run } = createRunner(`
 let count = 0;
 const timer = setInterval(() => {
@@ -106,10 +117,10 @@ const timer = setInterval(() => {
     console.log(JSON.stringify({type:"message_end",message:{role:"assistant",stopReason:"stop",content:"completed after progress"}}));
   }
 }, 20);
-`);
+`, { defaultTimeoutMs: 40, implementationTimeoutMs: 40 });
 
     await expect(run("prompt", launch, {
-      implementationProfile: true,
+      implementationProfile,
       maxRuntimeMs: null,
       // Allow child-process startup under a fully parallel test run; the
       // emitted activity still proves that idle time, not wall-clock time,
@@ -157,4 +168,10 @@ const timer = setInterval(() => {
       .rejects.toThrow("stalled after 0 seconds without observable Pi or tool activity");
     expect(unregister).toHaveBeenCalledOnce();
   });
+});
+
+it("rejects an unsupported model before spawning any worker", async () => {
+  const { run, register } = createRunner("console.log('should not execute');");
+  await expect(run("synthetic prompt", { ...launch, model: {provider:"synthetic",model:"future-unknown"} })).rejects.toThrow("future-unknown");
+  expect(register).not.toHaveBeenCalled();
 });

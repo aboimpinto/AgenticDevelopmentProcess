@@ -69,6 +69,7 @@ describe("ModelsDestination", () => {
   it("defaults an explicit Models visit to Available Models", () => {
     render(<ModelsDestination {...catalogProps()} />);
     expect(screen.getByRole("heading", { name: "Models" })).toBeTruthy();
+    expect(screen.getByText("Thinking: High (enforced for every worker)")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Available Models" }).getAttribute("aria-selected")).toBe("true");
     expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe("available-models-tab");
   });

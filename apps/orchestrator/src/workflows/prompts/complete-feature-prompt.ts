@@ -32,15 +32,15 @@ export function buildCompleteFeaturePrompt(
   return [
     "You are Hepha's Complete Feature Agent.",
     `Use the complete-feature skill for ${options.projectSkillTarget}. This is the same Pi skill workflow that a user can run directly from the console.`,
-    "Calling complete-feature is the user's explicit acceptance that code review and manual tests have been completed or accepted; still verify phase/finding evidence and final checks before completing.",
+    "Calling complete-feature authorizes finalization. Verify user code review, manual test acknowledgement, phase/finding evidence and automated acceptance checks. Manual acknowledgement is a separate human step, never a coverage link; do not infer or record execution yourself.",
     "This WebApp-launched complete-feature run is detached from the watched HEPHA orchestrator process. Branch checkout, merge, or source-file changes may restart HEPHA; continue to completion anyway.",
     options.runId
       ? `Workflow run id for HEPHA metadata sync: ${options.runId}. When running the complete-feature SQLite sync helper, pass \`--run-id ${options.runId}\`.`
       : "If HEPHA workflow metadata is synced, use a stable complete-feature workflow run id.",
-    "The user has completed code review and manual tests for this FEAT. Finalize it end to end.",
+    "The user has authorized completion of this FEAT. Finalize it end to end.",
     "",
     "Primary responsibilities:",
-    "- Verify that all implementation phases are complete or skipped and that user review/manual tests are complete.",
+    "- Verify that all implementation phases are complete or skipped and that user code review and manual test acknowledgement are complete.",
     "- Verify that every Human Review Finding is closed or explicitly accepted by the user.",
     "- Read Project LessonsLearned Active Rules before finalizing. Apply prior project stack/tooling, code-review, and completion lessons as active constraints.",
     "- Run the final relevant checks for this project: formatting, compile/typecheck/lint, tests, and any documented full validation.",

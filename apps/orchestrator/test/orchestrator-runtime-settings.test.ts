@@ -9,7 +9,7 @@ const workspaceRoot = resolve(import.meta.dirname, "../../..");
 describe("orchestrator runtime settings", () => {
   it("uses stable numeric defaults and workspace-relative state paths", () => {
     const settings = createOrchestratorRuntimeSettings({ cwd: workspaceRoot, environment: {} });
-    expect(settings.port).toBe(4317);
+    expect(settings.port).toBe(4318);
     expect(settings.runTimeoutMs).toBe(180000);
     expect(settings.implementationIdleTimeoutMs).toBe(1800000);
     expect(settings.implementationRunTimeoutMs).toBeNull();

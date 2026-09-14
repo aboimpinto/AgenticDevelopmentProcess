@@ -46,7 +46,7 @@ export class ProjectLessonsLearnedContextReader {
       "## Project LessonsLearned Context",
       "",
       `MemoryBank LessonsLearned path: ${lessonsRoot}`,
-      "Mandatory use: before changing code, read the selected active rule summaries as executable project rules. Previous code-review suggestions are prevention rules, not historical notes.",
+      "Mandatory use: before changing code, read the selected active rule summaries as executable project rules. Apply approved existing constraints within the accepted feature plan. Proposed-for-future-planning observations are suggestions for the next Deep-Dive/refinement, never new requirements or blockers for the current feature.",
       `Detected lesson focus: ${focus.displayKeywords.length > 0 ? focus.displayKeywords.join(", ") : "general project lessons"}.`,
     ];
 
@@ -232,56 +232,10 @@ export function scoreProjectActiveLessonDocument(
   text: string,
   focus: ProjectLessonFocus,
 ) {
-  const normalized = text.toLowerCase();
-  const focusText = focus.keywords.join(" ");
-  let score = scoreProjectLessonText(text, focus);
-
-  if (fileName === "common.md") {
-    score += 80;
-  }
-
-  if (fileName === "index.md") {
-    return 0;
-  }
-
-  if (fileName === "memorybank-docs.md" && hasAnyLessonFocus(focusText, [
-    "deep-dive", "design", "refine", "start", "continue", "complete", "final", "verification",
-    "review", "recovery", "phase", "memorybank", "documentation", "docs",
-  ])) {
-    score += 45;
-  }
-
-  if (fileName === "code-review-recovery.md" && hasAnyLessonFocus(focusText, [
-    "code-review", "review", "recovery", "continue", "complete", "finding", "needs", "changes",
-  ])) {
-    score += 45;
-  }
-
-  if (fileName === "rust.md" && hasAnyLessonFocus(`${focusText} ${normalized}`, [
-    "rust", "cargo", "crate", "module", "mod", "command", "codewhale", "tui",
-  ])) {
-    score += 40;
-  }
-
-  if (fileName === "rust-cargo.md" && hasAnyLessonFocus(`${focusText} ${normalized}`, [
-    "rust", "cargo", "test", "tests", "check", "build", "clippy", "fmt", "format", "verification",
-    "validate", "complete", "final",
-  ])) {
-    score += 40;
-  }
-
-  if (fileName === "codewhale-command-extraction.md" && hasAnyLessonFocus(`${focusText} ${normalized}`, [
-    "codewhale", "command", "commands", "extraction", "layer", "core", "session", "palette",
-    "completion", "tui",
-  ])) {
-    score += 40;
-  }
-
-  return score;
-}
-
-function hasAnyLessonFocus(text: string, terms: string[]) {
-  return terms.some((term) => text.includes(term));
+  // Common/index are collection conventions. Topic or project filenames never
+  // receive special priority; relevance comes from the lesson's actual content.
+  if (fileName === "index.md") return 0;
+  return scoreProjectLessonText(text, focus) + (fileName === "common.md" ? 80 : 0);
 }
 
 function collectProjectLessonsLearnedDocuments(
@@ -322,6 +276,7 @@ function collectProjectLessonActiveRules(documents: ProjectLessonDocument[], foc
   const rules: Array<{ line: string; score: number; source: string }> = [];
 
   for (const document of documents) {
+    if (document.content.includes("status: proposed-for-future-planning")) continue;
     for (const rawLine of document.content.split(/\r?\n/)) {
       const line = normalizeLessonRuleLine(rawLine);
 

@@ -24,10 +24,9 @@ import {
   buildRecoveryActions,
   buildHumanVerificationSummary,
   buildFindingDisplay,
-  buildCompletionReadiness,
   buildFeatureTimingSummary,
-  summarizeResolvedPhaseQualityGates,
 } from "./workflow-presentation.js";
+import { buildCompletionReadiness, summarizeResolvedPhaseQualityGates } from "./completion-readiness-presentation.js";
 
 // ─── Factory helpers ────────────────────────────────────────────────────────
 
@@ -132,7 +131,31 @@ function makeAgentRun(overrides?: Partial<ImplementationAgentRunSummary>): Imple
 
 // ─── buildOverviewDisplay ───────────────────────────────────────────────────
 
+describe("live phase presentation", () => {
+  it.each(["devcycle-mcp-compatibility", "implementation-phase-worker"])("shows a live %s worker before the phase document updates", agentRole => {
+    const phase = makePhase({ number: 6, status: "PENDING" });
+    const worker = makeAgentRun({ phaseNumber: 6, agentRole, status: "running", completedAt: null, currentStep: "Implementing the adapter" });
+    const activeRun = { runId: "run-1", status: "running" } as NonNullable<FeatureWorkflowSummary["activeRun"]>;
+    const rows = buildPhaseRows([phase, makePhase({ number: 7 })], [], null, [], [worker], null, null, activeRun);
+    expect(rows[0]).toMatchObject({ statusLabel: "Running", isActive: true, isCompleted: false, activityLabel: "Implementing the adapter" });
+    expect(rows[1]?.isActive).toBe(false);
+    expect(phase.status).toBe("PENDING");
+  });
+  it.each([null, "different-run"])("does not animate a stale worker when the active workflow is %s", runId => {
+    const worker = makeAgentRun({ status: "running", completedAt: null });
+    const activeRun = runId ? { runId, status: "running" } as NonNullable<FeatureWorkflowSummary["activeRun"]> : null;
+    expect(buildPhaseRows([makePhase()], [], null, [], [worker], null, null, activeRun)[0]).toMatchObject({ statusLabel: "Pending", isActive: false });
+  });
+});
+
 describe("buildOverviewDisplay", () => {
+  it("preserves the complete repair round report even when a round mentions a code-review report", () => {
+    const summary = "Phase 23 code_review repair is not resolved after 3 rounds.\n\n"
+      + [1, 2, 3].map(round => `Round ${round}:\nWork reported by the fixer: ${"Inspected the selected code. ".repeat(12)}\nReview report: /tmp/phase-23-code-review-current.md\nIndependent verification: Missing approval for the repaired revision.`).join("\n\n")
+      + "\n\nWhy HEPHA stopped: the requested gate remains unresolved.\nNext step: add guidance in the phase textbox.";
+    const display = buildOverviewDisplay(makeWorkflow({ workflowMessage: summary }));
+    expect(display.workflowMessage).toBe(summary);
+  });
   it("returns not-available display for null workflow", () => {
     const display = buildOverviewDisplay(null);
     expect(display.readinessLabel).toBe("Not available");
@@ -893,6 +916,22 @@ describe("summarizeResolvedPhaseQualityGates", () => {
 });
 
 describe("buildCompletionReadiness", () => {
+  it("shows the workflow as blocked rather than implementation complete when failure remains unresolved", () => {
+    const workflow = makeWorkflow({ implementationCompleted: true, canContinueImplementing: false,
+      lastRun: { status: "failed", error: "INVALID_FEATURE_STATUS", command: "start-implementing" } as FeatureWorkflowSummary["lastRun"],
+      readiness: { ready: false, reasons: [{ blocking: true, code: "invalid_refine_artifacts", message: "Malformed header" }] },
+    });
+    expect(buildOverviewDisplay(workflow).readinessLabel).toBe("Blocked");
+    expect(buildOverviewDisplay(workflow).readinessIcon).toBe("blocked");
+  });
+  it("keeps malformed implementation artifacts blocked even when all phases and human checks are done", () => {
+    const display = buildCompletionReadiness(makeWorkflow({ implementationCompleted: true,
+      userCodeReviewCompletedAt: "2031-01-01", manualTestsCompletedAt: "2031-01-01",
+      readiness: { ready: false, reasons: [{ blocking: true, code: "invalid_refine_artifacts", message: "INVALID_FEATURE_STATUS: malformed header" }] },
+    }), 0, { missing: 0, total: 0 });
+    expect(display.verdict).toBe("blocked");
+    expect(display.reasons.join(" ")).toContain("INVALID_FEATURE_STATUS");
+  });
   it("returns not_applicable for null workflow", () => {
     const display = buildCompletionReadiness(null, 0, { missing: 0, total: 0 });
     expect(display.verdict).toBe("not_applicable");
@@ -916,6 +955,12 @@ describe("buildCompletionReadiness", () => {
     const display = buildCompletionReadiness(workflow, 0, { missing: 0, total: 3 });
     expect(display.verdict).toBe("blocked");
     expect(display.canCompleteNow).toBe(false);
+  });
+
+  it("does not call verification or repair finalization", () => {
+    const workflow = makeWorkflow({ activeRun: { command: "continue-implementing", runId: "verification", status: "running" } as never });
+    const display = buildCompletionReadiness(workflow, 0, { missing: 0, total: 3 });
+    expect(display.isFinalizing).toBe(false); expect(display.canCompleteNow).toBe(false);
   });
 
   it("returns finalizing when active run is in progress", () => {

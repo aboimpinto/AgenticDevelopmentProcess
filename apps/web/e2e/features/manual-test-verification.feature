@@ -1,5 +1,45 @@
 Feature: Manual Test Verification Pack
 
+  Scenario: Passing results are distinct from unresolved acceptance coverage
+    Given every current manual case has a reviewed passing result
+    And acceptance coverage is still unresolved
+    Then the manual-test launcher reports all current manual cases passed in green independently of acceptance coverage
+    And each recorded pass is green and cannot be submitted again
+    And the panel explains that coverage checks are not recorded test failures
+    And whole-pack acceptance remains unavailable
+
+  Scenario: Long packs keep actions outside collapsible content
+    Given a manual pack has many coverage issues and a long executable test
+    Then coverage explanations and test instructions start collapsed
+    And review and result buttons remain outside the collapsed content
+    When I expand test instructions with the keyboard and scroll through them
+    Then the case actions and fixed pack actions remain visible
+    And the close button remains visible on desktop and narrow screens
+    And expanding content does not record reviews or results
+
+  Scenario: Record one reviewed case without accepting incomplete coverage
+    Given the current pack contains an executable case and uncovered acceptance criteria
+    When I review the individual case and explicitly record it as passed
+    Then the request names the exact pack review and case
+    And the uncovered criteria remain visible
+    And All tests passed remains unavailable
+
+  Scenario: Current incomplete pack can be regenerated without passing or approving tests
+    Given a current reviewed pack still has uncovered acceptance criteria
+    When I regenerate with an empty guidance field
+    Then a fresh pack is requested using the exact current pack identity
+    And no test result or approval is recorded
+    And the replacement containing the newly drafted scenarios offers pack review
+    When I review the replacement pack
+    Then manual result recording is enabled for that version
+
+  Scenario: Regeneration forwards optional human steering without granting approval
+    Given a current pack is missing keyboard and error recovery scenarios
+    When I enter those topics in "What is missing? (optional)"
+    And I regenerate the test pack
+    Then my guidance is sent with the exact current pack identity
+    And the proposed cases require review before execution results can be recorded
+
   Scenario: No pack generated — shows generate button
     Given the dashboard is loaded with a validated project
     And the selected FEAT has all implementation phases resolved
@@ -50,3 +90,17 @@ Feature: Manual Test Verification Pack
     When I enter a Test ID and Actual Result and click Submit Failure
     Then a Human Review Finding is created
     And the pack shows the failed test count
+
+  Scenario: Actions remain visible above long case lists
+    Given an outdated manual pack and paused regeneration
+    When the user opens verification and scrolls through the cases
+    Then review, all-pass and regeneration actions remain visible at the top
+    And disabled all-pass recording explains the stale pack
+    And regeneration is explicitly described as unfinished
+
+  Scenario: Human checks precede completion readiness in the feature detail
+    Given implementation is complete and manual verification is available
+    When the user opens the feature
+    Then user code review appears before manual tests
+    And manual tests appear before completion readiness
+    And recorded manual passes point to readiness refresh as the next coverage action

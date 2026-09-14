@@ -551,6 +551,13 @@ describe("isReviewValidForPack", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildPackStatus", () => {
+  it("reports incomplete coverage without denying that valid cases exist", () => {
+    const status = buildPackStatus({ currentPack: makePackRecord({ state: "current" }), currentReview: null,
+      testResults: [], isStale: false, allPhasesResolved: true, applicability: "incomplete", manualTestCount: 2 });
+    expect(status.message).toContain("2 executable manual");
+    expect(status.message).not.toContain("no executable manual case exists");
+    expect(status.canRecordTests).toBe(false);
+  });
   it("returns missing state when no current pack", () => {
     const status = buildPackStatus({
       currentPack: null,

@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "../../acceptance-responsibility-policy.js";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { StoredDeepDiveSession } from "@hepha/db";
@@ -160,8 +161,10 @@ export function buildDeepDiveDocumentUpdatePrompt(
     : "feature refinement, design decisions, and implementation planning";
 
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     `Use the deep-dive skill for HEPHA ${session.cardExternalId} to apply the saved Deep-Dive answers to ${itemLabel} documentation.`,
     "This is Deep-Dive stage 2 only. Do not generate a new question round.",
+    ...(session.focus ? [`Interview focus (context, not an approved decision): ${JSON.stringify(session.focus)}`, "Apply only answered decisions; do not turn the interview focus itself into new requirements."] : []),
     `Rewrite the ${itemLabel} Markdown using the original document plus the answered deep-dive transcript.`,
     "Return only the complete updated Markdown document. Do not include commentary, explanations, or code fences.",
     "Preserve useful existing sections, links, tables, and Mermaid diagrams.",

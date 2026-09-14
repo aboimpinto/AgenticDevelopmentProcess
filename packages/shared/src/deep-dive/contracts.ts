@@ -42,6 +42,7 @@ export interface DeepDiveQuestion {
 }
 
 export interface DeepDiveSession {
+  focus?: string | null;
   agentConnectionStatus: DeepDiveAgentConnectionStatus;
   cardExternalId: string;
   cardId: string;
@@ -59,6 +60,7 @@ export interface DeepDiveSession {
 }
 
 export interface StartDeepDiveSessionInput {
+  focus?: string;
   cardId: string;
   projectId: string;
 }

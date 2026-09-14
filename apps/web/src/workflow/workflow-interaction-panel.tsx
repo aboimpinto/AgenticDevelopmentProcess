@@ -6,8 +6,8 @@
  * typed intents through the controller. No lifecycle policy evaluation here.
  */
 
-import React, { useCallback, useMemo, useState } from "react";
-import type { BatchPreviewPlan, DeepDiveSession, WorkItemCard } from "@hepha/shared";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { BatchPreviewPlan, CompletionRecoveryBlocker, DeepDiveSession, WorkItemCard } from "@hepha/shared";
 import { buildPortfolioTimingAnalytics, getTerminalWorkItemLifecycle } from "@hepha/shared";
 
 import type { WorkflowActionId } from "./types.js";
@@ -15,6 +15,7 @@ import type { WorkflowApiAdapter } from "./workflow-api.js";
 import type { RuntimeEvidenceApi } from "./runtime-evidence-api.js";
 import { useRuntimeEvidenceController } from "./use-runtime-evidence-controller.js";
 import { useWorkflowController } from "./use-workflow-controller.js";
+import { usePhaseQualityResolution } from "./use-phase-quality-resolution.js";
 import { createWorkflowApiAdapter } from "./workflow-api.js";
 import { buildWorkflowReadModel } from "./workflow-mappers.js";
 import {
@@ -33,6 +34,8 @@ import { WorkflowTimingSummaryPanel } from "./workflow-timing-summary-panel.js";
 import { PortfolioTimingSummaryPanel } from "./portfolio-timing-summary-panel.js";
 import { LifecycleControlsPanel } from "./lifecycle-controls-panel.js";
 import { CompletionReadinessPanel } from "./completion-readiness-panel.js";
+import { useCompletionReadinessRefresh } from "./use-completion-readiness-refresh.js";
+import { buildPhaseQualityBlockers, buildPhaseQualityWarnings } from "./phase-quality-blockers.js";
 import { EpicFeatureExtractionPanel } from "./epic-feature-extraction-panel.js";
 
 // ─── Static API adapter (shared across instances) ───────────────────────────
@@ -49,7 +52,7 @@ export interface WorkflowInteractionPanelProps {
   readonly onNotice?: (message: string | null) => void;
   readonly onError?: (message: string | null) => void;
   /** Deep-Dive creates a session/overlay and is not a FeatureWorkflowAction route. */
-  readonly onStartDeepDive?: (item: WorkItemCard) => void;
+  readonly onStartDeepDive?: (item: WorkItemCard, focus?: string) => void;
   /** Opens the persisted recovery session returned by Continue Implementation. */
   readonly onDeepDiveRecoverySession?: (session: DeepDiveSession, item: WorkItemCard) => void;
   readonly isDeepDivePending?: boolean;
@@ -60,6 +63,7 @@ export interface WorkflowInteractionPanelProps {
   readonly onApplyFeaturePreview?: (plan: BatchPreviewPlan) => void;
   readonly onCancelFeaturePreview?: () => void;
   readonly onSubmitFinding?: (item: WorkItemCard, content: string) => void;
+  readonly manualVerificationPanel?: React.ReactNode;
   readonly api?: WorkflowApiAdapter;
   readonly runtimeEvidenceApi?: RuntimeEvidenceApi;
 }
@@ -67,6 +71,7 @@ export interface WorkflowInteractionPanelProps {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function WorkflowInteractionPanel({
+  manualVerificationPanel,
   item,
   relatedFeatures = [],
   projectId,
@@ -87,9 +92,16 @@ export function WorkflowInteractionPanel({
   runtimeEvidenceApi,
 }: WorkflowInteractionPanelProps) {
   const controller = useWorkflowController(api);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const readinessRefresh = useCompletionReadinessRefresh(projectId, item, onItemsUpdated);
+  const gateResolution = usePhaseQualityResolution(projectId, item, onItemsUpdated, onNotice, onError);
   const [findingDraft, setFindingDraft] = useState("");
+  const [deepDiveFocus, setDeepDiveFocus] = useState("");
+  useEffect(() => setDeepDiveFocus(""), [item.id, projectId]);
   const [isFindingFormOpen, setIsFindingFormOpen] = useState(false);
   const terminalLifecycle = getTerminalWorkItemLifecycle(item);
+  const activeDeepDive = item.featureWorkflow?.activeRun?.command === "deep-dive-feature";
+  const otherWorkflowActive = Boolean(item.featureWorkflow?.activeRun) && !activeDeepDive;
   const portfolioTiming = useMemo(
     () => buildPortfolioTimingAnalytics(relatedFeatures),
     [relatedFeatures],
@@ -127,8 +139,9 @@ export function WorkflowInteractionPanel({
         item.featureWorkflow?.implementationAgentRuns ?? [],
         item.featureWorkflow?.defaultImplementationModel ?? null,
         item.featureWorkflow?.refineCompletedAt ?? null,
+        terminalLifecycle ? null : item.featureWorkflow?.activeRun ?? null,
       ),
-    [item.phases, item.featureWorkflow?.implementationPhases, item.featureWorkflow?.implementationAgentRuns, item.featureWorkflow?.defaultImplementationModel, item.featureWorkflow?.lastRun?.runId, item.featureWorkflow?.refineCompletedAt, item.implementationEvidence?.phaseQualityGates],
+    [item.phases, item.featureWorkflow?.implementationPhases, item.featureWorkflow?.implementationAgentRuns, item.featureWorkflow?.defaultImplementationModel, item.featureWorkflow?.lastRun?.runId, item.featureWorkflow?.refineCompletedAt, item.featureWorkflow?.activeRun, terminalLifecycle, item.implementationEvidence?.phaseQualityGates],
   );
 
   const featureTiming = useMemo(
@@ -158,17 +171,45 @@ export function WorkflowInteractionPanel({
     const gateSummary = summarizeResolvedPhaseQualityGates(
       item.implementationEvidence?.phaseQualityGates ?? [],
     );
-    return buildCompletionReadiness(
+    const display = buildCompletionReadiness(
       item.featureWorkflow ?? null,
       gateSummary.total,
       gateSummary,
       terminalLifecycle,
     );
-  }, [item.featureWorkflow, item.implementationEvidence?.phaseQualityGates, terminalLifecycle]);
+    if (!item.completionRecovery || terminalLifecycle || item.featureWorkflow?.activeRun) return display;
+    return { ...display, verdict: item.completionRecovery.ready ? "ready" as const : "blocked" as const,
+      canCompleteNow: item.completionRecovery.ready, reasons: item.completionRecovery.blockers.map(blocker => blocker.message) };
+  }, [item.completionRecovery, item.featureWorkflow, item.implementationEvidence?.phaseQualityGates, terminalLifecycle]);
+
+  const resolveCompletionBlocker = (blocker: CompletionRecoveryBlocker) => {
+    const selector = blocker.action === "phase" && blocker.phaseNumber != null ? `[data-phase-number="${blocker.phaseNumber}"]`
+      : blocker.action === "manual_tests" ? ".manual-test-control > button"
+      : blocker.action === "implementation" ? '[data-workflow-controls="Implementation"]' : '[data-workflow-controls="Human Checkpoint"]';
+    const root = panelRef.current;
+    // Manual verification is a sibling panel inside this detail view.
+    let target = root?.querySelector<HTMLElement>(selector) ?? null;
+    if (!target && blocker.action === "manual_tests") {
+      target = root?.closest("aside.detail-panel")?.querySelector<HTMLElement>(selector) ?? null;
+      target?.click();
+    }
+    if (!target) { onError?.(blocker.prerequisite ?? "This action is unavailable in the current workflow. Resolve the artifact/workflow blockers listed in readiness, then refresh."); return; }
+    if (blocker.action === "phase") {
+      const controls = target.querySelector<HTMLElement>("[data-phase-recovery-controls] button");
+      if (controls) target = controls;
+      else {
+        const disclosure = target.querySelector<HTMLDetailsElement>(".phase-quality-issues");
+        if (disclosure) { disclosure.open = true; target = disclosure.querySelector<HTMLElement>("button") ?? disclosure; }
+      }
+    }
+    target.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    target.focus();
+  };
 
   // Action handler
   const handleAction = useCallback(
     async (actionId: WorkflowActionId) => {
+      if (readinessRefresh.pending) return;
       if (actionId === "submit-finding") {
         setIsFindingFormOpen(true);
         return;
@@ -235,7 +276,7 @@ export function WorkflowInteractionPanel({
         onNotice?.(result.message);
       }
     },
-    [controller, item, projectId, onItemsUpdated, onNotice, onError, onDeepDiveRecoverySession],
+    [controller, item, projectId, onItemsUpdated, onNotice, onError, onDeepDiveRecoverySession, readinessRefresh.pending],
   );
 
   // Complete handler
@@ -244,7 +285,12 @@ export function WorkflowInteractionPanel({
   }, [handleAction]);
 
   const deepDiveRecoveryActions = recoveryActions.filter((action) => action.type === "deep_dive");
-  const workflowRecoveryActions = recoveryActions.filter((action) => action.type !== "deep_dive");
+  // Preparation is authorized by backend action flags, not by the presence of
+  // implementation-readiness errors (submitted features may have no errors).
+  const preparationActions = (item.stateFolder === "01_SUBMITTED" || item.stateFolder === "02_READY_TO_DEVELOP" ? readModel.actions : []).filter((action) =>
+    action.id === "refine-feature" || (action.id === "create-ui-requirements" && action.available) ||
+    (action.id === "check-ui-requirement" && item.featureWorkflow?.uiRequirementDecision === "unknown"),
+  ).map((action) => action.id === "create-ui-requirements" ? { ...action, label: "Design Feature" } : action);
 
   if (item.kind === "epic") {
     const needsDeepDive = !terminalLifecycle && item.validation.needsValidationCount > 0;
@@ -291,47 +337,46 @@ export function WorkflowInteractionPanel({
   }
 
   return (
-    <div className="workflow-interaction-panel" role="region" aria-label="Feature workflow">
+    <div ref={panelRef} className="workflow-interaction-panel" role="region" aria-label="Feature workflow">
       {/* Overview — readiness, active run, last run */}
       <WorkflowOverviewPanel overview={overview} />
 
       {/* A FEAT Deep-Dive is an overlay/session workflow, not a FeatureWorkflowAction route. */}
-      {deepDiveRecoveryActions.length > 0 && (
+      {!terminalLifecycle && (
         <section className="validation-panel" aria-labelledby="feature-deep-dive-title">
           <div className="validation-heading">
-            <strong id="feature-deep-dive-title">Deep-Dive Required</strong>
+            <strong id="feature-deep-dive-title">{deepDiveRecoveryActions.length ? "Deep-Dive Required" : "Explore Feature"}</strong>
           </div>
-          <p className="validation-message">{deepDiveRecoveryActions[0]?.description}</p>
+          <p className="validation-message">{deepDiveRecoveryActions[0]?.description ?? "Revisit decisions or explore an additional topic, even after a completed Deep-Dive. Only your answers change the specification."}</p>
+          <label className="deep-dive-textarea" htmlFor="feature-deep-dive-focus"><span>Deep-Dive focus (optional)</span>
+          <textarea
+            id="feature-deep-dive-focus"
+            value={deepDiveFocus}
+            onChange={(event) => setDeepDiveFocus(event.target.value)}
+            maxLength={4000}
+            rows={3}
+            placeholder="For example: explore responsive layouts, keyboard navigation, and error states in more depth."
+            disabled={readinessRefresh.pending || isDeepDivePending || Boolean(item.featureWorkflow?.activeRun)}
+          />
+          </label>
+          {otherWorkflowActive && <p>Finish the active workflow before starting another Deep-Dive.</p>}
+          {activeDeepDive && <p>Resume the current interview. Finish it before starting another with different focus.</p>}
           <div className="feature-workflow-actions" role="group" aria-label="FEAT Deep-Dive">
             <button
               className="mini-button validation-action"
-              disabled={!onStartDeepDive || isDeepDivePending}
-              onClick={() => onStartDeepDive?.(item)}
+              disabled={readinessRefresh.pending || !onStartDeepDive || isDeepDivePending || otherWorkflowActive}
+              onClick={() => !activeDeepDive && deepDiveFocus.trim() ? onStartDeepDive?.(item, deepDiveFocus.trim()) : onStartDeepDive?.(item)}
               type="button"
             >
-              {isDeepDivePending ? "Opening FEAT Deep-Dive..." : deepDiveRecoveryActions[0]?.label}
+              {isDeepDivePending ? "Opening FEAT Deep-Dive..." : activeDeepDive ? "Continue FEAT Deep-Dive" : deepDiveRecoveryActions[0]?.label ?? "Start FEAT Deep-Dive"}
             </button>
           </div>
         </section>
       )}
 
-      {/* Lifecycle controls for recovery and implementation actions */}
-      {workflowRecoveryActions.length > 0 && (
-        <LifecycleControlsPanel
-          actions={workflowRecoveryActions.map((action) => ({
-            id: action.type === "ui_requirement" ? "check-ui-requirement" : "create-ui-requirements",
-            label: action.label,
-            available: action.available,
-            busy: false,
-            reason: null,
-            group: "recovery",
-          }))}
-          title="Recovery Actions"
-          onAction={handleAction}
-        />
-      )}
       <LifecycleControlsPanel
-        actions={readModel.actions.filter((a) => a.id === "refine-feature")}
+        actions={preparationActions}
+        disabled={readinessRefresh.pending}
         title="Feature Preparation"
         onAction={handleAction}
       />
@@ -341,7 +386,7 @@ export function WorkflowInteractionPanel({
           <input
             aria-label="Autonomous implementation"
             checked={controller.state.autonomousMode}
-            disabled={isImplementationModePending}
+            disabled={readinessRefresh.pending || isImplementationModePending}
             onChange={(event) => controller.setAutonomousMode(event.currentTarget.checked)}
             type="checkbox"
           />
@@ -357,6 +402,7 @@ export function WorkflowInteractionPanel({
             a.id === "cancel-workflow",
         )}
         title="Implementation"
+        disabled={readinessRefresh.pending}
         onAction={handleAction}
       />
 
@@ -366,6 +412,13 @@ export function WorkflowInteractionPanel({
       {/* Phase list with the server-authoritative runtime projection. */}
       <WorkflowPhaseListPanel
         phases={phaseRows}
+        completionGaps={item.completionRecovery?.phaseGaps}
+        recoveryBlockers={item.completionRecovery?.blockers}
+        onConfirmCoverage={proposalId => void readinessRefresh.refresh(proposalId)}
+        warnings={buildPhaseQualityWarnings(item.implementationEvidence?.phaseQualityGates ?? [])}
+        blockers={buildPhaseQualityBlockers(item.implementationEvidence?.phaseQualityGates ?? [])}
+        onResolveGate={!terminalLifecycle && item.stateFolder === "03_IN_PROGRESS" ? gateResolution.resolve : undefined}
+        gateActionDisabled={gateResolution.pending || readinessRefresh.pending || Boolean(item.featureWorkflow?.activeRun)}
         runtimeEvidence={{
           summaries: runtimeEvidence.state.summary?.phases ?? [],
           snapshots: runtimeEvidence.state.phases,
@@ -379,6 +432,7 @@ export function WorkflowInteractionPanel({
         }}
       />
       {runtimeEvidence.state.error ? <p className="validation-message" role="alert">{runtimeEvidence.state.error}</p> : null}
+      {gateResolution.message && <p role="status">{gateResolution.message}</p>}
 
       {/* Human checkpoint actions */}
       <LifecycleControlsPanel
@@ -389,6 +443,7 @@ export function WorkflowInteractionPanel({
             a.id === "accept-human-review-findings",
         )}
         title="Human Checkpoint"
+        disabled={readinessRefresh.pending}
         onAction={handleAction}
       />
       {isFindingFormOpen && (
@@ -397,7 +452,7 @@ export function WorkflowInteractionPanel({
           onSubmit={(event) => {
             event.preventDefault();
             const content = findingDraft.trim();
-            if (!content || !onSubmitFinding) return;
+            if (readinessRefresh.pending || !content || !onSubmitFinding) return;
             onSubmitFinding(item, content);
             setFindingDraft("");
             setIsFindingFormOpen(false);
@@ -407,23 +462,35 @@ export function WorkflowInteractionPanel({
             <span>Finding</span>
             <textarea
               autoFocus
+              disabled={readinessRefresh.pending}
               onChange={(event) => setFindingDraft(event.currentTarget.value)}
               placeholder="Describe the observed problem, expected outcome, and evidence."
               value={findingDraft}
             />
           </label>
           <div className="feature-workflow-actions">
-            <button className="mini-button validation-action" disabled={!findingDraft.trim() || !onSubmitFinding} type="submit">Submit Finding</button>
+            <button className="mini-button validation-action" disabled={readinessRefresh.pending || !findingDraft.trim() || !onSubmitFinding} type="submit">Submit Finding</button>
             <button className="mini-button" onClick={() => setIsFindingFormOpen(false)} type="button">Cancel</button>
           </div>
         </form>
       )}
+
+      {manualVerificationPanel}
 
       {/* Completion readiness */}
       <CompletionReadinessPanel
         readiness={completionReadiness}
         isPending={controller.state.pendingActionId === "complete-feature"}
         onComplete={handleComplete}
+        contextKey={item.id}
+        onRefresh={guidance => void readinessRefresh.refresh(undefined, undefined, guidance)}
+        assessment={item.completionRecovery}
+        onResolveBlocker={resolveCompletionBlocker}
+        coveragePhases={item.phases.filter(phase => /^(completed|skipped)$/i.test(phase.status))}
+        onAssignCoveragePhase={phaseNumber => void readinessRefresh.refresh(undefined, phaseNumber)}
+        isRefreshing={readinessRefresh.pending}
+        refreshMessage={readinessRefresh.message}
+        refreshError={readinessRefresh.error}
       />
     </div>
   );

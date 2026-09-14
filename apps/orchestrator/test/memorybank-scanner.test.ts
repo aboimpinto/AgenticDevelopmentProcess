@@ -304,13 +304,14 @@ describe("scanMemoryBankFolders", () => {
         phaseNumber: 6,
         phaseStatus: "COMPLETED",
         testFiles: ["apps/orchestrator/test/feat-999-integration.test.ts"],
-        warnings: [],
+        warnings: ["Reconcile the declared test/acceptance-coverage gate and its execution evidence.",
+          "Reconcile the declared code-review gate and its approval evidence."],
       }),
     ]);
     expect(feature!.implementationEvidence!.phaseQualityGates[0].gates).toEqual([
-      expect.objectContaining({ gate: "tests", status: "satisfied" }),
+      expect.objectContaining({ gate: "tests", status: "unknown" }),
       expect.objectContaining({ gate: "gherkin_e2e", status: "not_applicable" }),
-      expect.objectContaining({ gate: "code_review", status: "satisfied" }),
+      expect.objectContaining({ gate: "code_review", status: "missing", justification: expect.stringContaining("needs_changes") }),
     ]);
   });
 

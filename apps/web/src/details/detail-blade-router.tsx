@@ -99,29 +99,28 @@ export function DetailBlade(props: DetailBladeProps) {
           onCancelFeaturePreview={onCancelPreview}
           onSubmitFinding={onSubmitFeatureFinding}
           onItemsUpdated={props.onWorkItemsUpdated}
+          manualVerificationPanel={selectedItem.kind === "feature" && selectedItem.featureWorkflow?.implementationCompleted ? (
+            <section className="validation-panel" aria-label="Manual test verification">
+              <div className="validation-heading"><strong>Manual Tests</strong></div>
+              <ManualTestVerificationPanel
+                item={selectedItem}
+                workflow={selectedItem.featureWorkflow}
+                isPending={pendingDeepDiveAction?.startsWith(`manual-test-`) ?? false}
+                isDisabled={Boolean(selectedItem.featureWorkflow.activeRun)}
+                onGenerate={onGenerateManualTestPack}
+                onReview={onReviewManualTestPack}
+                onRecordResult={onRecordManualTestResult}
+                onFetchStatus={onFetchManualTestStatus}
+                getArtifactUrl={(item, format, download = false) =>
+                  `/api/manual-test-verification/artifact?projectId=${encodeURIComponent(selectedProject?.id ?? "")}&cardId=${encodeURIComponent(item.id)}&format=${format}${download ? "&download=1" : ""}`
+                }
+              />
+            </section>
+          ) : null}
         />
 
         {selectedItem.kind === "feature" && selectedProject ? (
           <FeatureDeliveryPanel item={selectedItem} projectId={selectedProject.id} />
-        ) : null}
-
-        {selectedItem.kind === "feature" && selectedItem.featureWorkflow?.implementationCompleted ? (
-          <section className="validation-panel" aria-label="Manual test verification">
-            <div className="validation-heading"><strong>Manual Tests</strong></div>
-            <ManualTestVerificationPanel
-              item={selectedItem}
-              workflow={selectedItem.featureWorkflow}
-              isPending={pendingDeepDiveAction?.startsWith(`manual-test-`) ?? false}
-              isDisabled={Boolean(selectedItem.featureWorkflow.activeRun)}
-              onGenerate={onGenerateManualTestPack}
-              onReview={onReviewManualTestPack}
-              onRecordResult={onRecordManualTestResult}
-              onFetchStatus={onFetchManualTestStatus}
-              getArtifactUrl={(item, format, download = false) =>
-                `/api/manual-test-verification/artifact?projectId=${encodeURIComponent(selectedProject?.id ?? "")}&cardId=${encodeURIComponent(item.id)}&format=${format}${download ? "&download=1" : ""}`
-              }
-            />
-          </section>
         ) : null}
 
         <RelationPanel

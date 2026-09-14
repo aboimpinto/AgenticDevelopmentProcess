@@ -36,3 +36,9 @@ describe("phase worker prompt policies", () => {
     expect(codeReviewFindingLedgerRule).toContain("Hepha owns those machine fields");
   });
 });
+
+it("takes validation commands and scope from declarations instead of a named package or phase category", () => {
+  expect(cargoValidationLadderRule).not.toMatch(/cargo test -p [a-z]/);
+  expect(cargoValidationLadderRule).not.toContain("only at phase checkpoint");
+  expect(cargoValidationLadderRule).toContain("declared commands");
+});

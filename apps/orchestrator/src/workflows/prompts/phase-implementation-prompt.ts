@@ -68,6 +68,7 @@ export function buildPhaseImplementationPrompt(
     options.phaseContract
       ? `- Phase execution contract: ${options.phaseContract.id}; role=${options.phaseContract.role}; development validation=${options.phaseContract.developmentValidation}; code review=${options.phaseContract.codeReview}; final validation=${options.phaseContract.finalValidation}; failure policy=${options.phaseContract.failurePolicy}.`
       : "- This legacy FEAT has no PhaseExecutionContract.json. Follow the phase document's explicit tasks and gates; do not infer behavior from its number or title.",
+    "- Tests, integration tests and code review are independent declared obligations, not consequences of phase role or source-file presence. If development establishes that a gate has nothing applicable to verify, record the scope reason in this phase and update its declaration. For ordered native phases, update future gate declarations in PhaseExecutionContract.json and their matching not-started Phase Task Ledger rows together, keeping stable identities, active/completed tasks and unrelated obligations; compatibility summary fields must agree. Return applicability evidence for HEPHA to project into machine-owned gate rows. Do not convert failed verification or unresolved review findings into not applicable. HEPHA reloads the declarations before selecting subsequent work.",
     `- Assigned agent: ${options.assignedAgent}`,
     `- Assigned model: ${options.assignedModelLabel}`,
     `- Branch: ${options.branchName}`,

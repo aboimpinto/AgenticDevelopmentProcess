@@ -104,6 +104,11 @@ describe("formatPhaseStatus", () => {
 // ---------------------------------------------------------------------------
 
 describe("formatPhaseBadge", () => {
+  it("shows live execution while a phase document remains pending, without changing settled states", () => {
+    expect(formatPhaseBadge(6, "Adapter", "pending", "running")).toBe("Phase 6: Adapter — Running");
+    expect(formatPhaseBadge(6, "Adapter", "pending", "idle")).toBe("Phase 6: Adapter — Pending");
+    expect(formatPhaseBadge(5, "Contracts", "completed", "running")).toBe("Phase 5: Contracts — Completed");
+  });
   it("returns null when phaseNumber is null", () => {
     expect(formatPhaseBadge(null, null, "pending")).toBeNull();
   });

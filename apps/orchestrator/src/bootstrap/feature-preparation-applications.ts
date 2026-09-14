@@ -5,6 +5,10 @@ import { RefinementDeepDiveHandoffApplication } from "../application/deep-dive/r
 import { DesignArtifactPolicy } from "../application/features/design-artifact-policy.js";
 import { DesignFeatureExecutionApplication } from "../application/features/design-feature-execution-application.js";
 import { FeatureFindingApplication } from "../application/features/feature-finding-application.js";
+import { PhaseQualityResolutionApplication } from "../application/features/phase-quality-resolution-application.js";
+import { CompletionReadinessVerificationApplication } from "../application/features/completion-readiness-verification-application.js";
+import { FreshFeatureVerificationApplication } from "../application/features/fresh-feature-verification-application.js";
+import type { CompletionReadinessRefreshApplication } from "../application/features/completion-readiness-refresh-application.js";
 import { FeatureFindingExecutionApplication } from "../application/features/feature-finding-execution-application.js";
 import { FeaturePreparationApplication } from "../application/features/feature-preparation-application.js";
 import {
@@ -50,6 +54,7 @@ type OneShotPrompt = (prompt: string, plan: import("@hepha/shared").HandoffPlanV
 type CompletionStarter = ConstructorParameters<typeof FeatureFindingApplication>[0]["startCompletion"];
 
 export interface FeaturePreparationApplicationsDependencies {
+  completionReadinessRefreshApplication: CompletionReadinessRefreshApplication;
   completeFeature: CompletionStarter;
   contextCollector: FeatureWorkflowContextCollector;
   designArtifactPolicy: DesignArtifactPolicy;
@@ -199,5 +204,20 @@ export function createFeaturePreparationApplications(dependencies: FeaturePrepar
     toProjectSummary,
   });
 
-  return { featureFindingApplication, featurePreparationApplication, refinedFeatureReadinessApplication };
+  const phaseQualityResolutionApplication = new PhaseQualityResolutionApplication({
+    verifyFresh: input => freshVerification.verifyFeatureFromRefresh(input),
+    readiness: dependencies.completionReadinessRefreshApplication,
+    targets: dependencies.targets, store: dependencies.metadataStore, scan: scanProject,
+    worker: input => dependencies.worker.execute(input),
+    plan: () => dependencies.routeResolver.resolvePlan("resolve-review-findings"),
+    notify: dependencies.notifyChanged,
+  });
+  const freshVerification = new FreshFeatureVerificationApplication({
+    readiness: dependencies.completionReadinessRefreshApplication,
+    targets: dependencies.targets, store: dependencies.metadataStore, scan: scanProject,
+    worker: input => dependencies.worker.execute(input),
+    plan: () => dependencies.routeResolver.resolvePlan("resolve-review-findings"), notify: dependencies.notifyChanged,
+  });
+  const completionReadinessVerificationApplication = new CompletionReadinessVerificationApplication(dependencies.completionReadinessRefreshApplication, freshVerification);
+  return { featureFindingApplication, featurePreparationApplication, refinedFeatureReadinessApplication, phaseQualityResolutionApplication, completionReadinessVerificationApplication };
 }

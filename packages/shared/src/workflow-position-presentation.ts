@@ -108,6 +108,7 @@ export function formatPhaseBadge(
   phaseNumber: number | null,
   phaseTitle: string | null,
   phaseStatus: PhaseLifecycleStatus,
+  executionState?: WorkflowExecutionState,
 ): string | null {
   if (phaseNumber === null) {
     return null;
@@ -117,7 +118,9 @@ export function formatPhaseBadge(
     ? `Phase ${phaseNumber}: ${phaseTitle}`
     : `Phase ${phaseNumber}`;
 
-  return `${numberLabel} — ${formatPhaseStatus(phaseStatus)}`;
+  const statusLabel = executionState === "running" && phaseStatus === "pending"
+    ? formatExecutionState(executionState) : formatPhaseStatus(phaseStatus);
+  return `${numberLabel} — ${statusLabel}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -285,7 +288,7 @@ export function buildCardStatusStack(
   const executionLabel = formatExecutionState(summary.executionState);
   const executionCssClass = formatExecutionStateCssClass(summary.executionState);
   const phaseBadge = summary.activePhaseNumber !== null
-    ? formatPhaseBadge(summary.activePhaseNumber, summary.activePhaseTitle, summary.phaseStatus)
+    ? formatPhaseBadge(summary.activePhaseNumber, summary.activePhaseTitle, summary.phaseStatus, summary.executionState)
     : null;
 
   const qualityGateLabel =
@@ -361,7 +364,7 @@ export function buildDetailSynopsis(
   if (summary.activePhaseNumber !== null) {
     rows.push({
       label: "Phase",
-      value: formatPhaseBadge(summary.activePhaseNumber, summary.activePhaseTitle, summary.phaseStatus) ?? "—",
+      value: formatPhaseBadge(summary.activePhaseNumber, summary.activePhaseTitle, summary.phaseStatus, summary.executionState) ?? "—",
     });
   }
 

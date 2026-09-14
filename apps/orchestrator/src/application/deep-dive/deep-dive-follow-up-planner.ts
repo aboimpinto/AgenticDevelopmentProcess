@@ -79,6 +79,10 @@ export function buildDeepDiveFollowUpPrompt(
     `Extra detail: ${answeredQuestion.answerText || "none"}`,
     "",
     "Complete transcript:",
+    ...(session.focus ? [
+      `User-requested interview focus: ${JSON.stringify(session.focus)}`,
+      "Before closing the interview, explicitly explore this focus and its unresolved decisions. Guidance is not an approved scope change; only saved answers authorize product decisions.",
+    ] : []),
     transcript,
     "",
     "Authoritative source:",

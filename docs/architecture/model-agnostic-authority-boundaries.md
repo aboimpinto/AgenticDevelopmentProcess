@@ -106,6 +106,11 @@ The boundary has five stages:
 5. **Apply effects deterministically.** After validation, Hepha—not the
    model—writes authority, updates state, or chooses the next node.
 
+The [JSON exchange protocol](json-exchange-protocol.md) specifies the target
+mandatory/conditional/optional field policy, host ownership, audit handling and
+per-boundary migration criteria. It is a target contract, not a claim that all
+current runtime adapters have migrated.
+
 ## Required contract package
 
 A model-producing workflow node should have one contract package from which the

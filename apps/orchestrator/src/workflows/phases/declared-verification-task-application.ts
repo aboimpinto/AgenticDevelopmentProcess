@@ -1,6 +1,10 @@
+import { hasOnlyPhaseHealthWarnings } from "./phase-verification-warning-policy.js";
+import { basename } from "node:path";
+import { requestVerificationRepair, type VerificationRepairPayload } from "../../exchanges/verification-repair-exchange.js";
 import type { FeatureWorkflowCommand, PhaseSummary, WorkItemCard } from "@hepha/shared";
 import type { AdapterResult } from "../../final-verification-adapter.js";
 import type { AggregateVerificationResult } from "../../final-verification-types.js";
+import type { PhaseExecutionRole } from "../../phase-execution-contract.js";
 import type { StoredProject } from "../../projects/stored-project.js";
 import type { PhaseTaskLedgerItem } from "./phase-task-ledger.js";
 import type { ImplementationWorkerInput } from "./implementation-worker-application.js";
@@ -12,7 +16,7 @@ export class DeclaredVerificationTaskApplication {
   constructor(private readonly dependencies: {
     buildRepairPrompt: (project: StoredProject, feature: WorkItemCard, phase: NumberedPhase, taskId: string, result: AggregateVerificationResult) => string;
     completeTask: (input: { activeTask: PhaseTaskLedgerItem; cardKey: string; phase: NumberedPhase; project: StoredProject; runId: string; summary: string }) => Promise<void>;
-    persistProjection: (phase: NumberedPhase, result: AggregateVerificationResult, reviewArtifactHash: string | null) => void;
+    persistProjection: (phase: NumberedPhase, result: AggregateVerificationResult, reviewArtifactHash: string | null, role: PhaseExecutionRole, runId: string) => void;
     recordProgress: (input: {
       agent: string; cardKey: string; command: FeatureWorkflowCommand; currentStep: string; feature: WorkItemCard;
       model: string; phase: NumberedPhase; project: StoredProject; runId: string; status: "verifying"; summary: string;
@@ -29,7 +33,7 @@ export class DeclaredVerificationTaskApplication {
     feature: WorkItemCard;
     implementationModel: import("@hepha/shared").HandoffPlanV1;
     phase: NumberedPhase;
-    phaseRole: string;
+    phaseRole: PhaseExecutionRole;
     profile: "full";
     project: StoredProject;
     reviewArtifactHash: string | null;
@@ -52,32 +56,34 @@ export class DeclaredVerificationTaskApplication {
         phaseRole: input.phaseRole,
         runId: input.runId,
       });
-      this.dependencies.persistProjection(input.phase, verification.aggregate, input.reviewArtifactHash);
-      if (verification.aggregate.status === "passed") {
+      this.dependencies.persistProjection(input.phase, verification.aggregate, input.reviewArtifactHash, input.phaseRole, input.runId);
+      const healthWarnings = hasOnlyPhaseHealthWarnings(verification.aggregate);
+      if (verification.aggregate.status === "passed" || healthWarnings) {
         const coverageAdvisories = verification.aggregate.checks.filter((check) => check.outcome === "advisory");
         const improvementLimit = Math.max(0, ...coverageAdvisories.map((check) => check.advisoryRepairLimit ?? 0));
         if (coverageAdvisories.length > 0 && coverageImprovementAttempts < improvementLimit) {
-          let repairOutput: string;
+          let repairOutput: VerificationRepairPayload;
           try {
-            repairOutput = await this.#runRepair(input, verification.aggregate, phaseRef);
+            repairOutput = await this.#runRepair(input, verification.aggregate, phaseRef, true);
           } catch {
-            repairOutput = "Verification Repair Result: BLOCKED\nThe optional coverage improvement worker could not complete.";
+            repairOutput = { phaseId: basename(input.phase.documentPath), taskId: input.taskId, outcome: "blocked", reason: "The optional coverage improvement worker could not complete." };
           }
           coverageImprovementAttempts += 1;
-          if (!isRepairBlockedOrAdvisoryAccepted(repairOutput)) continue;
+          if (repairOutput.outcome === "repaired") continue;
         }
         await this.dependencies.completeTask({
           activeTask: input.activeTask, cardKey: input.cardKey, phase: input.phase,
-          project: input.project, runId: input.runId, summary: verification.summaryLine,
+          project: input.project, runId: input.runId, summary: healthWarnings ? `Completed with non-blocking build/lint warnings. ${verification.summaryLine}` : verification.summaryLine,
         });
+        if (healthWarnings) return `${phaseRef}: declared verification task completed with non-blocking build/lint warnings. Raw outcomes are retained.`;
         return coverageAdvisories.length > 0
           ? `${phaseRef}: declared verification task '${input.taskId}' completed with a non-blocking test-coverage advisory.`
           : `${phaseRef}: declared verification task '${input.taskId}' passed.`;
       }
 
       const repairOutput = await this.#runRepair(input, verification.aggregate, phaseRef);
-      if (/^Verification Repair Result:\s*BLOCKED\s*$/im.test(repairOutput)) {
-        throw new Error(`${phaseRef} verification task '${input.taskId}' reported a genuine blocker.`);
+      if (repairOutput.outcome === "blocked") {
+        throw new Error(`${phaseRef} verification task '${input.taskId}' reported a genuine blocker: ${repairOutput.reason}`);
       }
     }
   }
@@ -86,18 +92,19 @@ export class DeclaredVerificationTaskApplication {
     input: Parameters<DeclaredVerificationTaskApplication["execute"]>[0],
     aggregate: AggregateVerificationResult,
     phaseRef: string,
+    allowAdvisoryAcceptance = false,
   ) {
-    return this.dependencies.runRepairWorker({
-      agentAction: "phase-worker",
+    return requestVerificationRepair({
+      phaseId: basename(input.phase.documentPath), taskId: input.taskId, allowAdvisoryAcceptance,
+      prompt: this.dependencies.buildRepairPrompt(input.project, input.feature, input.phase, input.taskId, aggregate),
+      run: prompt => this.dependencies.runRepairWorker({
+        agentAction: "phase-worker",
       agentName: "Verification Repair Agent", agentRole: "verification-repair", cardKey: input.cardKey,
       feature: input.feature, plan: input.implementationModel, phaseNumber: input.phase.number,
       phaseTitle: input.phase.title || phaseRef, project: input.project,
-      prompt: this.dependencies.buildRepairPrompt(input.project, input.feature, input.phase, input.taskId, aggregate),
+      prompt,
       runId: input.runId, step: `Repair ${phaseRef} task ${input.taskId}`,
+      }),
     });
   }
-}
-
-function isRepairBlockedOrAdvisoryAccepted(output: string): boolean {
-  return /^Verification Repair Result:\s*(?:BLOCKED|ADVISORY_ACCEPTED)\s*$/im.test(output);
 }

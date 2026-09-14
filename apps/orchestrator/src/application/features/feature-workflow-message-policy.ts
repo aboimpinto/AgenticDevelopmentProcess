@@ -19,6 +19,7 @@ export interface FeatureWorkflowMessageInput {
   stateFolder: MemoryBankStateFolder;
   uiRequirementDecision: FeatureWorkflowSummary["uiRequirementDecision"];
   userCodeReviewCompleted: boolean;
+  readinessReasons?: readonly { code: string; message: string; detail?: string }[];
 }
 
 export function createFeatureWorkflowMessage(input: FeatureWorkflowMessageInput) {
@@ -41,6 +42,14 @@ export function createFeatureWorkflowMessage(input: FeatureWorkflowMessageInput)
     return input.recoveredWorkflowMessage;
   }
   if (!input.isWorkflowReady) {
+    const reasons = input.readinessReasons;
+    if (reasons?.some(reason => reason.code === "validation_markers_present")) {
+      return "Resolve the target feature's outstanding decisions through Deep-Dive before continuing.";
+    }
+    if (input.stateFolder === "03_IN_PROGRESS") {
+      return `Implementation cannot continue until its saved state or evidence is repaired. ${reasons?.map(reason => `${reason.detail ?? ""} ${reason.message}`.trim()).join(" ") ?? "Inspect the continuation readiness details."}`;
+    }
+    if (reasons?.length) return `Feature preparation requires attention. ${reasons.map(reason => reason.message).join(" ")}`;
     return "Complete a current FEAT deep-dive and clear validation markers before design or refinement.";
   }
   if (input.lastError) {

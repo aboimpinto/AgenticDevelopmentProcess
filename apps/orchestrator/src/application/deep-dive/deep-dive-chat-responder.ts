@@ -48,6 +48,7 @@ export function buildDeepDiveChatPrompt(
     "",
     `${itemLabel}: ${session.cardExternalId} - ${session.cardTitle}`,
     `Topic: ${question.topic}`,
+    ...(session.focus ? [`Interview focus (guidance, not an approved decision): ${JSON.stringify(session.focus)}`] : []),
     "",
     "Question:",
     question.prompt,

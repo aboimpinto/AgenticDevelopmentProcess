@@ -105,9 +105,119 @@ function makeEpicItem(): WorkItemCard {
   };
 }
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("WorkflowInteractionPanel", () => {
+  it("locks an already-open finding form and workflow mutations during server-owned refresh, then restores them", () => {
+    const item = makeItem({ canSubmitFinding: true, canRecordUserCodeReview: true, canAcceptHumanReviewFindings: true, readiness: { ready: true, reasons: [] } });
+    const submit = vi.fn();
+    const props = { projectId: "example", onSubmitFinding: submit };
+    const view = render(<WorkflowInteractionPanel {...props} item={item} />);
+    fireEvent.click(screen.getByRole("button", { name: "Submit Finding" }));
+    fireEvent.change(screen.getByPlaceholderText("Describe the observed problem, expected outcome, and evidence."), { target: { value: "Saved draft" } });
+    const running = { ...item, completionRecovery: { ready: false, assessedAt: "now", blockers: [{ id: "recovery-running", action: "external" as const, message: "Running", actionLabel: "Wait" }] } };
+    view.rerender(<WorkflowInteractionPanel {...props} item={running} />);
+    expect(screen.getByRole("button", { name: "Refreshing Readiness" })).toHaveProperty("disabled", true);
+    for (const button of screen.getAllByRole("button", { name: /Submit Finding|User Code Review|Accept Findings|Complete Feature/i })) expect(button).toHaveProperty("disabled", true);
+    fireEvent.submit(screen.getByPlaceholderText("Describe the observed problem, expected outcome, and evidence.").closest("form")!);
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveProperty("disabled", false);
+    view.rerender(<WorkflowInteractionPanel {...props} item={item} />);
+    expect(screen.getByRole("button", { name: "Refresh Completion Readiness" })).toHaveProperty("disabled", false);
+    expect(screen.getByPlaceholderText("Describe the observed problem, expected outcome, and evidence.")).toHaveProperty("value", "Saved draft");
+  });
+  it("keeps the repair action directly in the owning phase without a duplicate readiness shortcut", async () => {
+    const item = makeItem({ canRecordUserCodeReview: true });
+    item.phases = [{ number: 12, title: "Verification", status: "COMPLETED", updatedAt: "now" }] as WorkItemCard["phases"];
+    item.completionRecovery = { ready: false, assessedAt: "now", blockers: [{ id: "phase-recovery-12", phaseNumber: 12, action: "phase",
+      message: "1 quality gap", actionLabel: "Fix Phase 12 quality gaps" }], phaseGaps: [{ id: "phase-12-acceptance_coverage", phaseNumber: 12,
+      phaseTitle: "Verification", kind: "acceptance_coverage", title: "Acceptance coverage", details: ["AC-01 lacks an execution report"], sourceIds: ["AC-01"], instruction: "Inspect existing evidence first." }] };
+    const submit = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [item], summary: "Repair started" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" onSubmitFinding={submit} />);
+    expect(screen.queryByRole("button", { name: "Fix Phase 12 quality gaps" })).toBeNull();
+    const repair = screen.getByRole("button", { name: "Verify / repair phase quality gaps" });
+    expect(repair.closest("details")).toBeNull();
+    fireEvent.click(repair);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/phase-quality/resolve", expect.objectContaining({ method: "POST" })));
+    expect(JSON.parse(fetchMock.mock.calls.find(([url]) => url === "/api/phase-quality/resolve")![1].body)).toMatchObject({ gate: "completion_recovery", phaseNumber: 12, action: "repair" });
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Complete Feature" })).toHaveProperty("disabled", true);
+  });
+
+  it("refreshes authoritative readiness without granting human acceptance", async () => {
+    const item = makeItem();
+    const fresh = makeItem({ readiness: { ready: true, reasons: [] }, canRecordUserCodeReview: true });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [fresh] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const onItemsUpdated = vi.fn();
+    const { rerender } = render(<WorkflowInteractionPanel item={item} projectId="project-1" onItemsUpdated={onItemsUpdated} />);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Completion Readiness" }));
+    await waitFor(() => expect(onItemsUpdated).toHaveBeenCalledWith([fresh]));
+    expect(fetchMock).toHaveBeenCalledWith("/api/projects/project-1/completion-readiness", expect.objectContaining({ method: "POST", body: JSON.stringify({ cardId: item.id, reassess: true, verifyExisting: true }) }));
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("complete-feature"))).toHaveLength(0);
+    rerender(<WorkflowInteractionPanel item={fresh} projectId="project-1" onItemsUpdated={onItemsUpdated} />);
+    expect(screen.getByText("User code review is pending.")).toBeTruthy();
+    expect(screen.getByText("Manual tests are pending.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Complete Feature" })).toHaveProperty("disabled", true);
+  });
+
+  it("shows refresh failures without discarding the existing blockers", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Scanner unavailable")));
+    render(<WorkflowInteractionPanel item={makeItem()} projectId="project-1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Completion Readiness" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Scanner unavailable"));
+    expect(screen.getByRole("button", { name: "Complete Feature" })).toHaveProperty("disabled", true);
+  });
+
+  it("offers Design after a completed Deep-Dive even when submitted readiness has no recovery reasons", async () => {
+    const item = { ...makeItem({ canCreateUiRequirements: true, canRefineFeature: false,
+      hasRefinementArtifacts: false, implementationCompleted: false, uiRequirementDecision: "requires_ui",
+      readiness: { ready: true, reasons: [] },
+      lastRun: { command: "deep-dive-feature", status: "completed" } as FeatureWorkflowSummary["lastRun"],
+    }), stateFolder: "01_SUBMITTED" } as WorkItemCard;
+    const executeAction = vi.fn().mockResolvedValue({ kind: "success", message: "Design started", snapshot: null });
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" onStartDeepDive={vi.fn()} api={{ executeAction } as unknown as WorkflowApiAdapter} />);
+    const design = screen.getByRole("button", { name: "Design Feature" });
+    expect(design).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: "Refine Feature" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Start FEAT Deep-Dive" })).toBeDefined();
+    fireEvent.click(design);
+    await waitFor(() => expect(executeAction).toHaveBeenCalledWith(expect.objectContaining({ actionId: "create-ui-requirements" }), expect.anything()));
+  });
+
+  it("renders Design only once when readiness also supplies a missing-design recovery reason", () => {
+    const item = makeItem({ canCreateUiRequirements: true, uiRequirementDecision: "requires_ui",
+      readiness: { ready: false, reasons: [{ code: "missing_design_artifacts", blocking: true, message: "Design required" }] },
+    });
+    item.stateFolder = "01_SUBMITTED";
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" />);
+    expect(screen.getAllByRole("button", { name: "Design Feature" })).toHaveLength(1);
+  });
+  it("can reopen the existing interview overlay without submitting different focus", () => {
+    const onStartDeepDive = vi.fn();
+    const item = makeItem({ activeRun: { status: "running", command: "deep-dive-feature" } as FeatureWorkflowSummary["activeRun"] });
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" onStartDeepDive={onStartDeepDive} />);
+    fireEvent.click(screen.getByRole("button", { name: "Continue FEAT Deep-Dive" }));
+    expect(onStartDeepDive).toHaveBeenCalledWith(item);
+    expect(screen.getByLabelText("Deep-Dive focus (optional)")).toHaveProperty("disabled", true);
+  });
+  it("offers voluntary Deep-Dive with user focus when a feature has no validation markers", () => {
+    const onStartDeepDive = vi.fn();
+    const item = makeItem({ readiness: { ready: true, reasons: [] }, uiRequirementDecision: "no_ui" });
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" onStartDeepDive={onStartDeepDive} />);
+    fireEvent.change(screen.getByLabelText("Deep-Dive focus (optional)"), { target: { value: "Explore keyboard navigation and responsive layouts" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start FEAT Deep-Dive" }));
+    expect(onStartDeepDive).toHaveBeenCalledWith(item, "Explore keyboard navigation and responsive layouts");
+  });
+
+  it("keeps voluntary Deep-Dive visible but disabled while implementation runs", () => {
+    const item = makeItem({ activeRun: { status: "running", command: "continue-implementing" } as FeatureWorkflowSummary["activeRun"] });
+    render(<WorkflowInteractionPanel item={item} projectId="project-1" onStartDeepDive={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Start FEAT Deep-Dive" })).toHaveProperty("disabled", true);
+  });
+
   it("renders a completed FEAT as read-only even when its Deep-Dive metadata is stale", () => {
     const onStartDeepDive = vi.fn();
     const item: WorkItemCard = {
@@ -288,6 +398,7 @@ describe("WorkflowInteractionPanel", () => {
       uiRequirementDecision: "no_ui",
       uiRequirementReason: "No UI requirements are needed. The FEAT can be refined.",
     });
+    item.stateFolder = "01_SUBMITTED";
 
     render(<WorkflowInteractionPanel api={{ executeAction: vi.fn() } as unknown as WorkflowApiAdapter} item={item} projectId="project-1" />);
 

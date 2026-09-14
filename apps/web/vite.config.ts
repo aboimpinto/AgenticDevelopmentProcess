@@ -12,10 +12,10 @@ export default defineConfig({
   },
   plugins: [react()],
   server: {
-    port: 5173,
+    port: Number(process.env.HEPHA_WEB_PORT ?? "5176"),
     proxy: {
-      "/api": "http://127.0.0.1:4317",
+      "/api": `http://127.0.0.1:${process.env.HEPHA_ORCHESTRATOR_PORT ?? "4318"}`,
     },
-    strictPort: false,
+    strictPort: true,
   },
 });

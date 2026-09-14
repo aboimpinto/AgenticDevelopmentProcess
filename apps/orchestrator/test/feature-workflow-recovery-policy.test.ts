@@ -31,7 +31,7 @@ describe("feature workflow recovery policy", () => {
   });
 
   it("supersedes implementation failures only after durable completion and never masks complete-feature", () => {
-    expect(superseded({ command: "continue-implementing", implementationCompleted: true })).toBe(true);
+    expect(superseded({ command: "continue-implementing", implementationCompleted: true })).toBe(false);
     expect(superseded({ command: "start-implementing", item: item("04_COMPLETED") })).toBe(true);
     expect(superseded({ command: "complete-feature", implementationCompleted: true })).toBe(false);
     expect(superseded({ command: "deep-dive-feature", implementationCompleted: true })).toBe(false);

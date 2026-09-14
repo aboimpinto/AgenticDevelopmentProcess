@@ -29,7 +29,7 @@ export class PhaseWorkerEntryApplication {
       feature: WorkItemCard;
       implementationModel: import("@hepha/shared").HandoffPlanV1;
       phase: NumberedPhase;
-      phaseRole: string;
+      phaseRole: import("../../phase-execution-contract.js").PhaseExecutionRole;
       profile: "full";
       project: StoredProject;
       reviewArtifactHash: string | null;

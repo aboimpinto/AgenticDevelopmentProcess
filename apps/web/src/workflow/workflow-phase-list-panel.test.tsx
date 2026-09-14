@@ -2,11 +2,25 @@
  * Tests for WorkflowPhaseListPanel.
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { RouteIdentityV1, RuntimePhaseEvidenceSummaryV1 } from "@hepha/shared";
 import { WorkflowPhaseListPanel, type RuntimeEvidenceListBinding } from "./workflow-phase-list-panel.js";
 import type { PhaseRowDisplay } from "./workflow-presentation.js";
+
+afterEach(cleanup);
+
+it("renders artifact errors only in the owning phase row", () => {
+  const view = render(<WorkflowPhaseListPanel phases={[makePhaseRow({ number: 12 }), makePhaseRow({ number: 41 })]}
+    recoveryBlockers={[
+      { id: "source", action: "external", phaseNumber: 41, message: "Declared phase status is unreadable", prerequisite: "Inspect the phase document", actionLabel: "Restore source" },
+      { id: "feature", action: "external", message: "Feature status conflicts", actionLabel: "Restore source" },
+    ]} />);
+  expect(screen.getByText("Declared phase status is unreadable").closest("li")?.dataset.phaseNumber).toBe("41");
+  expect(view.container.querySelector('[data-phase-number="12"]')?.textContent).not.toContain("Declared phase status is unreadable");
+  expect(screen.getByText("Inspect the phase document")).toBeTruthy();
+  expect(screen.queryByText("Feature status conflicts")).toBeNull();
+});
 
 function makePhaseRow(overrides?: Partial<PhaseRowDisplay>): PhaseRowDisplay {
   return {
@@ -37,6 +51,17 @@ function makePhaseRow(overrides?: Partial<PhaseRowDisplay>): PhaseRowDisplay {
 }
 
 describe("WorkflowPhaseListPanel", () => {
+  it("places collapsed resolution details only inside the affected phase", () => {
+    const { container } = render(<WorkflowPhaseListPanel phases={[makePhaseRow({ number: 1 }), makePhaseRow({ number: 2 })]}
+      blockers={[{ gate: "tests", phaseNumber: 1, phaseTitle: "Planning", title: "Phase 1 — Automated tests", explanation: "Evidence unverified",
+        recordedReason: "No run recorded", evidencePaths: ["results/tests.json"], steps: ["Inspect existing evidence first."] }]} />);
+    const issues = container.querySelector('[data-phase-number="1"] details');
+    expect(issues).not.toBeNull();
+    expect(issues?.hasAttribute("open")).toBe(false);
+    expect(issues?.textContent).toContain("Inspect existing evidence first.");
+    expect(issues?.textContent).toContain("results/tests.json");
+    expect(container.querySelector('[data-phase-number="2"] details')).toBeNull();
+  });
   it("shows 'No phases defined' when phases array is empty", () => {
     render(<WorkflowPhaseListPanel phases={[]} />);
     expect(screen.getByText("No phases defined for this feature.")).toBeDefined();

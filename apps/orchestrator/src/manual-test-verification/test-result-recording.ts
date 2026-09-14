@@ -1,10 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { ManualTestResultRecord } from "@hepha/db";
 import { buildFindingContent, buildFindingTitle } from "../manual-test-verification-policy.js";
 import type { ManualTestAdapterContext } from "./adapter-context.js";
-import { getExactCurrentManualTestPack } from "./current-pack.js";
+import { getExactCurrentManualTestPack, readStoredPackCases } from "./current-pack.js";
 
 // ---------------------------------------------------------------------------
 // Manual Test Recording (Success & Failure)
@@ -31,8 +31,8 @@ export interface RecordTestResultResult {
 /**
  * Record that every generated test in a reviewed pack passed.
  *
- * The canonical Markdown is the durable definition of a pack's test cases, so
- * each pass is persisted against its real MT identifier rather than a UI-only
+ * The validated manifest defines the pack's cases and agrees with its Markdown,
+ * so each pass is persisted against its real identifier rather than a UI-only
  * summary identifier. Repeating the request is idempotent for existing passes.
  */
 export async function recordAllManualTestPasses(options: {
@@ -75,7 +75,14 @@ export async function recordAllManualTestPasses(options: {
     };
   }
 
-  const testIds = [...readFileSync(markdownPath, "utf8").matchAll(/^###\s+(MT-\d+):/gm)].map((match) => match[1]!);
+  let testIds: string[];
+  try {
+    testIds = readStoredPackCases(context.projectRoot, pack.markdownPath, true).map((test) => test.id);
+    if (review.reviewedTestIds != null) throw new Error("Review all current manual cases before recording all tests as passing.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, resultId: null, findingId: null, message, errors: [message] };
+  }
   if (testIds.length === 0) {
     return {
       success: false,
@@ -154,7 +161,7 @@ export async function recordTestResult(
   }
 
   const review = await context.store.getCurrentManualTestReview(context.projectId, context.cardKey);
-  if (!review || review.id !== reviewId) {
+  if (!review || review.id !== reviewId || review.packId !== packId) {
     return {
       success: false,
       resultId: null,
@@ -164,6 +171,13 @@ export async function recordTestResult(
     };
   }
 
+  try {
+    if (!readStoredPackCases(context.projectRoot, pack.markdownPath, true).some((test) => test.id === testId)) throw new Error("Test ID is not in the reviewed pack.");
+    if (review.reviewedTestIds != null && !review.reviewedTestIds.includes(testId)) throw new Error("Review this case before recording its result.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, resultId: null, findingId: null, message, errors: [message] };
+  }
   const resultId = `result-${randomUUID()}`;
   const now = new Date().toISOString();
   let findingId: string | null = null;

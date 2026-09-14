@@ -20,7 +20,8 @@ export function isSupersededFeatureWorkflowFailure(input: SupersededFeatureWorkf
   }
   if (!isImplementationWorkflowCommand(input.command)) return false;
   if (input.item.stateFolder === "04_COMPLETED" && input.command !== "complete-feature") return true;
-  return input.implementationCompleted && input.command !== "complete-feature";
+  // Completion checkboxes cannot supersede an unresolved failure in an active feature.
+  return false;
 }
 
 export function createRecoveredFeatureWorkflowOutcome(input: {

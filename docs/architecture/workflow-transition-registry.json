@@ -145,14 +145,522 @@
   ],
   "transitions": [
     {
+      "id": "WF-PHASE-JSON-VERIFICATION",
+      "scope": "phase",
+      "from": "host verification execution or completion with declared non-applicable verification",
+      "trigger": "phase evidence is written or consumed through the versioned JSON exchange",
+      "to": "phase-specific gate projection or explicit protocol/evidence diagnostic",
+      "ownerPath": "apps/orchestrator/src/exchanges/phase-verification-repository.ts",
+      "ownerSymbol": "readPhaseVerification",
+      "rationale": "Use host-produced structured results and independent declared phase gates. Check configured identities, argv, working directory and required outcomes. Ordered task flags govern native applicability; the MCP Phase Quality Gate Contract governs compatibility applicability. Roles and file presence cannot add gates. Re-read applicability after developer revisions. Phase TwinTests do not replace EPIC workflow E2E obligations at their assigned checkpoints; mappings are many-to-many. Required failed checks and unresolved review findings remain blocked. Optional audit metadata does not gate decisions; migrated artifacts never fall back to prose success.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/json-exchange-protocol.test.ts",
+        "apps/orchestrator/test/phase-code-classification-policy.test.ts",
+        "apps/orchestrator/test/workflow-evidence-projection.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-json-exchange.feature"
+      ]
+    },
+    {
+      "id": "WF-VERIFICATION-JSON-REPAIR",
+      "scope": "recovery",
+      "from": "declared verification repair request",
+      "trigger": "typed repair response requires schema and phase/task authority validation",
+      "to": "independent host rerun, concrete blocker, or one bounded representation-only correction",
+      "ownerPath": "apps/orchestrator/src/exchanges/verification-repair-exchange.ts",
+      "ownerSymbol": "requestVerificationRepair",
+      "rationale": "Publish the same runtime schema to the worker, preserve execution facts through representation repair, forbid advisory acceptance for failed required checks, and report schema exhaustion as a protocol defect rather than a test failure. A worker repaired outcome is never evidence of passing tests.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/json-exchange-protocol.test.ts",
+        "apps/orchestrator/test/declared-verification-task-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-json-exchange.feature",
+        "apps/orchestrator/test/generic-declared-verification-task.feature"
+      ]
+    },
+    {
+      "id": "WF-MODEL-REQUEST-POLICY",
+      "scope": "runtime",
+      "from": "prepared Pi provider request",
+      "trigger": "before each provider request including continued tool turns",
+      "to": "High-reasoning bounded request or terminal policy refusal without fallback",
+      "ownerPath": "apps/orchestrator/src/runtime/pi/model-request-guard.ts",
+      "ownerSymbol": "modelRequestGuard",
+      "rationale": "Apply locally tokenized context and independent token-spending admission to every Pi invocation. Bind the readiness output allowance only on supported transports; Codex subscription requests omit unsupported output fields and reserve catalogue maximum output consistently in planning and the wire guard. Resolve transport through the actual connection provider, never a feature/model name or display label. Use this reservation for 50/80 percent thresholds. Bytes are diagnostics, never tokens. Compact only losslessly at the provider boundary, never omit evidence or downgrade reasoning to fit. Resolve verified tokenizer capability before worker spawn; provider-qualified aliases select separately pinned tokenizer revisions. Readiness and request preparation share the resolver. Unknown selections report their identity before executing work; invalid assets never use estimated token counts.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/model-request-policy.test.ts",
+        "apps/orchestrator/test/model-request-policy.integration.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts",
+        "apps/orchestrator/test/runtime-execution-coordinator.test.ts",
+        "apps/orchestrator/test/model-tokenizer-registry.test.ts",
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/model-request-policy.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-CASE-VERIFY",
+      "scope": "review",
+      "from": "current pack containing validated executable cases, possibly with incomplete overall coverage",
+      "trigger": "Explicit human review of one case or all current validated manual cases, followed by observed pass/fail recording",
+      "to": "Pack/review-bound case results; incomplete acceptance coverage still blocks feature completion",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.recordResult",
+      "rationale": "Manual case validity is independent of overall coverage. The user may review and record all validated cases in a current pack even while automated acceptance coverage is unresolved. Stale packs, invalid cases, partial reviews and failed findings remain guarded. Bulk recording persists individual case IDs and does not stamp completion or start finalization while overall readiness is incomplete. Top-of-dialog actions stay visible with reasons when disabled.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-verification-application.test.ts",
+        "packages/db/test/sqlite-manual-test-repository.test.ts",
+        "apps/orchestrator/test/manual-test-pack-review-binding.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/manual-test-pack-review-binding.feature",
+        "apps/web/e2e/features/manual-test-verification.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-AUTHORING-RESUME",
+      "scope": "review",
+      "from": "manual authoring interrupted after zero or more validated batches",
+      "trigger": "human retries generation with unchanged sources, pack identity and guidance",
+      "to": "remaining criterion batches assessed and saved before publishing a new pack",
+      "ownerPath": "apps/orchestrator/src/manual-test-verification/authoring-checkpoints.ts",
+      "ownerSymbol": "authorWithCheckpoints",
+      "rationale": "Persist validated batches independently of provider session timeout. Bind checkpoints to source/model and exact pack identity; stale inputs cannot reuse proposals. Drafts grant no acceptance authority. Invalid JSON or case-contract drafts are returned to the model with the exact diagnostic, rejected response and original source/guidance contract. Each correction rechecks source and operation ownership. Only validated replacements are checkpointed. Shared repeated-diagnostic detection stops repeated or cycling defects after three occurrences; provider/authority failures are not draft correction. Action prose is not restricted to a fixed opening-verb vocabulary; required fields, concrete context, placeholder rejection and human review remain authoritative.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-authoring-recovery.test.ts",
+        "apps/orchestrator/test/manual-test-pack-authoring.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/manual-test-pack-review-binding.feature",
+        "apps/orchestrator/test/manual-test-authoring-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-MANUAL-PACK-REGENERATE",
+      "scope": "review",
+      "from": "current, stale or incomplete manual verification pack",
+      "trigger": "human requests a new pack with optional scenario guidance",
+      "to": "validated new version awaiting human review, or explicit unresolved coverage",
+      "ownerPath": "apps/orchestrator/src/application/manual-tests/manual-test-verification-application.ts",
+      "ownerSymbol": "ManualTestVerificationApplication.generate",
+      "rationale": "Assess coverage and draft missing manual scenarios on every user-facing generation, even with blank guidance. Keep drafting separate from execution and acceptance; bind reviews/results to exact pack versions.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/manual-test-pack-authoring.test.ts",
+        "apps/orchestrator/test/manual-test-case-contract.test.ts",
+        "packages/db/test/sqlite-manual-test-repository.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/manual-test-verification.feature",
+        "apps/orchestrator/test/manual-test-pack-review-binding.feature"
+      ]
+    },
+    {
+      "id": "WF-VERIFICATION-DIAGNOSIS-HANDOFF",
+      "scope": "review",
+      "from": "a still-owned phase recovery worker returns with a scoped verification diagnosis",
+      "trigger": "validate the bounded handoff against exactly the selected criteria before automatic readiness refresh",
+      "to": "source-bound diagnostic context for the next explicit repair, execution or investigation action; never passing proof",
+      "ownerPath": "apps/orchestrator/src/manual-test-verification/verification-worker-diagnoses.ts",
+      "ownerSymbol": "recordWorkerDiagnosis",
+      "rationale": "Preserve implementation/setup findings without treating missing execution as implementation authority. Actual executed failures may receive the explicitly scoped correction defined by the worker execution contract. Invalidate stale findings when cited sources or configuration change, preserve partial coverage, and prevent unchanged repair/investigation loops.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/verification-worker-diagnoses.test.ts",
+        "apps/orchestrator/test/collective-verification.integration.test.ts",
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature"
+      ]
+    },
+    {
+      "id": "WF-READINESS-EXECUTION-HANDOFF",
+      "consoleCapturePolicy": "Accept checksum-bound run-owned terminal stdout capture for test, static, preparation and discovery checks. Preserve equivalent literal invocation and exact cwd; a literal AND-list may be wrapped once in parentheses to capture the complete command. No added statements, changed selection, redirects or destinations. Native stdout log/text reports remain subject to native identity/count/outcome validation; health/discovery logs never prove test coverage. Importer verifies every supplied checksum and retains nonzero exits as failures.",
+      "executionProjectionPolicy": "Allowlist executable check fields and source references for the execution prompt; omit planner reasons and phase prose. Receipt context separately allowlists id/kind/cwd/command so wider runtime objects cannot leak historical prerequisites into its identity envelope. Preserve original plan for audit/assessment. FV-21 proves both handoff boundaries and actual process execution using a controlled adapter; no guarantee of arbitrary live-model reasoning is claimed.",
+      "setupSourcePolicy": "verification-setup/v2 requires inspection and execution to trace infrastructure and scenario state requirements to current runner/fixture code with exact references. Historical prose, cached reasons, previous receipts and sibling projects are not dependency authority. Use bounded runner-owned setup within existing permissions; report actual missing state controls separately. The inspection contract hash invalidates old baselines and triggers reinspection. This is a model instruction contract, not deterministic inference of arbitrary dependency graphs.",
+      "nativeReportCollectionPolicy": "Inspect wrapper delegation before selecting commands: preserve scope/guards but use source-built native reporter checks instead of hidden no-build and summary-only output. Shared import accepts bounded reports path/sha256 collections or legacy report bindings, never both. Validate every native identity, count, outcome and checksum; console logs remain audit-only. Accept both hash-first and working-tree-first source qualifications, preserving the raw claim and rejecting multiple hashes. FV-19 and setup-contract scenarios exercise the corrections without weakening freshness or human acceptance.",
+      "commandResolutionPolicy": "Before saving a baseline or dispatching execution, resolveVerificationCommands validates inspected and reused plans and binds the sole configured Cargo.toml when a built-in Cargo manifest-consuming command has no explicit manifest option and no discoverable manifest from cwd. Preserve flags, report destinations, cwd, test paths and phase mappings; reject ambiguous manifests. Record original plan and corrections; execution context, validation and future baselines use the corrected command. Never infer corrections from prior receipts or rewrite evidence. FV-18 and legacy-baseline HTTP coverage prove execution and reuse; optional receipt metadata remains optional.",
+      "commandPresentationPolicy": "Shared binding compares literal POSIX/Bash arguments, assignment syntax and operators without executing shell text. Equivalent quotes, escaped spaces, continuation and separator whitespace are accepted directly, including with one literal cd to the configured cwd and separately bound console capture. Preserve raw receipt commands. Changed selection, argument boundaries, manifest options, report destinations, descriptors or control flow remain mismatches. Unsupported expansions/grammar retain exact-text matching and the existing diagnostic recovery path. No project or runner-specific rules.",
+      "receiptProductionPolicy": "HEPHA normally includes runId in the current context/template and best-effort enriches missing receipt metadata after worker success, ownership and source checks, preserving receipt.worker.json. Missing/null/empty runId alone never blocks valid evidence, even when enrichment cannot persist. verifiedAt is optional audit metadata: absent, malformed, old or future values alone never block admission, and validation is independent of the current wall clock. Preserve raw timestamps; never invent replacements. Shared read-only import still validates current output directory, selected checks and native reports with source guards in the workflow. Explicit conflicting IDs remain errors. Adding metadata cannot certify execution. Current receipt contract is authoritative over historical examples. FV-10/FV-11/FV-12 cover normal production, conflicts and ID-less success; FV-13/FV-15/FV-16/FV-17 prove real execution reaches readiness despite timestamp errors and absent IDs through HTTP and browser Refresh. Legacy ordering of conflicting receipts remains unchanged. New workers receive the verification.execution.receipt common exchange schema and a host-owned receipt-template.json with fixed identities and null outcome placeholders. Runtime uses that same schema before independent native evidence checks; legacy receipt/v1 remains an explicit compatibility path. Resolve only HEPHA reserved output-directory placeholders to literal host-owned paths before execution and legacy receipt binding, preserving quoting semantics and unrelated expressions. No model correction or rerun is required for the expanded-path representation alone. Supporting artifacts (build provenance or diagnostic JSON) use checksum-bound artifacts entries and never supply test counts; native reports stay independently required.",
+      "planStabilityPolicy": "FeatureDescription.md describes or links the current test inventory; test additions, renames and replacements update it together with configured selection. Persist a validated baseline, then revalidate identity, requirements, contract/project configuration, phase scope and content snapshots including dirty source and linked repositories. Unchanged plans retain selection with new run/report destinations; all tests execute again. Drift, corrupt data or unsupported snapshot context returns to inspection. Source drift during inspection stops before execution. No old report or acceptance is reused.",
+      "targetedCorrectionPolicy": "Report original configuration errors with field/cwd/resolved path without cascading phase errors for existing references. Check ID order does not matter. Merge small checkUpdates/phaseUpdates for diagnosed entries, reject duplicate/unrelated/unknown fields, apply the full validator and persist. Complete plans remain compatible; runtime/cancellation bounds stay unchanged.",
+      "planOutputContractPolicy": "Inspection and correction share one syntactically valid JSON template populated with required phase numbers. All example placeholders must be replaced by inspected configuration; the template itself grants no execution authority. The same parser and semantic validator admit both responses.",
+      "planFormatRecoveryPolicy": "Presentation normalization distinguishes non-JSON inline code examples from competing JSON payloads. Malformed JSON gets a source-excerpt-free categorized diagnostic with line/column and recovery guidance, supplied with the saved response to bounded correction. Successful correction resumes actual test execution. Rejecting an unsafe candidate is not an immediate workflow stop.",
+      "evidencePipelinePolicy": "Use readRecoveryExecutionEvidence for phase/repair and Refresh receipts. Refresh supplies current run/check bindings; no independent native-report validator or receipt schema is permitted. Current source snapshots remain mandatory. Successful non-test logs may be silent and never certify coverage. One parameterized execution prompt contract defines output for both callers.",
+      "planValidationPolicy": "Locally decode one unambiguous JSON payload, allowing presentation wrappers but rejecting malformed/truncated/competing payloads. Apply the same semantic validator and persist the canonical selected plan; formatting wrappers alone never invoke correction. Classify test/static/preparation/discovery checks. Only actual tests claim automated gates and require test paths; non-test checks require successful bound logs and zero claimed tests. Reject identical canonical cwd/command executions. Shared files within a suiteKey are legal for distinct filters, assemblies, namespaces and configurations; the inspector compares actual selections before deduplicating equivalent or full/subset executions. Preserve every source reference. Typed unresolved plan and command-admission errors receive targeted corrections while validation progresses, each with a 180000ms worker runtime bound. The same diagnostic set recurring three times triggers escalation after root-cause diagnosis; distinct defects may continue. Cached plans pass the same admission before execution. Preserve raw output, canonical semantic candidates and aggregate diagnostics; instruct correction to preserve unaffected scope and avoid repeated inspection. Never retry runtime/budget/cancellation errors here. Targeted patches may correct either participant named by a duplicate or legacy overlap diagnostic; unrelated checks and phase obligations remain protected. Correction runtime failure retains the actual plan diagnostic plus runtime cause and points to Refresh Completion Readiness, without creating a phase finding or changing human results.",
+      "activityPolicy": "Publish inspecting, correcting, preparing, testing, checking, waiting, validating and assessing from server-owned transitions. Track check identity through tool start/end including bounded newline/logging wrappers. Testing means active tests; supporting checks and waiting are separate, and completed attempts never imply passing evidence. Record correction category, attempt, reason and start time. Failed or interrupted runs clear active labels.",
+      "inspectionBudgetPolicy": "Cumulative spending is operator-configured, never inferred from context capacity. Budget stops dispatch no tests/fallback. Preserve bounded partial inspection checkpoints for source-validated reinspection on a later explicit Refresh; never certify partial work or reuse it as execution authority.",
+      "scope": "feature-wide fresh verification from user readiness refresh",
+      "from": "idle implemented feature regardless of historical evidence or investigation gaps",
+      "trigger": "user refresh explicitly carries reassess and verifyExisting authority",
+      "to": "feature-wide inspection, fresh execution, source/report validation and assessment-only reconciliation",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-readiness-verification-application.ts",
+      "ownerSymbol": "CompletionReadinessVerificationApplication.refresh",
+      "rationale": "Every explicit Refresh verifies current source instead of trusting historical passes. Inspect all phase obligations, configuration and prerequisites; deduplicate shared checks and run all feature-related automation. Validate run-local native reports and unchanged repository snapshots. Failure, skip, missing report, interruption or source drift blocks readiness. Recover invalid evidence within the same run before assessment; no automatic production-code repair, approval or completion. Background assessment cannot dispatch workers. Explicit Refresh publishes schema-validated command-only inventory corrections and host-owned Phase references before capturing source baselines. Assessment-only calls do not write. Publication preserves criteria, flags, lifecycle and human results; cache reuse never replays old literal replacements.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/receipt-command-binding.test.ts",
+        "apps/orchestrator/test/execution-receipt-producer.test.ts",
+        "apps/orchestrator/test/completion-readiness-verification.test.ts",
+        "apps/orchestrator/test/fresh-verification-evidence.test.ts",
+        "apps/orchestrator/test/fresh-mixed-plan.test.ts",
+        "apps/orchestrator/test/verification-plan-correction.test.ts",
+        "apps/orchestrator/test/verification-plan-handoff.test.ts",
+        "apps/orchestrator/test/fresh-feature-verification.twin.test.ts",
+        "apps/orchestrator/test/fresh-verification-contract.test.ts",
+        "apps/orchestrator/test/unified-verification-evidence.test.ts",
+        "apps/orchestrator/test/unified-verification.integration.test.ts",
+        "apps/web/src/workflow/completion-recovery-activity.test.ts",
+        "apps/orchestrator/test/verification-multi-repository.test.ts",
+        "apps/orchestrator/test/receipt-health-capture.test.ts",
+        "apps/orchestrator/test/receipt-linked-revisions.test.ts",
+        "apps/orchestrator/test/execution-display-names.test.ts",
+        "apps/orchestrator/test/fresh-verification-repair.test.ts",
+        "apps/orchestrator/test/verification-inventory-publication.test.ts",
+        "apps/orchestrator/test/refresh-command-inventory.integration.test.ts",
+        "apps/orchestrator/test/verification-evidence-recovery.test.ts",
+        "apps/orchestrator/test/verification-evidence-recovery.integration.test.ts",
+        "apps/orchestrator/test/readiness-progress-recovery.test.ts",
+        "apps/orchestrator/test/receipt-literal-commands.test.ts",
+        "apps/orchestrator/test/receipt-literal-commands.integration.test.ts",
+        "apps/orchestrator/test/verification-shared-sources.test.ts",
+        "apps/orchestrator/test/execution-receipt-template.test.ts",
+        "apps/orchestrator/test/execution-receipt-template.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/fresh-feature-verification.feature",
+        "apps/orchestrator/test/unified-verification.feature",
+        "apps/orchestrator/test/verification-plan-handoff.feature",
+        "apps/orchestrator/test/verification-multi-repository.feature",
+        "apps/orchestrator/test/receipt-health-capture.feature",
+        "apps/orchestrator/test/execution-display-names.feature",
+        "apps/orchestrator/test/fresh-verification-repair.feature",
+        "apps/orchestrator/test/refresh-command-inventory.feature",
+        "apps/orchestrator/test/verification-evidence-recovery.feature",
+        "apps/orchestrator/test/readiness-progress-recovery.feature",
+        "apps/orchestrator/test/receipt-literal-commands.feature",
+        "apps/orchestrator/test/verification-shared-sources.feature",
+        "apps/orchestrator/test/execution-receipt-template.feature"
+      ],
+      "linkedRepositoryPolicy": "Command cwd and source ownership are independent. Existing relative configurationFiles bind their owning Git repositories, allowing matching testPaths across those repositories while preserving command, phase mappings and evidence obligations. Reject unbound source selections and symlink escapes. Enumerate configured directories through Git source inventory; validate containment and source existence without inferring runtime selection from shared files. Snapshot all bound source repositories during execution and baseline reuse. No new mandatory plan field or project-specific runner rewrite is introduced.",
+      "linkedRevisionPolicy": "Fresh scoped imports may retain multiple explicit working-tree revision claims only when the leading full hash matches the command repository and every claimed full hash matches a configuration-bound source repository HEAD. Unbound, alternative, abbreviated multi-hash and legacy ambiguous prose remain rejected. Complete source-content freshness checks remain authoritative.",
+      "executionIdentityPolicy": "Display names are labels, not globally unique keys. Retain every passing parameterized record with report-local references, preserve native TRX execution/assembly context and scope multi-report identities by checksum. Validate counts, all outcomes and native execution bindings; reject repeated report bytes and duplicate native execution IDs. Report-local references are not stable TestPlan IDs or proof of criterion coverage. Assessment matches the documented inventory, source assertions and configured scope; identical names cannot merge TwinTest and E2E evidence.",
+      "failedRefreshRepairPolicy": "Project bound nonzero failed receipt checks through their inspected phase mappings, including when historical phase gates are satisfied. Revalidate commands and run-local report checksums server-side. User repair launches the generic historical-green discrepancy goal: trace task ownership, compare exact prior/current execution and dirty source/config history, repair correct production or incorrect test/scanner rules with regression evidence, and iterate until resolved or a concrete impasse/lack of progress. Successful fresh-failure repair return hands off to fresh verification; worker prose does not establish readiness. Other completed repairs reassess first and hand off to fresh verification when source changed; unrelated reassessment failures do not trigger execution. Preserve active-run/cancellation/successor guards and human acceptance.",
+      "nonTestConsoleCapturePolicy": "Accept terminal checksum-bound log capture on the unchanged literal AND list for static/preparation/discovery commands. Preserve exit status and exact selection; earlier stdout is not claimed captured. Native stdout tests retain whole-list capture requirements.",
+      "evidenceRecoveryPolicy": "Receipt/import validation diagnostics return to the verification agent with the exact rejection, selected plan and current native evidence. Correct recording defects without rerunning passing suites; rerun only unresolved selected checks and required dependencies when evidence cannot be recovered. Revalidate with the unchanged shared importer and source/ownership guards. Repeated or cycling diagnostic sets escalate on their third occurrence after a diagnosis attempt; changed audit metadata is not progress. Preserve rejected receipts and responses. No automatic production edits, plan weakening, human acceptance or lifecycle completion. Provider/budget failures remain distinct.",
+      "workerRecoveryPolicy": "Recoverable inspection failures receive the original scope, saved inspection progress and exact failure before retry. Execution and evidence-repair worker errors return to receipt recovery with saved reports and the latest error. Reuse passing current-run evidence and resume only unresolved selected work. Shared progress policy detects recurring/cycling diagnostics. Explicit runtime-policy codes, exhausted provider routes, cancellation and spending/authority failures escape to their original owner."
+    },
+    {
+      "id": "WF-COMPLETION-READINESS-REFRESH",
+      "explicitReassessmentPolicy": "The single user Refresh first performs fresh feature-wide verification through WF-READINESS-EXECUTION-HANDOFF, then assesses all acceptance criteria using only current-run automated reports. Prior approvals remain historical and manual results remain saved. Background rechecks remain cached and never execute; confirmation and assignment cannot execute. Selected-model token and recovery policies still apply. Read-only coverage assessment is independent of manual-pack generation/review and unrelated phase/artifact blockers. A stale or absent pack excludes saved manual passes from current evidence but cannot suppress automated coverage assessment. Completion and coverage confirmation retain their separate freshness and authority guards.",
+      "modelCapacityPolicy": "Resolve current local Pi SDK limits for every approved provider/model route once per refresh before planning; never use the display catalogue cache for compaction thresholds. Preserve 50/80 percent safeguards and fail closed on unknown live limits.",
+      "scope": "feature readiness",
+      "from": "displayed completion readiness",
+      "trigger": "human selects Refresh Completion Readiness; pin exact provider-scoped SDK model limits and tokenizer; use a resettable 120-second idle watchdog without a five-minute absolute deadline; server-owned start, 50% light / 80% strong token occupancy compaction and settlement notify the board; spending limits remain independent; oversized fact arrays subdivide under a whole-refresh budget; importer-version changes invalidate former report exclusions",
+      "to": "fresh assessment with criterion-group validation of mixed manual/automated evidence, retained partial proof and original diagnoses, grouped phase-owned gaps and optional unapproved coverage proposals",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-readiness-refresh-application.ts",
+      "ownerSymbol": "CompletionReadinessRefreshApplication.refresh",
+      "rationale": "Opt-in recovery uses complete verified identities and authoritative human outcomes. Try lossless compression before retrieval. Inspect large source documents once in bounded pages, extracting exact additional operative clauses instead of whole related discussions. Validate page/criterion accounting, completeness, exact quotes and explicit duplicate occurrences. Preserve quote-local scope, offsets, source digest, negative qualifications and memberships; shared literal text cannot transfer authority. Bound page facts and per-criterion source context. Before buying identity retrieval, prove that source/manual/report context without identities can fit. Pack compatible criteria into bounded final groups while preserving the exact union of report-bound identity indexes. Share repeated diagnostic origins/reasons losslessly, retaining every occurrence and human result. Aggregate cross-page clauses and complementary evidence before a verdict. Plan below the runtime guard using local tokenizer counts, correction token headroom and an independent aggregate token-spending budget. Model context thresholds never use byte counts or the spending ceiling. Checkpoints bind full prompts and current algorithm/source/pack/report/result fingerprints and are revalidated on reuse. Incomplete or irreducible context remains an assessment error, never inferred test repair, permission to omit requirements or readiness. Completed assessment and explicit required coverage confirmation enable completion without rewriting manual package hashes or human results.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/coverage-source-selection.test.ts",
+        "apps/orchestrator/test/coverage-source-aggregation.integration.test.ts",
+        "apps/orchestrator/test/native-execution-reports.test.ts",
+        "apps/orchestrator/test/coverage-context-budget.test.ts",
+        "apps/orchestrator/test/coverage-assessment-batches.test.ts",
+        "apps/orchestrator/test/coverage-assessment-checkpoints.test.ts",
+        "apps/orchestrator/test/recovery-execution-evidence.test.ts",
+        "apps/orchestrator/test/completion-readiness-recovery.integration.test.ts",
+        "apps/orchestrator/test/completion-phase-gaps.test.ts",
+        "apps/web/src/workflow/use-completion-readiness-refresh.test.ts",
+        "apps/web/src/workflow/completion-recovery-activity.test.ts",
+        "apps/orchestrator/test/completion-loop-contract.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts",
+        "apps/orchestrator/test/logical-acceptance-coverage.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/pi-sdk-catalog.feature",
+        "apps/orchestrator/test/coverage-source-aggregation.feature",
+        "apps/orchestrator/test/completion-readiness-recovery.feature",
+        "apps/web/e2e/features/workflow-interactions.feature",
+        "apps/web/e2e/features/completion-loop.feature",
+        "apps/orchestrator/test/logical-acceptance-coverage.feature"
+      ],
+      "logicalCoveragePolicy": "TestCoverage is logical alignment of current assertions, delegated fixtures and integration boundaries with accepted FEAT/EPIC criteria, independent of numeric telemetry. Reuse prior phase mappings with current source contents and fresh inspection findings. Passing execution and logical sufficiency remain separate; no line/branch/percentage report is required. Refresh inspects/runs/assesses without creating tests or fixing product code; an explicit phase fixer repairs confirmed in-scope findings and executes affected checks."
+    },
+    {
+      "id": "WF-COVERAGE-RESPONSE-CORRECTION",
+      "scope": "feature readiness",
+      "from": "malformed final assessor response",
+      "trigger": "typed schema validation identifies an invalid field",
+      "to": "same-evidence field corrections while validation progresses, then validated checkpoint or diagnosed impasse",
+      "ownerPath": "apps/orchestrator/src/manual-test-verification/coverage-response-correction.ts",
+      "ownerSymbol": "correctCoverageResponse",
+      "rationale": "Keep provider success distinct from valid assessment. Persist value-free field/type diagnostics and response hashes; never promote rejected output to evidence. Correction cannot drop evidence, relax coverage validation, execute tests or grant approval. A shared progress policy permits successive distinct field corrections; the same field and required shape recurring three times escalates after diagnosis. Response lengths, hashes and metadata do not reset progress. Each correction retains the full original evidence and prompt budget; transport failures do not trigger it. Validated checkpoints remain reusable across refresh and restart without repeating successful retrieval.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/acceptance-coverage-reconciliation.test.ts",
+        "apps/orchestrator/test/coverage-assessment-checkpoints.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts",
+        "apps/orchestrator/test/completion-loop-contract.test.ts",
+        "apps/orchestrator/test/readiness-progress-recovery.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature",
+        "apps/orchestrator/test/readiness-progress-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-COMPLETION-RECOVERY-UI-LOCK",
+      "scope": "phase",
+      "from": "local or server-owned completion readiness refresh in progress",
+      "trigger": "current card projection reports the recovery lock, including automatic refresh and browser remount",
+      "to": "conflicting mutations disabled until both server and local activity settle",
+      "ownerPath": "apps/web/src/workflow/use-completion-readiness-refresh.ts",
+      "ownerSymbol": "useCompletionReadinessRefresh",
+      "rationale": "The authoritative recovery lock must drive the detail panel as well as the feature card. Disable refresh, coverage confirmation/assignment, phase repair/waiver, workflow and human-review mutations, manual results and generation, delivery preparation and EPIC relationship mutations. Preserve open drafts and read-only evidence/document/status navigation. Callback guards reject direct submission while busy; existing server guards remain authoritative for request races. Stale success notices and green completion styling cannot imply current readiness.",
+      "unitTestPaths": [
+        "apps/web/src/workflow/use-completion-readiness-refresh.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature"
+      ]
+    },
+    {
+      "id": "WF-CONFIGURED-VERIFICATION-ROUTING",
+      "contextPolicy": "Use the same pinned model token counter/capacity and shared spending budget as coverage assessment. Reserve output, framing, wrapper and correction room; apply 50% light lossless factoring and 80% strong criterion partitioning with a 75% target. Reuse bounded source-fact extraction only when needed; irreducible complete context remains blocked, never truncated. Group identical partial references while retaining distinct explanations and untouched approval bindings. Notify feature-card compaction activity. Compatibility-only injected runners without model metadata keep their conservative default bound.",
+      "scope": "phase",
+      "from": "new or cached unresolved coverage decisions",
+      "trigger": "readiness refresh detects absent or changed configured action bindings",
+      "to": "canonical existing execution targets or an explicit investigate-and-repair action",
+      "ownerPath": "apps/orchestrator/src/manual-test-verification/verification-action-routing.ts",
+      "ownerSymbol": "routeVerificationActions",
+      "rationale": "A separate bounded tool-free assessment selects only IDs from a statically discovered project catalog. Commands and paths cannot be invented by the response. Supply authoritative current pack/review-bound manual results, validated partial contributions and original diagnoses; historical phase prose cannot revoke these outcomes or reopen verified obligations. Preserve coverage proposals and all prerequisites, group shared runs, and invalidate saved bindings when configuration or normalized decisions change. Unsupported configuration is investigation work, not evidence of missing tests.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/configured-verification-targets.test.ts",
+        "apps/orchestrator/test/verification-action-routing.test.ts",
+        "apps/orchestrator/test/verification-routing-context.test.ts",
+        "apps/orchestrator/test/completion-phase-gaps.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature"
+      ]
+    },
+    {
+      "id": "WF-VERIFICATION-SETUP-INSPECT",
+      "scope": "phase",
+      "from": "unresolved verification configuration or evidence mapping",
+      "trigger": "human explicitly requests investigation and repair from the owning phase",
+      "to": "scoped investigation, correction and affected verification, followed by automatic readiness reassessment",
+      "ownerPath": "apps/orchestrator/src/application/features/phase-quality-resolution-application.ts",
+      "ownerSymbol": "PhaseQualityResolutionApplication.resolve",
+      "rationale": "Unknown setup requires investigation first, not an inspection-only endpoint. The explicit repair includes all unresolved non-confirmation phase findings, prior diagnoses, configured targets and prerequisites. Correct verified in-scope gaps and execute affected checks while making progress. Historical generated inspection-only instructions cannot narrow this request. Preserve project setup authority, human acceptance, valid passing evidence, stale-document guards and cancellation. Assessment alone grants no repair authority.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/completion-phase-gaps.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature",
+        "apps/orchestrator/test/phase-quality-resolution.feature"
+      ],
+      "repairSettlementPolicy": "Explicit completed repairs reassess current evidence. If that reassessment reports the canonical changed-source condition, hand off to fresh verification automatically; unrelated failures and failed workers do not trigger execution. Cancellation and successor-run checks guard both handoff and result publication. Worker prose never grants acceptance."
+    },
+    {
+      "id": "WF-COMPLETION-EXISTING-EXECUTION",
+      "scope": "phase",
+      "from": "identified existing tests without verified execution evidence",
+      "trigger": "human makes listed prerequisites available and explicitly requests existing verification",
+      "to": "execution-only preflight and report publication followed by automatic readiness reassessment",
+      "ownerPath": "apps/orchestrator/src/application/features/phase-quality-resolution-application.ts",
+      "ownerSymbol": "PhaseQualityResolutionApplication.resolve",
+      "rationale": "Typed execution requirements are untrusted preflight suggestions, not shell authority or proof. Surface prerequisites outside collapsed details; explicit phase execution requires acknowledgement, while the separate user Refresh handoff permits actual preflight without an availability claim. Worker checks real setup and stops if absent, without duplicate tests or production edits inferred from missing execution. An actual failing check may justify one in-scope correction and rerun with both reports preserved. Acknowledgement, discovery and worker prose cannot satisfy coverage. Verified imports and explicit confirmation still gate completion.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/acceptance-coverage-reconciliation.test.ts",
+        "apps/orchestrator/test/completion-phase-gaps.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts",
+        "apps/orchestrator/test/completion-loop-contract.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/completion-loop.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-REPAIR-READINESS",
+      "scope": "phase",
+      "from": "human-requested phase quality repair with a current terminal outcome",
+      "trigger": "the repair worker settles without cancellation or superseding workflow",
+      "to": "one server-owned readiness reassessment followed by a project-change notification",
+      "ownerPath": "apps/orchestrator/src/application/features/phase-quality-resolution-application.ts",
+      "ownerSymbol": "PhaseQualityResolutionApplication.refreshAfterRepair",
+      "rationale": "Repair completion must not leave readiness stale or depend on an open browser. Use fresh verification after a repair of bound failed Refresh executions; other repair kinds reuse assessment-only refresh. Neither path confirms proposals, alters results or finalizes. Independently check the selected gate after return: absent/failed execution or incomplete assessment records failed unresolved verification, not successful repair. Preserve repair failures and never overwrite successor runs.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/completion-readiness-recovery.integration.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts",
+        "apps/orchestrator/test/fresh-verification-repair.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/completion-readiness-recovery.feature",
+        "apps/web/e2e/features/completion-loop.feature",
+        "apps/orchestrator/test/fresh-verification-repair.feature"
+      ],
+      "failedRefreshRepairPolicy": "Project bound nonzero failed receipt checks through their inspected phase mappings, including when historical phase gates are satisfied. Revalidate commands and run-local report checksums server-side. User repair launches the generic historical-green discrepancy goal: trace task ownership, compare exact prior/current execution and dirty source/config history, repair correct production or incorrect test/scanner rules with regression evidence, and iterate until resolved or a concrete impasse/lack of progress. Successful fresh-failure repair return hands off to fresh verification; worker prose does not establish readiness. Other completed repairs reassess first and hand off to fresh verification when source changed; unrelated reassessment failures do not trigger execution. Preserve active-run/cancellation/successor guards and human acceptance."
+    },
+    {
+      "id": "WF-COMPLETION-PHASE-GAPS",
+      "scope": "phase",
+      "from": "unresolved acceptance coverage or genuine task evidence after readiness refresh",
+      "trigger": "explicit readiness refresh groups current evidence by verification responsibility",
+      "to": "idempotent phase repair context and working phase controls; explicit repair dispatch receives the current server-owned gaps",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-phase-gaps.ts",
+      "ownerSymbol": "persistCompletionPhaseGaps",
+      "rationale": "Avoid per-criterion noise, navigation-only blockers and generic findings. Confirmation-only criteria are amber review controls, not repair instructions or red gaps, and cannot dispatch a repair worker. Reconcile exact terminal task evidence, assign generic verification ownership, exclude generated instructions from evidence and preserve human results. Only actual evidence or confirmed existing mappings can clear gaps.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/completion-phase-gaps.test.ts",
+        "apps/orchestrator/test/completion-readiness-recovery.integration.test.ts",
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/completion-blocker-location.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/completion-readiness-recovery.feature",
+        "apps/web/e2e/features/workflow-interactions.feature"
+      ],
+      "presentationOwnership": "Readiness summarizes phase gaps without duplicate phase action buttons. Artifact diagnostics use exact affected-document ownership and appear in that phase; unknown/feature ownership remains feature-level. Manual verification messages appear beside manual controls. No gate or authorization semantics change."
+    },
+    {
+      "id": "WF-COMPLETION-COVERAGE-CONFIRM",
+      "scope": "feature readiness",
+      "from": "current source-bound coverage proposal",
+      "trigger": "human explicitly confirms the displayed evidence links",
+      "to": "audited coverage overlay and reassessed readiness; original pack and results unchanged",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-readiness-refresh-application.ts",
+      "ownerSymbol": "CompletionReadinessRefreshApplication.refresh",
+      "rationale": "Validate known references and typed importer-verified provenance before explicit semantic confirmation. Isolate invalid proposed links by criterion while retaining unrelated valid proposals; malformed envelopes remain fail-closed. Exact source/evidence/outcome link bindings preserve unaffected confirmations after report changes, while changed links and source/package/algorithm changes require reassessment. Recheck during later scans and completion admission; no generated passing results, inferred code-review approval or implicit finalization.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/acceptance-coverage-reconciliation.test.ts",
+        "apps/orchestrator/test/completion-readiness-recovery.integration.test.ts",
+        "apps/web/src/workflow/use-completion-readiness-refresh.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/completion-readiness-recovery.feature",
+        "apps/web/e2e/features/workflow-interactions.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-QUALITY-RESOLVE",
+      "scope": "phase",
+      "from": "in-progress feature with a resolved phase and an unresolved verification gate",
+      "trigger": "explicit human repair request or confirmed, justified waiver for one selected gate",
+      "to": "one bounded repair invocation with progressive scoped correction and verification, then independent reassessment; or an audited waiver without advancement",
+      "ownerPath": "apps/orchestrator/src/application/features/phase-quality-resolution-application.ts",
+      "ownerSymbol": "PhaseQualityResolutionApplication.resolve",
+      "rationale": "Instructions alone are not recovery controls. Preserve human authority with scoped worker dispatch, stale-document and active-run guards, and justified exceptions distinct from passing results. Reject known failed checks and rejected reviews on the waiver path. Cancellation remains authoritative. Other gates and human acceptance still block completion.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/fresh-verification-repair.test.ts",
+        "apps/orchestrator/test/logical-acceptance-coverage.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.feature",
+        "apps/web/e2e/features/workflow-interactions.feature",
+        "apps/orchestrator/test/fresh-verification-repair.feature",
+        "apps/orchestrator/test/logical-acceptance-coverage.feature"
+      ],
+      "failedRefreshRepairPolicy": "Project bound nonzero failed receipt checks through their inspected phase mappings, including when historical phase gates are satisfied. Revalidate commands and run-local report checksums server-side. User repair launches the generic historical-green discrepancy goal: trace task ownership, compare exact prior/current execution and dirty source/config history, repair correct production or incorrect test/scanner rules with regression evidence, and iterate until resolved or a concrete impasse/lack of progress. Successful fresh-failure repair return hands off to fresh verification; worker prose does not establish readiness. Other completed repairs reassess first and hand off to fresh verification when source changed; unrelated reassessment failures do not trigger execution. Preserve active-run/cancellation/successor guards and human acceptance.",
+      "repairSettlementPolicy": "Explicit completed repairs reassess current evidence. If that reassessment reports the canonical changed-source condition, hand off to fresh verification automatically; unrelated failures and failed workers do not trigger execution. Cancellation and successor-run checks guard both handoff and result publication. Worker prose never grants acceptance.",
+      "logicalCoveragePolicy": "TestCoverage is logical alignment of current assertions, delegated fixtures and integration boundaries with accepted FEAT/EPIC criteria, independent of numeric telemetry. Reuse prior phase mappings with current source contents and fresh inspection findings. Passing execution and logical sufficiency remain separate; no line/branch/percentage report is required. Refresh inspects/runs/assesses without creating tests or fixing product code; an explicit phase fixer repairs confirmed in-scope findings and executes affected checks."
+    },
+    {
+      "id": "WF-MCP-PHASE-QUALITY-ADMISSION",
+      "scope": "implementation",
+      "from": "a phase marked completed or skipped, before continuation or after worker return",
+      "trigger": "persisted phase quality projection reports missing, unknown or unjustifiably waived evidence",
+      "to": "same-phase evidence/code/test/review repair, followed by rescan and admission; escalate on repeated lack of meaningful progress",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.repairPhaseGates",
+      "rationale": "Every phase uses its declared independent review and meaningful-coverage flags plus configured checks. Canonical JSON overrides legacy result prose; native execution failures remain binding. Reconcile old evidence without inventing results, repair actual gaps, retain the original applicability baseline, prevent advancement outside the assigned phase and reassess repeated failures. Missing optional audit fields do not affect admission. Reject a disabled acceptance-coverage flag paired with an active assessment; reconcile scope without using numeric-threshold absence or reason-word matching as gate authority. Undeclared legacy gates require reconciliation independently of changed-file types. Coverage references may include passing supporting health checks when at least one behavioral test proves the criterion. Producers must not override declarations by project identity, phase position or work class.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-checkpoint-test-evidence.test.ts",
+        "apps/orchestrator/test/feature-workflow-recovery-policy.test.ts",
+        "apps/orchestrator/test/implementation-evidence-paths.test.ts",
+        "apps/orchestrator/test/implementation-evidence-scanner.test.ts",
+        "apps/orchestrator/test/phase-quality-projection.test.ts",
+        "apps/web/src/workflow/phase-quality-blockers.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/phase-gates.test.ts",
+        "apps/orchestrator/test/phase-gates-repository.test.ts",
+        "apps/orchestrator/test/portable-phase-gate-policy.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-gate-applicability.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/web/e2e/features/workflow-interactions.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-LIFECYCLE-RECOVERY",
+      "scope": "implementation",
+      "from": "admitted continuation or returned start worker with an isolated partial lifecycle transition",
+      "trigger": "a closed read-only policy recognizes a stale Ready header or an unfinished authorized start move",
+      "to": "same workflow resumes after verified repair, or blocks with a precise recovery rejection",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/compatibility-implementation-recovery.ts",
+      "ownerSymbol": "CompatibilityImplementationRecovery.recover",
+      "rationale": "One repair allowance per run: host repairs a known stale header; a missing start move gets one time-bounded agent attempt. Rescan must find one actual In Progress destination with valid artifacts and unchanged feature evidence. No repair may waive decisions, gates or phase authority. Read explicit status from header metadata or a relocated feature-identified metadata block, regardless of introductory headings. Reject competing declarations and do not borrow task, fenced example, quoted or commented statuses. Read-only validation never rewrites lifecycle metadata.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/compatibility-lifecycle-recovery.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/compatibility-status-declaration.test.ts",
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/web/e2e/features/workflow-interactions.feature",
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-SESSION-CONTINUE",
+      "scope": "implementation",
+      "from": "a bounded provider worker returns inside a durable user workflow",
+      "trigger": "rescanned validated artifacts show progress and remaining work within recorded authority",
+      "to": "a fresh phase session, finalization, supervised boundary, or an explicit blocked/failed outcome",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.executeImplementation",
+      "rationale": "HEPHA owns continuation across single-phase provider sessions. Explicit autonomy permits later phases and finalization; omitted or false autonomy stops at the selected phase boundary. Process exit zero is never workflow completion. Rescan and validate after each session, preserve cancellation and replacement, stop on real failure, block after two no-progress returns, and require completed artifacts before feature success.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-STATE-PROJECTION",
+      "scope": "implementation state",
+      "from": "validated compatibility documents at an admitted runtime boundary",
+      "trigger": "a declared lifecycle folder alias is semantically equal to its canonical status",
+      "to": "canonical feature-status projection with preserved phase evidence",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/compatibility-lifecycle-state.ts",
+      "ownerSymbol": "canonicalizeCompatibilityFeatureStatus",
+      "rationale": "Readiness accepts explicit known aliases without mutations. Execution writes canonical feature status only after validation and rejects contradictions with the actual folder. Phase headers and inventory rows must agree; unknown prefixes and nested status prose cannot satisfy the header contract. Dashboard recovery displays the actual implementation error rather than directing every readiness failure to Deep Dive.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature"
+      ]
+    },
+    {
       "id": "WF-RECIPE-SOURCE-MCP",
       "scope": "dispatch",
       "from": "supported feature workflow action request",
       "trigger": "validated recipe-source policy selects devcycle-mcp for the exact action identity",
-      "to": "one plan-bound MCP compatibility worker using the mapped legacy recipe",
+      "to": "bounded plan-bound MCP compatibility sessions using mapped recipes under one durable workflow",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
-      "rationale": "Compare the proven legacy recipe with native Hepha while preserving the selected action/model identity, provider-owned artifact format, and phase-scoped implementation telemetry. Hepha still enforces Deep-Dive decision closure, prohibits deferred human gates, and delegates autonomous review/acceptance. Refine Feature remains documentation-only: stack and quality commands are discovered statically and no package-manager, compiler, build, test, lint, audit, registry-search, or version-probe command may execute during planning. Refinement conditionally generates a Rust/Cargo foreground execution profile only when the target product workspace has Cargo.toml and the feature or configured gates will invoke Cargo; FeatureTasks and every phase inherit that activated profile, sequential foreground Cargo invocations are permitted, background and sibling concurrent Cargo processes are prohibited, and non-Cargo features receive no Cargo instructions. Implementation dispatch is technology-neutral and applies only inherited stack constraints. Implementation completion and release readiness are independent: only in-scope tasks and configured executable gates block phase or feature implementation acceptance, while external release dependencies become findings and follow-up work. Zero-warning authority remains universal for executed in-scope commands: no configured warning may be classified green even when the process exits zero.",
+      "rationale": "Compare the proven legacy recipe with native Hepha while preserving the selected action/model identity, provider-owned artifact format, and phase-scoped implementation telemetry. Recipe selection also selects the one provider-owned artifact validator used for refinement promotion, dashboard readiness, and Start/Continue admission; a zero-exit worker and file presence alone never establish readiness. Manual-test obligations bind to unique stable [contract:<taskId>] task markers rather than reconstructed prose headings. Hepha still enforces Deep-Dive decision closure, prohibits deferred human gates, and delegates autonomous review/acceptance. Refine Feature remains documentation-only: stack and quality commands are discovered statically and no package-manager, compiler, build, test, lint, audit, registry-search, or version-probe command may execute during planning. Refinement conditionally generates a Rust/Cargo foreground execution profile only when the target product workspace has Cargo.toml and the feature or configured gates will invoke Cargo; FeatureTasks and every phase inherit that activated profile, sequential foreground Cargo invocations are permitted, background and sibling concurrent Cargo processes are prohibited, and non-Cargo features receive no Cargo instructions. Implementation dispatch is technology-neutral and applies only inherited stack constraints. Implementation completion and release readiness are independent: only in-scope tasks and configured executable gates block phase or feature implementation acceptance, while external release dependencies become findings and follow-up work. Zero-warning authority remains universal for executed in-scope commands: no configured warning may be classified green even when the process exits zero. Project command authoring follows project-test-plan-authoring/v1: refinement writes the FeatureDescription TestPlan, developers validate and maintain it, and Phase files reference checks. This prompt contract does not alter runtime source snapshot semantics.",
       "unitTestPaths": [
         "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
         "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
@@ -162,25 +670,46 @@
         "apps/orchestrator/test/pi-argument-builder.test.ts",
         "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
         "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
-        "apps/orchestrator/test/feat-062-projection-composition.test.ts"
+        "apps/orchestrator/test/feat-062-projection-composition.test.ts",
+        "apps/orchestrator/test/project-test-plan-authoring-policy.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/project-test-plan-authoring.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-REFINE-POSTCONDITION-BLOCK",
+      "scope": "preparation",
+      "from": "terminal MCP refinement worker with unresolved preparation lifecycle state",
+      "trigger": "postcondition scan finds that the FEAT remains outside Ready To Develop after refinement",
+      "to": "blocked result evaluation with interactive FEAT Deep-Dive recovery",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.execute",
+      "rationale": "A zero-exit model process is transport success, not refinement completion. When refinement cannot promote the FEAT into Ready To Develop because preparation decisions remain unresolved, preserve the worker summary and expose the standard interactive Deep-Dive recovery. A FEAT that is already Ready but has invalid provider artifacts follows WF-MCP-ARTIFACT-VALIDATION-FAIL instead so Refine remains available for deterministic repair.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/web/src/workflow/workflow-presentation.test.ts"
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
       ]
     },
     {
-      "id": "WF-MCP-REFINE-POSTCONDITION-BLOCK",
-      "scope": "preparation",
-      "from": "terminal MCP refinement worker with no complete provider refinement artifacts",
-      "trigger": "provider-independent postcondition scan finds that the FEAT is not Ready To Develop with complete refinement artifacts",
-      "to": "blocked result evaluation with interactive FEAT Deep-Dive recovery",
+      "id": "WF-MCP-ARTIFACT-VALIDATION-FAIL",
+      "scope": "preparation and implementation admission",
+      "from": "terminal MCP refinement output or requested MCP Start/Continue action",
+      "trigger": "the recipe-selected provider validator reports one or more refinement or implementation artifact contract violations",
+      "to": "failed refinement result or refused implementation admission with exact deterministic diagnostics and no implementation side effects",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
-      "ownerSymbol": "DevCycleMcpCompatibilityApplication.execute",
-      "rationale": "A zero-exit model process is transport success, not refinement completion. Preserve the worker summary, withhold repeat Refine, and expose the standard decision-closure workflow until provider-owned artifacts and lifecycle state satisfy completion postconditions.",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.assertOperationArtifacts",
+      "rationale": "Provider-specific format compatibility must not create split-brain readiness. The same selected validator decides whether Refine may complete, whether the dashboard may enable Start or Continue, and whether direct execution may proceed. Invalid Ready artifacts leave Refine available and inject the current diagnostics into the repair prompt. Start and Continue fail before recording a workflow run, creating a branch, dispatching a worker, or mutating manual-test state. Stable contract task markers provide identity; numbered headings and status prose are display content only.",
       "unitTestPaths": [
         "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
         "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
-        "apps/web/src/workflow/workflow-presentation.test.ts"
+        "apps/orchestrator/test/feature-projection-applications.test.ts",
+        "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts"
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
@@ -274,6 +803,22 @@
       ]
     },
     {
+      "id": "WF-PREPARATION-CONTROLS",
+      "scope": "preparation",
+      "from": "feature workflow summary",
+      "trigger": "backend authorizes a preparation action",
+      "to": "visible preparation control and typed action dispatch",
+      "ownerPath": "apps/web/src/workflow/workflow-interaction-panel.tsx",
+      "ownerSymbol": "WorkflowInteractionPanel",
+      "rationale": "Render Design and Refine from authoritative action flags, independently of recovery diagnostics. Keep Refine disabled while required design is missing and retain voluntary Deep-Dive.",
+      "unitTestPaths": [
+        "apps/web/src/workflow/workflow-mappers.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/web/e2e/features/workflow-interactions.feature"
+      ]
+    },
+    {
       "id": "WF-DESIGN-EXECUTE",
       "scope": "preparation",
       "from": "clarified feature",
@@ -306,6 +851,25 @@
       ]
     },
     {
+      "id": "WF-DD-VOLUNTARY-FOCUS",
+      "scope": "preparation",
+      "from": "idle non-terminal feature",
+      "trigger": "human requests additional exploration with optional focus",
+      "to": "durable focused Deep-Dive interview",
+      "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-start-application.ts",
+      "ownerSymbol": "DeepDiveStartApplication.start",
+      "rationale": "Clarification may be requested without validation markers. Persist focus separately from source, preserve existing interviews, reject conflicting active workflows, and enforce UI design prerequisites before provider-independent refinement.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-start-application.test.ts",
+        "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
+        "apps/orchestrator/test/feature-entry-prompts.test.ts",
+        "packages/db/test/sqlite-card-repository.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-focused-deep-dive.feature"
+      ]
+    },
+    {
       "id": "WF-DEEP-DIVE-MARKER-GATE",
       "scope": "preparation",
       "from": "scanned work-item description",
@@ -331,20 +895,22 @@
       "id": "WF-REFINE-EXECUTE",
       "scope": "preparation",
       "from": "clarified or designed feature",
-      "trigger": "refine command returns COMPLETED, durable artifacts satisfy the current V3 authoring contract, and any declared final checkpoint has an executable project coverage profile",
+      "trigger": "refine command returns COMPLETED and durable artifacts satisfy the current V3 authoring contract; numeric coverage tooling is optional",
       "to": "ready-to-develop feature",
       "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
       "ownerSymbol": "RefineFeatureExecutionApplication.execute",
-      "rationale": "Generate and validate the complete current implementation contract before promotion; historical contract readability cannot authorize obsolete new output.",
+      "rationale": "Generate and validate the complete current implementation contract before promotion; historical contract readability cannot authorize obsolete new output. Carry the shared EPIC/FEAT/Phase/Task acceptance responsibility policy, many-to-many test/criterion/code traceability and assigned full-workflow E2E obligations through refinement. A final checkpoint role cannot introduce an LCOV profile or percentage requirement. Missing numeric instrumentation is not a Deep-Dive decision or a refinement blocker.",
       "unitTestPaths": [
         "apps/orchestrator/test/refine-feature-execution-application.test.ts",
         "apps/orchestrator/test/final-checkpoint-coverage-profile-policy.test.ts",
         "apps/orchestrator/test/refine-artifact-contract-projection.test.ts",
-        "apps/orchestrator/test/model-routing.test.ts"
+        "apps/orchestrator/test/model-routing.test.ts",
+        "apps/orchestrator/test/acceptance-responsibility-policy.test.ts"
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-refine-feature-execution-application.feature",
-        "apps/orchestrator/test/refine-feature-artifact-contract.feature"
+        "apps/orchestrator/test/refine-feature-artifact-contract.feature",
+        "apps/orchestrator/test/generic-phase-planning-acceptance-prompt.feature"
       ]
     },
     {
@@ -439,7 +1005,7 @@
       "id": "WF-REFINE-FAIL",
       "scope": "failed",
       "from": "refinement error",
-      "trigger": "worker result is malformed, Deep-Dive handoff persistence fails, or a COMPLETED claim does not satisfy the current V3 artifact and declared final-checkpoint coverage-profile contract",
+      "trigger": "worker result is malformed, Deep-Dive handoff persistence fails, or a COMPLETED claim does not satisfy the current V3 artifact and explicitly configured verification contract",
       "to": "failed refinement with source state preserved",
       "ownerPath": "apps/orchestrator/src/application/features/refine-feature-execution-application.ts",
       "ownerSymbol": "RefineFeatureExecutionApplication.execute",
@@ -1479,7 +2045,7 @@
       "to": "settled terminal invocation with no substitute or later workflow advance",
       "ownerPath": "apps/orchestrator/src/runtime/pi/runtime-execution-coordinator.ts",
       "ownerSymbol": "RuntimeExecutionCoordinator.execute",
-      "rationale": "Make no-step, Global, fail-immediately, unsafe recovery, and exhausted second-hop outcomes terminal instead of inventing a route or replaying work.",
+      "rationale": "Make no-step, Global, fail-immediately, unsafe recovery, and exhausted second-hop outcomes terminal instead of inventing a route or replaying work. Read already-persisted terminal attempts without settling them again; preserve policy-stop identity rather than creating a spurious persistence failure. Spending stops never buy a fallback.",
       "unitTestPaths": [
         "apps/orchestrator/test/runtime-execution-coordinator.test.ts"
       ],
@@ -1612,6 +2178,132 @@
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/review-remediation-lifecycle.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-HEALTH-WARNINGS",
+      "scope": "phase",
+      "from": "phase evidence scan or declared verification task return",
+      "trigger": "explicit applicability flags and observed command outcomes are evaluated",
+      "to": "phase acceptance governed by required tests and code review, with optional health-warning repair",
+      "ownerPath": "apps/orchestrator/src/workflows/phases/phase-verification-warning-policy.ts",
+      "ownerSymbol": "hasOnlyPhaseHealthWarnings",
+      "rationale": "Read portable boolean Phase Gate Declarations when no canonical gate record owns applicability. Never infer from identity or changed files. Preserve independently configured test failures. Build/lint outcomes remain truthful advisory warnings and cannot manufacture missing coverage, block phase advancement or launch unsolicited repair. Canonical gate records retain revision validation. Human-requested health repair remains available on the phase. A required-review declaration defers to indexed report verdicts rather than replacing approval with a missing placeholder.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/declared-phase-gate-flags.test.ts",
+        "apps/orchestrator/test/phase-gate-applicability.integration.test.ts",
+        "apps/orchestrator/test/declared-verification-task-application.test.ts",
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/phase-json-exchange.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-gate-applicability.feature"
+      ]
+    },
+    {
+      "id": "WF-READINESS-ACCEPTED-SCOPE",
+      "scope": "feature",
+      "from": "current feature planning baseline and applicable verification evidence",
+      "trigger": "authorized completion readiness assessment or post-repair reassessment",
+      "to": "validated criterion decisions, scoped repair or verification retry, and non-blocking future proposals",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-readiness-refresh-application.ts",
+      "ownerSymbol": "CompletionReadinessRefreshApplication.refresh",
+      "rationale": "Assess only accepted feature obligations and assigned parent criteria. Validate one versioned JSON exchange against the host baseline; complementary proof is valid without coverage-link confirmation. Read missing references within admitted roots, preserve manual outcomes and native report binding, and keep extra improvements outside current gates. A validated unmet obligation cannot be overwritten by legacy worker diagnosis routing.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.test.ts",
+        "apps/orchestrator/test/completion-loop-twin.integration.test.ts",
+        "apps/orchestrator/test/fresh-feature-verification.twin.test.ts",
+        "apps/orchestrator/test/verification-shared-sources.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.feature"
+      ]
+    },
+    {
+      "id": "WF-VERIFICATION-VALIDATION-RESUME",
+      "scope": "feature",
+      "from": "blocked verification at report validation",
+      "trigger": "explicit user Refresh with unchanged source and independently valid selected reports",
+      "to": "resume the same execution run and assess accepted feature criteria without test redispatch",
+      "ownerPath": "apps/orchestrator/src/application/features/fresh-feature-verification-application.ts",
+      "ownerSymbol": "FreshFeatureVerificationApplication.verifyFeatureFromRefresh",
+      "rationale": "Revalidate every selected receipt, source owner and snapshot before resuming interrupted validation. Audit-only duplicate bindings count no tests. Qualified multi-repository revisions bind to configured owners. Failed or stale evidence does not resume; human acceptance remains independent.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/verification-validation-resume.test.ts",
+        "apps/orchestrator/test/recovery-execution-evidence.test.ts",
+        "apps/orchestrator/test/receipt-linked-revisions.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/verification-validation-resume.feature"
+      ]
+    },
+    {
+      "id": "WF-READINESS-AUTOMATED-EVIDENCE",
+      "scope": "feature",
+      "from": "accepted feature criteria, automated evidence and independent human acknowledgements",
+      "trigger": "completion readiness assessment or projection",
+      "to": "automated criterion decisions plus separate human acknowledgement blockers",
+      "ownerPath": "apps/orchestrator/src/application/features/completion-recovery-projection.ts",
+      "ownerSymbol": "projectCompletionRecovery",
+      "rationale": "Manual cases and results never supply automated coverage or invalidate its cache. Manual acknowledgement remains a required independent completion step. Explicit manual-only obligations do not manufacture automated requirements. Preserve existing human records and reject manual contributions in the v2 exchange.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.test.ts",
+        "apps/orchestrator/test/completion-readiness-recovery.integration.test.ts",
+        "apps/orchestrator/test/manual-test-pack-review-binding.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.feature"
+      ]
+    },
+    {
+      "id": "WF-READINESS-CONTEXT-RECOVERY",
+      "scope": "feature",
+      "from": "validated accepted criteria with pending assertion references",
+      "trigger": "read-only evidence retrieval during readiness assessment",
+      "to": "retained decisions and accumulated source context for unresolved criteria",
+      "ownerPath": "apps/orchestrator/src/manual-test-verification/coverage-reconciliation-prompt.ts",
+      "ownerSymbol": "proposeCoverageReconciliation",
+      "rationale": "Retain all retrieved source bodies and validated decisions on an unchanged snapshot. Follow new references while context and operator spending limits permit progress, rather than stopping after two hops. Resolve document anchors within the admitted feature folder and source roots. Assess the accepted collective verification approach without adding test layers or replacing manual-only qualifications. Repeated or unavailable references remain verification issues, not passes or missing implementation findings.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.test.ts",
+        "apps/orchestrator/test/coverage-context-budget.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/accepted-feature-readiness.feature"
+      ]
+    },
+    {
+      "id": "WF-READINESS-SOURCE-RECOVERY",
+      "scope": "feature",
+      "from": "fresh verification source snapshot changed after execution",
+      "trigger": "same explicit Refresh retains ownership and accepted feature requirements are unchanged",
+      "to": "diagnose changed files, re-inspect setup and rerun all checks in a new attempt; assess only after stable snapshots and valid reports",
+      "ownerPath": "apps/orchestrator/src/application/features/fresh-feature-verification-application.ts",
+      "ownerSymbol": "FreshFeatureVerificationApplication.verifyFeatureFromRefresh",
+      "rationale": "A configured runner can regenerate tracked inputs. Never waive fingerprint checks or promote old reports. Persist filename/hash diagnostics, preserve each attempt, prohibit dropped checks/gates/phase assignments, and allow two automatic reinspections and executions. After three drifting executions stop with a browser Retry verification action. Requirements changes and cancellation remain boundaries. No generated filename or project type is special-cased.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/verification-source-recovery.test.ts",
+        "apps/orchestrator/test/verification-source-recovery.integration.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/verification-source-recovery.feature"
+      ]
+    },
+    {
+      "id": "WF-PHASE-REPAIR-POSTCONDITION",
+      "scope": "phase",
+      "from": "selected phase repair worker returned",
+      "trigger": "host reassessment finds the selected gate, health warning or phase completion gap still unresolved",
+      "to": "feed current evidence and prior worker report into the next scoped repair; verify again; escalate after three unsuccessful rounds",
+      "ownerPath": "apps/orchestrator/src/application/features/phase-quality-resolution-application.ts",
+      "ownerSymbol": "PhaseQualityResolutionApplication.resolveScoped",
+      "rationale": "Worker return is not repair success. The same selected scope and user guidance own up to three repair-and-verification rounds. Keep health warnings non-blocking for overall completion but require their resolution when explicitly selected for repair. An unavailable assessment cannot establish a repair postcondition. Source-invalidated repairs hand off to owned fresh verification. Preserve cancellation, human decisions, independent approval and existing fresh-verification ownership. Escalation reports each round, unresolved evidence and how the phase textbox can steer another loop.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
+        "apps/orchestrator/test/phase-quality-projection.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/phase-quality-resolution.feature"
       ]
     }
   ]

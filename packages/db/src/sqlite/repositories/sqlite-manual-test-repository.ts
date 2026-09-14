@@ -19,36 +19,42 @@ export class SqliteManualTestRepository {
 
   async recordManualTestPack(record: ManualTestVerificationPackRecord): Promise<void> {
     this.context.ensure();
-    this.context.run(
-      `
-      insert into hepha_manual_test_packs (
-        id, project_id, card_key, version, state,
-        manifest_hash, markdown_path, pdf_path, render_error,
-        created_at, superseded_at
-      )
-      values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      on conflict (id)
-      do update set
-        state = excluded.state,
-        markdown_path = excluded.markdown_path,
-        pdf_path = excluded.pdf_path,
-        render_error = excluded.render_error,
-        superseded_at = excluded.superseded_at
-      `,
-      [
-        record.id,
-        record.projectId,
-        record.cardKey,
-        record.version,
-        record.state,
-        record.manifestHash,
-        record.markdownPath,
-        record.pdfPath ?? null,
-        record.renderError ?? null,
-        record.createdAt,
-        record.supersededAt ?? null,
-      ],
-    );
+    this.context.transaction(() => {
+      const exists = this.context.get("select id from hepha_manual_test_packs where id = ?", [record.id]);
+      this.context.run(
+        `
+        insert into hepha_manual_test_packs (
+          id, project_id, card_key, version, state,
+          manifest_hash, markdown_path, pdf_path, render_error,
+          created_at, superseded_at
+        )
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        on conflict (id)
+        do update set
+          state = excluded.state,
+          markdown_path = excluded.markdown_path,
+          pdf_path = excluded.pdf_path,
+          render_error = excluded.render_error,
+          superseded_at = excluded.superseded_at
+        `,
+        [
+          record.id,
+          record.projectId,
+          record.cardKey,
+          record.version,
+          record.state,
+          record.manifestHash,
+          record.markdownPath,
+          record.pdfPath ?? null,
+          record.renderError ?? null,
+          record.createdAt,
+          record.supersededAt ?? null,
+        ],
+      );
+      if (!exists && !record.supersededAt) {
+        this.context.run("update hepha_card_metadata set manual_tests_completed_at = null where project_id = ? and card_key = ?", [record.projectId, record.cardKey]);
+      }
+    });
   }
 
   async getCurrentManualTestPack(projectId: string, cardKey: string): Promise<ManualTestVerificationPackRecord | null> {
@@ -131,14 +137,16 @@ export class SqliteManualTestRepository {
       insert into hepha_manual_test_reviews (
         id, project_id, card_key, pack_id,
         reviewed_at, state, invalidated_at,
-        invalidated_reason
+        invalidated_reason, reviewed_test_ids_json
       )
-      values (?, ?, ?, ?, ?, ?, ?, ?)
+      values (?, ?, ?, ?, ?, ?, ?, ?, ?)
       on conflict (id)
       do update set
         state = excluded.state,
         invalidated_at = excluded.invalidated_at,
-        invalidated_reason = excluded.invalidated_reason
+        invalidated_reason = excluded.invalidated_reason,
+        reviewed_at = excluded.reviewed_at,
+        reviewed_test_ids_json = excluded.reviewed_test_ids_json
       `,
       [
         record.id,
@@ -149,6 +157,7 @@ export class SqliteManualTestRepository {
         record.state,
         record.invalidatedAt ?? null,
         record.invalidatedReason ?? null,
+        record.reviewedTestIds == null ? null : JSON.stringify(record.reviewedTestIds),
       ],
     );
     return record;
@@ -246,4 +255,3 @@ export class SqliteManualTestRepository {
   }
 
 }
-

@@ -6,6 +6,7 @@ import type {
   WorkItemCard,
 } from "@hepha/shared";
 import type { StoredProject } from "../../projects/stored-project.js";
+import { featureDesignPrerequisite } from "./feature-design-prerequisite.js";
 
 type PreparationStore = Pick<CardMetadataStore, "recordFeatureUiRequirement" | "recordFeatureWorkflowRun">;
 type PreparationTarget = { feature: WorkItemCard; project: StoredProject };
@@ -69,12 +70,8 @@ export class FeaturePreparationApplication {
     if (feature.stateFolder !== "01_SUBMITTED" && feature.stateFolder !== "02_READY_TO_DEVELOP") {
       throw new Error("Only submitted or ready FEATs can be refined.");
     }
-    if (feature.featureWorkflow?.uiRequirementDecision === "requires_ui" && !feature.featureWorkflow.hasDesignArtifacts) {
-      throw new Error("This FEAT needs UI requirements before refinement.");
-    }
-    if (feature.featureWorkflow?.uiRequirementDecision === "unknown") {
-      throw new Error("Hepha must classify whether this FEAT needs UI requirements before refinement.");
-    }
+    const designBlocker = featureDesignPrerequisite(feature.featureWorkflow?.uiRequirementDecision, feature.featureWorkflow?.hasDesignArtifacts ?? false);
+    if (designBlocker) throw new Error(designBlocker);
     return this.#start(target, "refine-feature", "Starting refine-feature skill", "Refining", "Refinement", this.#dependencies.startRefineWorker);
   }
 

@@ -7,7 +7,7 @@ export function extractChangedFileEvidencePaths(markdown: string) {
   let collectingChangedSection = false;
   let changedSectionLevel = 0;
 
-  for (const line of markdown.split(/\r?\n/)) {
+  for (const line of joinWrappedChangeItems(markdown)) {
     const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
 
     if (heading?.[1] && heading[2]) {
@@ -32,12 +32,42 @@ export function extractChangedFileEvidencePaths(markdown: string) {
       continue;
     }
 
-    for (const path of extractMarkdownPathTokens(line)) {
-      paths.add(path);
+    // Preservation notes are context, not changes. Keep positive clauses on a
+    // mixed line: a document can be created while a source file is untouched.
+    for (const clause of line.split(/;|\bbut\b/i)) {
+      if (isUnchangedEvidenceClause(clause)) continue;
+      for (const path of extractMarkdownPathTokens(clause)) {
+        paths.add(path);
+      }
     }
   }
 
   return [...paths];
+}
+
+function joinWrappedChangeItems(markdown: string): string[] {
+  const lines: string[] = [];
+  let wrapping = false;
+  for (const line of markdown.split(/\r?\n/)) {
+    // Continue only the same explicitly labelled list item. A new item,
+    // paragraph, or heading must not attribute reference paths as changes.
+    if (wrapping && /^\s{2,}\S/.test(line) && !/^\s*(?:[-*+]\s|\d+[.)]\s|#)/.test(line)) {
+      lines[lines.length - 1] += ` ${line.trim()}`;
+      continue;
+    }
+    wrapping = /^\s*[-*+]\s/.test(line) && isChangedFileEvidenceLine(line);
+    lines.push(line);
+  }
+  return lines;
+}
+
+function isUnchangedEvidenceClause(clause: string) {
+  const text = clause.replace(/`[^`]+`/g, "<path>");
+  return /\bnot\s+(?:been\s+)?(?:modified|changed|updated|added|removed)\b/i.test(text)
+    || /\b(?:preserved|left|kept|remains?|was|were)\b[^.;]*\b(?:untouched|unchanged)\b/i.test(text)
+    || /<path>\s+(?:untouched|unchanged)\b/i.test(text)
+    || /\b(?:untouched|unchanged)\s+(?:files?\s+)?<path>/i.test(text)
+    || /\bno\b[^.;]*\b(?:source|product|unrelated)\b[^.;]*\b(?:changed|modified|updated)\b/i.test(text);
 }
 
 export function extractPhaseTaskLedgerEvidencePaths(markdown: string, phaseNumber: number) {
@@ -128,7 +158,7 @@ export function isCodeReviewReportPath(path: string) {
 }
 
 export function isTestEvidencePath(path: string) {
-  return /(^|\/)(test|tests|e2e|__tests__)\/|\.test\.[cm]?[jt]sx?$|\.spec\.[cm]?[jt]sx?$|\.feature$/i.test(path);
+  return /(^|\/)(test|tests|e2e|__tests__)\/|\.test\.[cm]?[jt]sx?$|\.spec\.[cm]?[jt]sx?$|\.feature$|(^|\/)(?:[^/]+_)?tests?\.rs$|(^|\/)test_[^/]+\.py$|_test\.(?:go|py)$/i.test(path);
 }
 
 export function isE2eEvidencePath(path: string) {

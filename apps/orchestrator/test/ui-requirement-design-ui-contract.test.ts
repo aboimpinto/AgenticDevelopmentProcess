@@ -19,7 +19,7 @@ describe("Dashboard — UI requirement contract", () => {
   });
 
   it("renders lifecycle descriptors without re-evaluating policy", () => {
-    expect(controls).toContain("disabled={!action.available || action.busy || action.completed}");
+    expect(controls).toContain("disabled={disabled || !action.available || action.busy || action.completed}");
     expect(controls).toContain("title={action.reason ?? action.label}");
   });
 

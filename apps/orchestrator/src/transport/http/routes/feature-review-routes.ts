@@ -6,11 +6,17 @@ import type {
   FeatureWorkflowActionResponse,
   ResolveFeatureFindingInput,
   SubmitFeatureFindingInput,
+  PhaseQualityResolutionInput,
 } from "@hepha/shared";
 import { readJson } from "../read-json.js";
 import { sendJson } from "../send-json.js";
+import { handlePhaseQualityResolutionRoute } from "./phase-quality-resolution-route.js";
+import type { FeatureFindingApplication } from "../../../application/features/feature-finding-application.js";
+import type { FeatureHumanReviewApplication } from "../../../application/features/feature-human-review-application.js";
+import type { PhaseQualityResolutionApplication } from "../../../application/features/phase-quality-resolution-application.js";
 
 export interface FeatureReviewRoutesContext {
+  resolvePhaseQuality(input: PhaseQualityResolutionInput): Promise<FeatureWorkflowActionResponse>;
   acceptFindingsPhase(input: FeatureWorkflowActionInput): Promise<FeatureWorkflowActionResponse>;
   addFindingDetail(input: AddFeatureFindingDetailInput): Promise<FeatureWorkflowActionResponse>;
   recordHumanReview(input: FeatureHumanReviewInput): Promise<FeatureWorkflowActionResponse>;
@@ -25,6 +31,7 @@ export async function handleFeatureReviewRoutes(
   context: FeatureReviewRoutesContext,
 ): Promise<boolean> {
   if (request.method !== "POST") return false;
+  if (await handlePhaseQualityResolutionRoute(request, response, url, input => context.resolvePhaseQuality(input))) return true;
 
   if (url.pathname === "/api/feature-human-review") {
     const input = await readJson<FeatureHumanReviewInput>(request);
@@ -53,4 +60,17 @@ export async function handleFeatureReviewRoutes(
   }
 
   return false;
+}
+
+/** Compose the review/verification command family outside the server entrypoint. */
+export function createFeatureReviewRoutesContext(findings: FeatureFindingApplication,
+  humanReview: FeatureHumanReviewApplication, phaseQuality: PhaseQualityResolutionApplication): FeatureReviewRoutesContext {
+  return {
+    acceptFindingsPhase: input => findings.acceptPhase(input),
+    addFindingDetail: input => findings.addDetail(input),
+    recordHumanReview: input => humanReview.record(input),
+    resolveFinding: input => findings.resolve(input),
+    submitFinding: input => findings.submit(input),
+    resolvePhaseQuality: input => phaseQuality.resolve(input),
+  };
 }

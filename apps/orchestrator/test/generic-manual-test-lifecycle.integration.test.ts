@@ -53,7 +53,7 @@ describe("generic manual-test lifecycle Gherkin integration", () => {
       metadataStore: { recordFeatureHumanReview } as unknown as CardMetadataStore,
       notifyChanged: vi.fn(),
       operations: {
-        generatePack: vi.fn(), queryPackStatus: vi.fn(), recordPackReview: vi.fn(), recordTestResult: vi.fn(),
+        generatePack: vi.fn(), queryPackStatus: vi.fn(async () => ({ isReady: true, isStale: false, isReviewed: true, failedCount: 0, currentPackId: "pack", state: "current" })), recordPackReview: vi.fn(), recordTestResult: vi.fn(),
         recordAllPasses: vi.fn(async () => ({ success: true, resultId: "result", findingId: null, message: "passed", errors: [] })),
       } as never,
       scanProject: async () => [workItem],
@@ -82,7 +82,7 @@ describe("generic manual-test lifecycle Gherkin integration", () => {
       metadataStore: { recordFeatureHumanReview } as unknown as CardMetadataStore,
       notifyChanged: vi.fn(),
       operations: {
-        generatePack: vi.fn(), queryPackStatus: vi.fn(), recordPackReview: vi.fn(), recordTestResult: vi.fn(),
+        generatePack: vi.fn(), queryPackStatus: vi.fn(async () => ({ isReady: true, isStale: false, isReviewed: true, failedCount: 0, currentPackId: "pack", state: "current" })), recordPackReview: vi.fn(), recordTestResult: vi.fn(),
         recordAllPasses: vi.fn(async () => ({ success: true, resultId: "result", findingId: null, message: "passed", errors: [] })),
       } as never,
       scanProject: async () => [workItem],

@@ -121,7 +121,7 @@ export function createOrchestratorRuntimeSettings(input: {
       readPositiveIntegerEnvironment(runtimeEnv.HEPHA_FIXER_RESPONSE_REPAIR_ATTEMPTS, 3),
       fingerprintAbsoluteSafetyCap,
     ),
-    port: Number.parseInt(runtimeEnv.HEPHA_ORCHESTRATOR_PORT ?? "4317", 10),
+    port: Number.parseInt(runtimeEnv.HEPHA_ORCHESTRATOR_PORT ?? "4318", 10),
     rawSessionLogCleanupConfig: readRawSessionLogCleanupConfig(runtimeEnv),
     refineFeatureStallTimeoutMs: readPositiveIntegerEnvironment(
       runtimeEnv.HEPHA_PI_REFINE_FEATURE_STALL_TIMEOUT_MS,

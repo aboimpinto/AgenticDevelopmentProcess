@@ -175,25 +175,7 @@ export function validatePhaseContractProjection(
         path: phase.document,
         message: "A declared final_checkpoint must end with one required verification task using profile full.",
       });
-    } else {
-      const taskLine = ledgerLines.find((line) => line.includes(`[contract:${lastTask.id}]`)) ?? "";
-      if (!/\btest-coverage\b/i.test(taskLine)) {
-        errors.push({
-          code: "CONTRACT_COVERAGE_GATE_MISMATCH",
-          path: phase.document,
-          message: `Final checkpoint task '${lastTask.id}' must request declarative test-coverage measurement evidence.`,
-        });
-      }
     }
-    const coverageRow = gateRows.find((row) => row[0]?.trim().toLowerCase() === "test coverage");
-    if (coverageRow?.[1]?.trim().toLowerCase() !== "missing"
-      || !/\b80%/.test(coverageRow?.[2] ?? "")
-      || !/\b(?:95(?:-100)?%|95%.*100%)/i.test(coverageRow?.[2] ?? "")) {
-      errors.push({
-        code: "CONTRACT_COVERAGE_GATE_MISMATCH",
-        path: phase.document,
-        message: "A declared final_checkpoint must start with a missing Test coverage measurement row that states the advisory 80% reference and 95-100% target.",
-      });
-    }
+    // Numeric telemetry is optional. Logical coverage follows the declared phase gates.
   }
 }

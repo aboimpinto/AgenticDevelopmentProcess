@@ -7,6 +7,7 @@ import {
 import { parseMarkdownPipeTables } from "../../markdown-pipe-table-parser.js";
 import { readPhaseContractTaskId } from "../../phase-execution-contract.js";
 import { extractPhaseTaskLedger } from "../../workflows/phases/phase-task-ledger.js";
+import { canonicalCompatibilityStatus, readCompatibilityHeaderStatus } from "../../workflows/recipes/compatibility-lifecycle-state.js";
 
 export type DevCycleRefineArtifactErrorCode =
   | "MISSING_FEATURE_TASKS"
@@ -19,6 +20,7 @@ export type DevCycleRefineArtifactErrorCode =
   | "EMPTY_PHASE_FILE"
   | "INVALID_PHASE_HEADING"
   | "MISSING_PHASE_STATUS"
+  | "PHASE_STATUS_MISMATCH"
   | "DEFERRED_HUMAN_DECISION_TASK"
   | "INVALID_MANUAL_TEST_OBLIGATIONS"
   | "MANUAL_TEST_TRACEABILITY_MISMATCH";
@@ -35,7 +37,7 @@ export interface DevCycleRefineArtifactValidationResult {
 }
 
 const requiredPhaseNumbers = Object.freeze(Array.from({ length: 9 }, (_, phase) => phase));
-type DevCycleArtifactProfile = "refinement" | "implementation";
+type DevCycleArtifactProfile = "refinement" | "implementation" | "completed";
 
 /** Validate the durable outputs promised by the legacy DevCycle refine-feature recipe. */
 export function validateDevCycleRefineArtifacts(
@@ -49,6 +51,10 @@ export function validateDevCycleImplementationArtifacts(
   featureFolderPath: string,
 ): DevCycleRefineArtifactValidationResult {
   return validateDevCycleArtifacts(featureFolderPath, "implementation");
+}
+
+export function validateDevCycleCompletedArtifacts(featureFolderPath: string): DevCycleRefineArtifactValidationResult {
+  return validateDevCycleArtifacts(featureFolderPath, "completed");
 }
 
 function validateDevCycleArtifacts(
@@ -67,8 +73,8 @@ function validateDevCycleArtifacts(
     return { valid: false, errors };
   }
 
-  const expectedFeatureStatus = profile === "refinement" ? "READY_TO_DEVELOP" : "IN_PROGRESS";
-  if (!new RegExp(`\\*\\*Status(?::)?\\*\\*\\s*:?\\s*${expectedFeatureStatus}\\b`, "i").test(featureTasks)) {
+  const expectedFeatureStatus = profile === "refinement" ? "READY_TO_DEVELOP" : profile === "completed" ? "COMPLETED" : "IN_PROGRESS";
+  if (canonicalCompatibilityStatus(readCompatibilityHeaderStatus(featureTasks)) !== expectedFeatureStatus) {
     errors.push({
       code: "INVALID_FEATURE_STATUS",
       path: "FeatureTasks.md",
@@ -134,7 +140,7 @@ function validateDevCycleArtifacts(
       });
       continue;
     }
-    validatePhaseFile(featureFolderPath, phase, reference, profile, errors);
+    validatePhaseFile(featureFolderPath, phase, reference, profile, errors, status);
   }
 
   validateManualTestTraceability(featureFolderPath, rowsByPhase, errors);
@@ -227,6 +233,7 @@ function validatePhaseFile(
   relativePath: string,
   profile: DevCycleArtifactProfile,
   errors: DevCycleRefineArtifactError[],
+  expectedStatus: string | undefined,
 ) {
   const path = resolve(featureFolderPath, relativePath);
   if (!existsSync(path)) {
@@ -253,8 +260,8 @@ function validatePhaseFile(
       message: `DevCycle phase ${phase} document has no matching phase heading.`,
     });
   }
-  const statusMatch = content.match(/\*\*Status(?::)?\*\*\s*:?\s*([A-Z_]+)/i);
-  if (!isAllowedPhaseStatus(statusMatch?.[1]?.toUpperCase(), profile)) {
+  const status = readCompatibilityHeaderStatus(content);
+  if (!isAllowedPhaseStatus(status, profile)) {
     errors.push({
       code: "MISSING_PHASE_STATUS",
       path: relativePath,
@@ -262,6 +269,10 @@ function validatePhaseFile(
         ? `DevCycle phase ${phase} document has no initial status metadata.`
         : `DevCycle phase ${phase} document has no valid implementation lifecycle status.`,
     });
+  }
+  if (status && expectedStatus && status !== expectedStatus) {
+    errors.push({ code: "PHASE_STATUS_MISMATCH", path: relativePath,
+      message: `Phase ${phase} header status ${status} disagrees with FeatureTasks status ${expectedStatus}. Reconcile implementation evidence before continuing.` });
   }
   if (profile === "refinement" && containsDeferredHumanDecisionTask(content)) {
     errors.push({
@@ -275,14 +286,27 @@ function validatePhaseFile(
 function isAllowedPhaseStatus(status: string | undefined, profile: DevCycleArtifactProfile): boolean {
   if (!status) return false;
   if (profile === "refinement") return status === "PENDING" || status === "SKIPPED";
+  if (profile === "completed") return status === "COMPLETED" || status === "SKIPPED";
   return ["PENDING", "IN_PROGRESS", "COMPLETED", "SKIPPED", "AWAITING_USER_ACCEPTANCE", "BLOCKED"].includes(status);
 }
 
 function containsDeferredHumanDecisionTask(markdown: string): boolean {
   const taskSections = markdown.split(/^###\s+Task\b/im).slice(1);
-  return taskSections.some((task) =>
-    /(?:human\s+sign[- ]?off|required\s+human|human\s+(?:approval|judg(?:e)?ment)|owner\s+attestation|product(?:\/platform)?[- ]owner\s+attestation|CODEOWNERS?\s+approval|manual\s+(?:approval|acceptance))/i.test(task),
-  );
+  const deferredDecision = /(?:human\s+sign[- ]?off|required\s+human|human\s+(?:approval|judg(?:e)?ment)|owner\s+attestation|product(?:\/platform)?[- ]owner\s+attestation|CODEOWNERS?\s+approval|manual\s+(?:approval|acceptance))/gi;
+  return taskSections.some((task) => task.split(/\r?\n/).some((line) => {
+    for (const match of line.matchAll(deferredDecision)) {
+      const prefix = line.slice(Math.max(0, match.index - 100), match.index);
+      if (/(?:\bno\b|\bnot\b|\bnever\b|\bwithout\b|\bmust\s+not\b|\bmay\s+not\b|\bdo(?:es)?\s+not\b|\bcannot\b|\bprohibit(?:s|ed)?\b|\bforbid(?:s|den)?\b)[^.;:]*$/i.test(prefix)) {
+        continue;
+      }
+      const suffix = line.slice(match.index + match[0].length);
+      if (/\bfail\s+if\b/i.test(prefix) && /\b(?:introduced|added|created|requested|required|remains?)\b/i.test(suffix)) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }));
 }
 
 function readOrNull(path: string): string | null {

@@ -17,6 +17,16 @@ export class PiModelCatalogScanner {
 
     try {
       const payload: unknown = JSON.parse(result.stdout);
+      if (payload && typeof payload === "object" && "models" in payload && Array.isArray(payload.models)) {
+        const allowed = input.providerIds?.length ? new Set(input.providerIds) : null;
+        return { kind: "success", payload: { ...payload, models: payload.models
+          .filter(row => !allowed || !row || typeof row !== "object" || !("providerId" in row) || allowed.has(row.providerId))
+          .map(row => {
+            if (!row || typeof row !== "object" || !("providerId" in row)) return row;
+            const { providerId: _provider, ...model } = row;
+            return model;
+          }) } };
+      }
       return { kind: "success", payload };
     } catch {
       const payload = parsePiModelTable(result.stdout, input.providerIds);

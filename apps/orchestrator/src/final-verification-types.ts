@@ -14,7 +14,7 @@ export type VerificationCheckIntent = "build" | "test" | "lint" | "coverage";
  * Canonical set of required intents. Every profile must cover at least one
  * `required: true` check for each of these intents.
  */
-export const REQUIRED_VERIFICATION_INTENTS: readonly VerificationCheckIntent[] = ["build", "test", "lint", "coverage"] as const;
+export const REQUIRED_VERIFICATION_INTENTS: readonly VerificationCheckIntent[] = ["build", "test", "lint"] as const;
 
 export interface CoverageTelemetryDeclaration {
   /** LCOV report path relative to the project execution root. */

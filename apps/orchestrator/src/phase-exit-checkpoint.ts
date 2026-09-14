@@ -1,6 +1,8 @@
+import { isUnresolvedQualityGate } from "@hepha/shared";
 export interface PhaseExitGate {
   gate: string;
   status: string;
+  justification?: string | null;
 }
 
 export interface PhaseExitCheckpointInput {
@@ -342,7 +344,7 @@ export function assessAuthoritativeReviewPhaseExit(
 
 function assessGenericPhaseExitCheckpoint(input: PhaseExitCheckpointInput): PhaseExitCheckpointDecision {
   const missingGates = input.qualityGates
-    .filter((gate) => gate.status.toLowerCase() === "missing")
+    .filter((gate) => isUnresolvedQualityGate({ ...gate, status: gate.status.toLowerCase(), justification: gate.justification ?? null }))
     .map((gate) => gate.gate);
   if (input.safetyKernel?.enforcementEnabled && !input.safetyKernel.manifestPersisted) missingGates.push("safety-kernel-manifest");
   if (input.safetyKernel?.enforcementEnabled && !input.safetyKernel.terminalRemediationState) missingGates.push("safety-kernel-remediation");

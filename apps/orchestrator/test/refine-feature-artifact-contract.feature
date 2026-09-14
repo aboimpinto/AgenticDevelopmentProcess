@@ -76,29 +76,29 @@ Feature: Generic RefineFeature artifact contract
     Then artifact validation fails with ARCHITECTURE_DEBT_TOUCH_PLAN_IDENTITY_MISMATCH
     And the feature is not declared ready
 
-  Scenario: A declared final checkpoint requires measurable test coverage
-    Given the arbitrary phase topology includes a final checkpoint
-    When RefineFeature validates the handoff before promotion
-    Then its last ordered task requests full-verification, test-coverage, and manual-review-ready evidence
-    And its Test coverage telemetry declares an advisory 80 percent reference and a 95 to 100 percent target
-    But a topology with no declared final checkpoint remains valid without inventing one
+  Scenario: A declared final checkpoint uses logical acceptance assessment
+    Given the accepted workflow declares a final checkpoint
+    When refinement prepares its final verification task
+    Then its required full verification remains declared
+    And its test coverage assessment compares assertions with acceptance criteria
+    And no numeric coverage measurement row or percentage target is required
 
-  Scenario: Refinement provisions an unambiguous project coverage profile
-    Given the arbitrary phase topology includes a final checkpoint
-    And the existing project test configuration identifies an LCOV command, report path, and production selectors
-    When RefineFeature authors the handoff
-    Then it creates or updates the project-owned final verification profile
-    And it preserves every existing verification check
-
-  Scenario: Ambiguous coverage configuration returns to Deep-Dive
-    Given the arbitrary phase topology includes a final checkpoint
-    But the project has no configured coverage command or machine-readable LCOV report
-    When RefineFeature authors the handoff
-    Then it asks for the authoritative command, report path, source selectors, and multi-stack ownership through NEEDS_DEEP_DIVE
-    And refinement is blocked rather than failed or falsely promoted
+  Scenario: Missing numeric instrumentation does not require Deep-Dive
+    Given a project has configured build, lint and test commands
+    But no numeric coverage command or LCOV report
+    When refinement validates its final checkpoint artifacts
+    Then numeric instrumentation is not a promotion prerequisite
+    And no coverage-setup questions are required merely because instrumentation is absent
 
   Scenario: Valid project coverage configuration is reused
     Given the project-owned final verification profile already contains valid coverage checks
     When another arbitrary feature with a final checkpoint is refined
     Then RefineFeature reuses the project coverage configuration
     And it does not ask the user the coverage-setup questions again
+
+  Scenario: Document metadata remains readable after introductory sections
+    Given a feature or phase document with an explicit feature-identified status block
+    And introductory sections appear before that metadata block
+    When implementation artifacts are validated
+    Then the declared document status is read without changing the document
+    And nested task, quoted, commented and example statuses cannot supply its lifecycle authority

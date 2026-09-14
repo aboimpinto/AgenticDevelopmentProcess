@@ -1,4 +1,7 @@
+import { modelTokenizerEncoding } from "./model-token-counter.js";
 import { randomUUID } from "node:crypto";
+import { presentModelRequestFailure } from "./model-request-failure.js";
+import { createPromptUsageAudit } from "./prompt-usage-audit.js";
 import { spawn } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
@@ -56,8 +59,11 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
   ): Promise<string> {
     const piEnv = launch.environment;
     const model = launch.model;
+    // Reject unsupported selections before a worker or provider request exists.
+    modelTokenizerEncoding({ id: model.model, provider: model.provider });
 
     await mkdir(config.sessionDirectory, { recursive: true });
+    const usageAudit = createPromptUsageAudit(resolve(config.sessionDirectory, `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID()}-usage.jsonl`));
     const promptForCli = shouldUsePiPromptFile(prompt, options)
       ? writePiPromptFileArgument(prompt, options, config.sessionDirectory)
       : prompt;
@@ -99,7 +105,7 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
         })],
         {
           cwd: options.cwd ?? config.workspaceRoot,
-          env: piEnv,
+          env: { ...piEnv, ...(options.maxOutputTokens ? { HEPHA_PI_OUTPUT_TOKEN_LIMIT: String(options.maxOutputTokens) } : {}) },
           windowsHide: true,
         },
       );
@@ -177,6 +183,7 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
           appendWorkflowStreamLog(streamLogPath, renderedEvent);
         }
         try {
+          usageAudit.event(event);
           options.onPiEvent?.(event);
         } catch (error) {
           terminatePiProcessTree(child);
@@ -225,6 +232,7 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
         resetStallTimeout();
         const safeChunk = redactPinnedSecret(chunk, piEnv);
         errorChunks.push(safeChunk);
+        usageAudit.stderr(safeChunk);
         appendWorkflowStreamLog(streamLogPath, safeChunk);
       });
 
@@ -238,7 +246,7 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
           exitCode,
           fallbackOutput: fallbackStdout,
           output,
-          stderr: errorChunks.join("").trim(),
+          stderr: presentModelRequestFailure(errorChunks.join("").trim()),
           terminalState,
         });
 

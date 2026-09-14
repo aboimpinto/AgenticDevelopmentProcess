@@ -18,4 +18,12 @@ describe("generic phase planning acceptance prompt Gherkin integration", () => {
     expect(planning.join("\n")).toContain("Create or update `plan.md`");
     expect(consumer.join("\n")).toContain("Read this phase's row");
   });
+  it("Planning preserves acceptance responsibility across levels", () => {
+    expect(readFileSync(featurePath, "utf8")).toContain("Scenario: Planning preserves acceptance responsibility across levels");
+    const prompt = renderPhasePlanningAcceptanceRules({ epicAcceptanceTestsFileName: "accept.md", featurePlanningArtifactFileName: "plan.md", isPlanningPhase: false }).join("\n");
+    for (const level of ["EPIC", "FEAT", "Phase", "Task"]) expect(prompt).toContain(`| ${level} |`);
+    expect(prompt).toContain("many-to-many");
+    expect(prompt).toContain("A passing TwinTest does not replace that E2E obligation");
+  });
+
 });

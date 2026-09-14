@@ -607,8 +607,11 @@ describe("IsolatedPiWorkerContext", () => {
 
     const root = await mkdtemp(resolve(tmpdir(), "hepha-context-positive-"));
     roots.push(root);
-    const factory = new IsolatedPiWorkerContext({ baseEnvironment: { PATH: "/bin" }, createUniqueId: () => "valid", runtimeRoot: root });
+    const factory = new IsolatedPiWorkerContext({ baseEnvironment: { PATH: "/bin", HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS: "900000", UNRELATED_SECRET: "never-forward" }, createUniqueId: () => "valid", runtimeRoot: root });
     const prepared = await factory.prepare({ attemptId: "attempt-valid", connection: connection(), providerId: "openai", route: primaryRoute });
+    const environment = prepared.buildEnvironment();
+    expect(environment.HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS).toBe("900000");
+    expect(environment.UNRELATED_SECRET).toBeUndefined();
     await expect(prepared.cleanup()).resolves.toBe(true);
     await expect(prepared.cleanup()).resolves.toBe(true);
     expect(existsSync(prepared.configurationRoot)).toBe(false);
