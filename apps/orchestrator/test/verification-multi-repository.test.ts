@@ -1,3 +1,4 @@
+// Execution fixtures assert TAP evidence; pin the reporter across Node versions.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,7 +18,7 @@ function fixture() {
   };
   const client = repo("frontend"), server = repo("backend"), unrelated = repo("unrelated");
   writeFileSync(join(client, "package.json"), JSON.stringify({ scripts: { integration: "bash ../backend/run.sh" } }));
-  writeFileSync(join(server, "run.sh"), 'node --test "$(dirname "$0")/flow.test.cjs"\n');
+  writeFileSync(join(server, "run.sh"), 'node --test --test-reporter=tap "$(dirname "$0")/flow.test.cjs"\n');
   writeFileSync(join(server, "flow.test.cjs"), 'require("node:test")("full workflow", () => require("node:assert/strict").equal(2 + 2, 4));\n');
   const directory = join(client, ".hepha/verification-runs/first"); mkdirSync(directory, { recursive: true });
   const folder = join(client, "feature"); mkdirSync(folder);

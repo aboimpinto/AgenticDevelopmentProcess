@@ -1,3 +1,4 @@
+// Execution fixtures assert TAP evidence; pin the reporter across Node versions.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,7 +20,7 @@ test('expiry', () => assert.equal(2 > 1, true));
 test('compatibility', () => assert.equal(false, false));
 `);
   const checks = ["recovery", "expiry", "compatibility"].map(id => ({ id, kind: "test", suiteKey: "node-integration", cwd,
-    command: `node --test --test-name-pattern=^${id}$ journeys.test.cjs`, configurationFiles: ["package.json"],
+    command: `node --test --test-reporter=tap --test-name-pattern=^${id}$ journeys.test.cjs`, configurationFiles: ["package.json"],
     testPaths: ["journeys.test.cjs"], reason: `Inspected separate ${id} scenario in the shared source`, gates: ["tests"] }));
   return { cwd, plan: { checks, phases: [{ phaseNumber, checkIds: checks.map(c => c.id) }] } };
 }

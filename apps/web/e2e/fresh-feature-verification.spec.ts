@@ -48,10 +48,13 @@ for (const scenario of freshScenarios) test(`${scenario.id}: ${scenario.title}`,
     await expect.poll(async () => (await f.freshMetrics()).busy).toBe(false);
     await expect(refresh).toBeEnabled();
     const m = await f.freshMetrics();
-    expect(m.inspectionReads).toBe(["budget", "mixed"].includes(scenario.mode) ? 2 : 1);
+    expect(m.inspectionReads).toBe(["budget", "mixed", "changed"].includes(scenario.mode) ? 2 : 1);
+    expect(m.executions).toBe(scenario.mode === "changed" ? 4 : 2);
     if (scenario.mode === "mixed") expect(m.activities).toEqual(["inspecting", "correcting", "preparing", "testing", "waiting", "testing", "waiting", "checking", "waiting", "validating", "assessing"]);
     if (scenario.mode === "budget") expect(m.prompts[1]).toContain("Previous partial inspection checkpoint (revalidate, never evidence):");
-    expect(m.commands).toEqual(["node runner.cjs save", "node runner.cjs browser"]);
+    expect(m.commands).toEqual(scenario.mode === "changed"
+      ? ["node runner.cjs save", "node runner.cjs browser", "node runner.cjs save", "node runner.cjs browser"]
+      : ["node runner.cjs save", "node runner.cjs browser"]);
     expect(m.results).toEqual(before.results); expect(m.pack).toEqual(before.pack);
     if (scenario.mode === "missing-run-id") {
       const receipts = f.receiptArtifacts();

@@ -1,3 +1,4 @@
+// Execution fixtures assert TAP evidence; pin the reporter across Node versions.
 import { afterEach, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -33,13 +34,13 @@ it("retains the original gate declaration across new repository reads", () => {
 it("real test failure remains unresolved until repaired execution succeeds", () => {
   const f = fixture();
   const testPath = resolve(f.root, "sequence.test.cjs");
-  const command = `${process.execPath} --test ${testPath}`;
+  const command = `${process.execPath} --test --test-reporter=tap ${testPath}`;
   f.record.flags.needTestCoverage = true;
   f.record.criteria = [{ id: "sequence", description: "Preserve order" }];
   f.record.coverage = { outcome: "sufficient", criteria: [{ criterionId: "sequence", checkIds: ["test"], testPaths: [testPath], assertions: "Exact sequence matches" }] };
   for (const broken of [true, false]) {
     writeFileSync(testPath, `const {test}=require('node:test');const assert=require('node:assert/strict');test('sequence',()=>assert.deepEqual([1,2],[${broken ? '2,1' : '1,2'}]));`);
-    const execution = spawnSync(process.execPath, ["--test",testPath], { encoding:"utf8" });
+    const execution = spawnSync(process.execPath, ["--test", "--test-reporter=tap",testPath], { encoding:"utf8" });
     expect(execution.status).toBe(broken ? 1 : 0);
     const evidencePath = resolve(f.root,"execution.jsonl");
     writeFileSync(evidencePath, [
@@ -48,7 +49,7 @@ it("real test failure remains unresolved until repaired execution succeeds", () 
     ].map(v=>JSON.stringify(v)).join("\n"));
     f.record.checks = [{id:"test",gate:"tests",required:true,command,cwd:f.root,outcome:"passed",evidence:[{path:evidencePath,toolCallId:"tool"}]}];
     // Receipt command formatting is not a second execution-plan gate.
-    f.record.checks[0]!.command = "node --test ./sequence.test.cjs";
+    f.record.checks[0]!.command = "node --test --test-reporter=tap ./sequence.test.cjs";
     f.save();
     expect(f.gates().find(g=>g.gate==="tests")?.status).toBe(broken ? "missing" : "satisfied");
     writeFileSync(resolve(f.root, "native.log"), execution.stdout + execution.stderr);
@@ -101,12 +102,12 @@ it.each(["No numeric production coverage threshold is configured.", "Instrumenta
     const f = fixture();
     const testPath = resolve(f.root, "preservation.test.cjs");
     writeFileSync(testPath, "const {test}=require('node:test');const assert=require('node:assert/strict');test('preserves values',()=>assert.deepEqual([1,2].map(x=>x*2),[2,4]));");
-    const executed = spawnSync(process.execPath, ["--test", testPath], { encoding: "utf8" });
+    const executed = spawnSync(process.execPath, ["--test", "--test-reporter=tap", testPath], { encoding: "utf8" });
     expect(executed.status).toBe(0);
     const reportPath = resolve(f.root, "native-tests.log");
     writeFileSync(reportPath, executed.stdout + executed.stderr);
     f.record.criteria = [{ id: "preservation", description: "Preserve ordered values." }];
-    f.record.checks = [{ id: "behavior", gate: "tests", required: true, command: "node --test preservation.test.cjs", cwd: f.root,
+    f.record.checks = [{ id: "behavior", gate: "tests", required: true, command: "node --test --test-reporter=tap preservation.test.cjs", cwd: f.root,
       outcome: "passed", evidence: [{ path: reportPath }] }];
     f.record.coverage = { outcome: "not_applicable", reason,
       criteria: [{ criterionId: "preservation", checkIds: ["behavior"], testPaths: [testPath], assertions: "Exact ordered output equals the expected doubled values." }] };

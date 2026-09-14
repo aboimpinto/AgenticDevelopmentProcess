@@ -1,3 +1,4 @@
+// Execution fixtures assert TAP evidence; pin the reporter across Node versions.
 import { phaseGatesProtocol, type PhaseGateRecord } from "../src/exchanges/phase-gates.js";
 import { createCardMetadataStore } from "@hepha/db";
 import type { HandoffPlanV1, MemoryBankStateFolder, WorkItemCard } from "@hepha/shared";
@@ -96,13 +97,13 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     const path = resolve(f.folder(), "Phases/phase-7-work.md");
     const script = resolve(f.folder(), "verify.test.cjs");
     writeFileSync(script, "const {test}=require('node:test');const assert=require('node:assert/strict');test('preserves value',()=>assert.equal(2+3,5));");
-    const execution = spawnSync(process.execPath, ["--test", script], { encoding: "utf8" });
+    const execution = spawnSync(process.execPath, ["--test", "--test-reporter=tap", script], { encoding: "utf8" });
     expect(execution.status).toBe(0);
     writeFileSync(resolve(f.folder(), "execution.log"), execution.stdout + execution.stderr);
     writeFileSync(path, readFileSync(path, "utf8") + [
       "| Gate | Command | Result |", "| --- | --- | --- |",
-      "| Partition suite | node --test verify.test.cjs | PASS — behavior 1, all 0 failed |",
-      "| Boundary fixtures/live | node --test verify.test.cjs | PASS — 1 fixture OK; no forbidden dependency |",
+      "| Partition suite | node --test --test-reporter=tap verify.test.cjs | PASS — behavior 1, all 0 failed |",
+      "| Boundary fixtures/live | node --test --test-reporter=tap verify.test.cjs | PASS — 1 fixture OK; no forbidden dependency |",
       "| Supporting target | runner test | PASS — exit 0, 0 tests |",
       `| Lint | analyzer check | ${failed ? "FAIL — 1 warning" : "PASS — exit 0, zero warnings"} |`,
       "## Phase Quality Gate Contract", "| Gate | Applicability | Rationale |",
@@ -123,13 +124,13 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(readFileSync(new URL("./compatibility-implementation-lifecycle.feature", import.meta.url), "utf8")).toContain(`Scenario: ${scenario}`);
     const testPath = resolve(f.folder(), "verify.test.cjs");
     writeFileSync(testPath, `const {test}=require('node:test'); const assert=require('node:assert/strict');\ntest('retains message order',()=>assert.deepEqual(['first','second'].map(x=>x.toUpperCase()),${failed ? "['SECOND','FIRST']" : "['FIRST','SECOND']"}));`);
-    const execution = spawnSync(process.execPath, ["--test", testPath], { encoding: "utf8" });
+    const execution = spawnSync(process.execPath, ["--test", "--test-reporter=tap", testPath], { encoding: "utf8" });
     expect(execution.status).toBe(failed ? 1 : 0);
     writeFileSync(resolve(f.folder(), "execution.log"), execution.stdout + execution.stderr);
     const phasePath = resolve(f.folder(), "Phases/phase-6-work.md");
     writeFileSync(phasePath, readFileSync(phasePath, "utf8") + [
       "| Gate | Command | Expected | Result |", "| --- | --- | --- | --- |",
-      `| Ordering regressions | \`node --test verify.test.cjs\` | Green | ${failed ? "FAIL — 0 fixtures passed; 1 fixture failed" : "PASS — 1/1 fixtures OK; 0 failed"} |`,
+      `| Ordering regressions | \`node --test --test-reporter=tap verify.test.cjs\` | Green | ${failed ? "FAIL — 0 fixtures passed; 1 fixture failed" : "PASS — 1/1 fixtures OK; 0 failed"} |`,
       "", "- Changed files: `modules/format.ts`,", "  `modules/format.rs`.",
     ].join("\n"));
     const reviews = resolve(f.folder(), "code-reviews/phase-6");
@@ -450,7 +451,7 @@ describe("structured gates recover within the original user workflow", () => {
       if (input.agentAction === "complete-feature") { f.move("04_COMPLETED"); f.save(); return "Finalized after verified gates."; }
       expect(input.step).toBe("Repairing phase quality gates");
       expect(input.phaseNumber).toBe(7);
-      const command = `${process.execPath} --test ${testPath}`;
+      const command = `${process.execPath} --test --test-reporter=tap ${testPath}`;
       const observationPath = resolve(f.project.rootPath, ".hepha/phase-evidence", `${input.runId}.jsonl`);
       const payload: PhaseGateRecord = { phaseId: "phase-7-work.md", flags: { needCodeReview: review, needTestCoverage: coverage },
         criteria: [{ id: "sequence", description: "Preserve request sequence." }], checks: [],
@@ -458,7 +459,7 @@ describe("structured gates recover within the original user workflow", () => {
         coverage: coverage ? { outcome: "sufficient", criteria: [{ criterionId: "sequence", checkIds: ["ordering"], testPaths: [testPath], assertions: "Exact ordered values remain unchanged after mapping." }] }
           : { outcome: "not_applicable", criteria: [], reason: "No new behavioral scope." } };
       if (coverage) {
-        const result = spawnSync(process.execPath, ["--test", testPath], { encoding: "utf8" }); executions++;
+        const result = spawnSync(process.execPath, ["--test", "--test-reporter=tap", testPath], { encoding: "utf8" }); executions++;
         expect(result.status).toBe(0);
         input.onPiEvent!({ type: "tool_execution_start", toolCallId: "actual-execution", toolName: "bash", args: { command } });
         input.onPiEvent!({ type: "tool_execution_end", toolCallId: "actual-execution", toolName: "bash", isError: result.status !== 0,
