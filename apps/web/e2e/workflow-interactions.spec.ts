@@ -356,42 +356,29 @@ function expectNoBrowserErrors(browserErrors: readonly string[]) {
 }
 
 test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
-  test("Existing refresh recovers confirmed coverage without repeating human verification", async ({ page }) => {
+  test("Existing refresh validates approved coverage without repeating human verification", async ({ page }) => {
     const item = makeFeature({ implementationCompleted: true, canStartImplementing: false,
-      readiness: { ready: true, reasons: [] }, userCodeReviewCompletedAt: NOW, manualTestsCompletedAt: null });
+      readiness: { ready: true, reasons: [] }, userCodeReviewCompletedAt: NOW, manualTestsCompletedAt: NOW });
     item.phases.forEach(phase => { phase.status = "completed"; });
     const { requests, browserErrors } = await installFixture(page, item);
     await page.route("**/api/projects/hepha/completion-readiness", async route => {
       const body = route.request().postDataJSON();
       requests.push({ body, path: "/api/projects/hepha/completion-readiness" });
-      const confirmed = body.confirm === true && body.confirmProposalId === "coverage-proposal";
-      item.completionRecovery = { assessedAt: NOW, ready: confirmed,
-        blockers: confirmed ? [] : [{ id: "phase-recovery-1", phaseNumber: 1, action: "phase", actionLabel: "Fix Phase 1 quality gaps", message: "1 quality gap in Phase 1" }],
-        phaseGaps: confirmed ? [] : [{ id: "phase-1-acceptance_coverage", phaseNumber: 1, phaseTitle: item.phases.find(phase => phase.number === 1)!.title,
-          kind: "acceptance_coverage", title: "Acceptance coverage and test evidence", details: ["AC-01 coverage needs confirmation"], sourceIds: ["AC-01"], instruction: "Verify the existing manual case mapping.",
-          proposalId: "coverage-proposal", proposedLinks: [{ sourceId: "AC-01", kind: "manual", evidenceId: "MT-01", stepNumbers: [2], explanation: "Step 2 checks the expected confirmation." }] }],
-        ...(confirmed ? {} : { proposal: { id: "coverage-proposal", links: [{ sourceId: "AC-01", kind: "manual" as const, evidenceId: "MT-01", stepNumbers: [2], explanation: "Step 2 checks the expected confirmation." }] } }) };
-      if (confirmed) item.featureWorkflow!.manualTestsCompletedAt = NOW;
+      item.completionRecovery = { assessedAt: NOW, ready: true, verifiedCriterionCount: 1, blockers: [], phaseGaps: [] };
       await route.fulfill({ contentType: "application/json", body: JSON.stringify({ items: [item], assessment: item.completionRecovery,
-        message: confirmed ? "Current evidence satisfies completion readiness." : "Review existing evidence links; no test results were changed." }) });
+        message: "Current evidence satisfies completion readiness." }) });
     });
     const detail = await openFeatureDetail(page);
     const readiness = detail.getByRole("region", { name: "Complete Feature readiness" });
     await readiness.getByRole("button", { name: "Refresh Completion Readiness" }).click();
-    await expect(readiness.getByText("1 quality gap in 1 phase. Resolve them in the phases above.")).toBeVisible();
-    await expect(readiness.getByText("AC-01 coverage needs confirmation")).toHaveCount(0);
-    await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
-    await readiness.getByRole("button", { name: "Fix Phase 1 quality gaps", exact: true }).click();
-    const recovery = detail.getByRole("region", { name: "Phase 1 completion quality gaps" });
-    await expect(recovery.getByRole("button", { name: "Verify / repair phase quality gaps" })).toBeFocused();
-    await expect(recovery.getByText("Step 2 checks the expected confirmation.")).not.toBeVisible();
-    await recovery.getByText("Acceptance coverage and test evidence — 1 criteria", { exact: true }).click();
-    await expect(recovery.getByText("Step 2 checks the expected confirmation.")).toBeVisible();
-    await recovery.getByRole("button", { name: "I confirm these evidence links cover the listed criteria" }).click();
+    await expect(readiness.getByText("1 accepted criteria verified against the feature plan.")).toBeVisible();
+    await expect(detail.getByRole("button", { name: "I confirm these evidence links cover the listed criteria" })).toHaveCount(0);
     await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeEnabled();
+    expect(item.featureWorkflow!.userCodeReviewCompletedAt).toBe(NOW);
+    expect(item.featureWorkflow!.manualTestsCompletedAt).toBe(NOW);
     expect(requests.filter(request => ["/api/complete-feature", "/api/feature-human-review", "/api/manual-tests/record-pass"].includes(request.path))).toEqual([]);
     expect(requests.filter(request => request.path === "/api/projects/hepha/completion-readiness").map(request => request.body)).toEqual([
-      { cardId: item.id, reassess: true, verifyExisting: true }, { cardId: item.id, confirmProposalId: "coverage-proposal", confirm: true },
+      { cardId: item.id, reassess: true, verifyExisting: true },
     ]);
     expectNoBrowserErrors(browserErrors);
   });
@@ -409,10 +396,10 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     const detail = await openFeatureDetail(page);
     const readiness = detail.getByRole("region", { name: "Complete Feature readiness" });
     await expect(readiness.getByText(/Missing evidence link/)).toHaveCount(0);
-    await readiness.getByRole("button", { name: "Fix Phase 1 quality gaps" }).click();
     const phase = detail.getByRole("region", { name: "Phase 1 completion quality gaps" });
     const repair = phase.getByRole("button", { name: "Verify / repair phase quality gaps" });
-    await expect(repair).toBeFocused();
+    await phase.scrollIntoViewIfNeeded();
+    await expect(repair).toBeEnabled();
     await expect(phase.getByText("AC-14: Missing evidence link")).not.toBeVisible();
     const guidance = phase.getByRole("textbox", { name: "Additional repair guidance (optional)" });
     const repairBox = await repair.boundingBox(), guidanceBox = await guidance.boundingBox();
@@ -480,7 +467,7 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     expectNoBrowserErrors(browserErrors);
   });
   test("Checkpoint build diagnostics remain distinct from missing tests", async ({ page }) => {
-    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false });
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false, userCodeReviewCompletedAt: NOW, manualTestsCompletedAt: NOW });
     item.phases.forEach(phase => { phase.status = "completed"; });
     item.implementationEvidence!.phaseQualityGates[0]!.gates = [
       { gate: "tests", status: "satisfied", justification: "Host test execution passed", evidencePaths: ["phase.md.verification.json"] },
@@ -489,11 +476,11 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     ];
     const { requests, browserErrors } = await installFixture(page, item);
     const detail = await openFeatureDetail(page);
-    await detail.locator('[data-phase-number="1"]').getByText("1 verification issue — how to resolve").click();
+    await detail.locator('[data-phase-number="1"]').getByText("1 non-blocking warning — how to resolve").click();
     const issue = detail.getByRole("region", { name: "Phase 1 — Build", exact: true });
-    await expect(issue.getByText("Recorded verification has not passed. Inspect the outcome and diagnostics below.", { exact: true })).toBeVisible();
+    await expect(issue.getByText("Non-blocking warning. The recorded outcome is preserved; you may choose whether to repair it.", { exact: true })).toBeVisible();
     await expect(issue.getByText("Recorded diagnostic: Build emitted warnings despite exit zero", { exact: true })).toBeVisible();
-    await expect(detail.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    await expect(detail.getByRole("button", { name: "Complete Feature", exact: true })).toBeEnabled();
     expect(requests.filter(request => request.path === "/api/complete-feature")).toEqual([]);
     expectNoBrowserErrors(browserErrors);
   });

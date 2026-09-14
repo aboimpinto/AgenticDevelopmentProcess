@@ -51,6 +51,24 @@ pnpm build
 Use `pnpm test:e2e` for affected end-to-end journeys when the local test
 environment is available.
 
+## Dependency updates
+
+Update tightly coupled packages together: React and React DOM with their type
+packages, Vitest with its coverage provider, and Prisma client with its adapter.
+Dependabot groups these families so one PR can validate the complete combination.
+
+HEPHA uses TypeScript 7's native `tsc` through the `@typescript/native` npm alias.
+The `typescript` dependency is an alias for the official
+`@typescript/typescript6` compatibility package because source inspection and
+architecture tests use the JavaScript compiler API. TypeScript 7 does not expose
+that API. Keep compilation and programmatic inspection separate when updating
+these packages; do not replace the compatibility alias with an ordinary major
+version bump. See [TypeScript's side-by-side migration guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6-0).
+
+Run typecheck, core tests, build, web coverage/quality checks and the affected
+browser journeys for dependency upgrades. A React runtime upgrade requires the
+full dashboard browser suite. Keep frozen-lockfile installation working in CI.
+
 ## Pull requests
 
 A useful pull request explains:

@@ -9,6 +9,9 @@ export default defineConfig({
     // narrow ceiling above that known lazy vendor chunk so future growth still
     // restores the warning.
     chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: { manualChunks: { "react-vendor": ["react", "react-dom", "react-dom/client"] } },
+    },
   },
   plugins: [react()],
   server: {
