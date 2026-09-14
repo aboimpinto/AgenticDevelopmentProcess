@@ -19,7 +19,7 @@
     "ajv": "^8.20.0",
     "gpt-tokenizer": "4.0.0",
     "saxes": "6.0.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
