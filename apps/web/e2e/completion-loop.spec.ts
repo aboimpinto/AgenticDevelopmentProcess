@@ -75,11 +75,12 @@ for (const scenario of completionScenarios) test(`${scenario.id}: ${scenario.tit
     }
     if (scenario.mode === "mixed-evidence") {
       await expect(detail.getByText("1 improvements for future planning — non-blocking", { exact: true })).toBeVisible();
-      expect((await f.metrics()).record?.assessedLinks?.filter(l => l.sourceId === "AC-02").map(l => l.kind).sort()).toEqual(["automated", "manual"]);
+      expect((await f.metrics()).record?.assessedLinks?.filter(l => l.sourceId === "AC-02").map(l => l.kind).sort()).toEqual(["automated"]);
     }
     const final = await f.metrics();
     expect(final.results).toEqual(original.results); expect(final.pack).toEqual(original.pack);
     expect(final.metadata?.userCodeReviewCompletedAt).toBe(original.metadata?.userCodeReviewCompletedAt);
+    expect(final.metadata?.manualTestsCompletedAt).toBe(original.metadata?.manualTestsCompletedAt);
     expect(final.lifecycle).toBe("03_IN_PROGRESS");
     expect(final.unexpected).toEqual([]); expect(errors).toEqual([]);
     // Complete Feature stays an explicit user action; the tests never click it.

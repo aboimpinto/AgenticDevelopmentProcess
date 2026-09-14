@@ -10,7 +10,7 @@ for (const scenario of freshScenarios) test(`${scenario.id}: ${scenario.title}`,
     await page.goto(f.url);
     await page.getByRole("button", { name: /FEAT-EXAMPLE.*Synthetic delivery/ }).click();
     const detail = page.locator("aside.detail-panel");
-    const refresh = detail.getByRole("button", { name: "Refresh Completion Readiness", exact: true });
+    const refresh = detail.getByRole("button", { name: /^(Refresh Completion Readiness|Retry verification)$/ });
     const complete = detail.getByRole("button", { name: "Complete Feature", exact: true });
     try {
       await refresh.click();
@@ -38,7 +38,7 @@ for (const scenario of freshScenarios) test(`${scenario.id}: ${scenario.title}`,
     }
     if (scenario.mode === "budget") {
       await expect.poll(async () => (await f.freshMetrics()).busy).toBe(false);
-      await expect(refresh).toBeEnabled(); await expect(complete).toBeDisabled();
+      await expect(detail.getByRole("button", { name: "Retry verification", exact: true })).toBeEnabled(); await expect(complete).toBeDisabled();
       expect((await f.freshMetrics()).executions).toBe(0);
       await expect(detail.getByText(/HEPHA_INPUT_USAGE_BUDGET_EXCEEDED/).first()).toBeVisible();
       expect(await detail.textContent()).not.toContain("HEPHA_MODEL_REQUEST {");
@@ -89,6 +89,7 @@ for (const scenario of freshScenarios) test(`${scenario.id}: ${scenario.title}`,
     }
     if (["failed", "skipped", "changed", "wrong-run-id"].includes(scenario.mode)) {
       expect(m.fresh?.status).toBe("blocked"); await expect(complete).toBeDisabled();
+      await expect(detail.getByRole("button", { name: "Retry verification", exact: true })).toBeEnabled();
       expect(m.fresh?.error).toBeTruthy();
       // Surface the shared importer's diagnosis, not a Refresh-specific error dialect.
       await expect(detail).toContainText(m.fresh!.error!);
