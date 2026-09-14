@@ -16,6 +16,9 @@ import type {
   WorkflowPositionSummary,
 } from "@hepha/shared";
 import { designArtifactDefinitions } from "@hepha/shared";
+import { featureDesignPrerequisite } from "./feature-design-prerequisite.js";
+import { compatibilityRecoveryKind } from "../../workflows/recipes/compatibility-lifecycle-recovery-policy.js";
+import { validateDevCycleImplementationArtifacts } from "./devcycle-refine-artifact-validator.js";
 import type { FeatureWorkflowMessageInput } from "./feature-workflow-message-policy.js";
 import type { FeatureWorkflowProgressInput } from "./feature-workflow-progress-projector.js";
 import type { BuildWorkflowPositionInput } from "../../workflow-position-builder.js";
@@ -171,10 +174,7 @@ export class FeatureWorkflowSummaryProjector {
     const hasDesignArtifacts = designArtifactDefinitions
       .every(({ fileName }) => this.#dependencies.artifactExists(item, fileName));
     const hasRefinementArtifacts = this.#dependencies.hasCompleteRefinementArtifacts(item);
-    const mcpDesign = this.#dependencies.recipeSourceFor("designFeature") === "devcycle-mcp";
     const mcpRefine = this.#dependencies.recipeSourceFor("refineFeature") === "devcycle-mcp";
-    const mcpStart = this.#dependencies.recipeSourceFor("startImplementing") === "devcycle-mcp";
-    const mcpContinue = this.#dependencies.recipeSourceFor("continueImplementing") === "devcycle-mcp";
     const hasContinuationArtifacts = item.stateFolder === "03_IN_PROGRESS"
       && this.#dependencies.hasCompleteContinuationArtifacts(item);
     const sourceHash = input.documentHash
@@ -199,7 +199,7 @@ export class FeatureWorkflowSummaryProjector {
     const mcpRefineNeedsDeepDiveRecovery = mcpRefine && !hasRefinementArtifacts &&
       metadata?.workflowCommand === "refine-feature" &&
       (metadata.workflowStatus === "completed" || metadata.workflowStatus === "blocked") &&
-      (item.stateFolder === "01_SUBMITTED" || item.stateFolder === "02_READY_TO_DEVELOP");
+      item.stateFolder === "01_SUBMITTED";
     const workflowRunSuperseded = workflowFailureSuperseded || mcpRefineRunSuperseded;
     const recoveredOutcome = mcpRefineRunSuperseded
       ? {
@@ -227,7 +227,7 @@ export class FeatureWorkflowSummaryProjector {
       : metadata?.workflowCurrentNodeId ?? null;
     const currentStep = mcpRefineNeedsDeepDiveRecovery
       ? "Waiting for FEAT Deep-Dive answers"
-      : effectiveStatus === "running" && this.#dependencies.isImplementationWorkflowCommand(metadata?.workflowCommand)
+      : effectiveStatus === "running" && currentNodeId !== "implementation-recovery" && this.#dependencies.isImplementationWorkflowCommand(metadata?.workflowCommand)
         ? this.#dependencies.deriveImplementationCurrentStep(item) ?? metadata!.workflowCurrentStep
         : metadata?.workflowCurrentStep ?? null;
     const lastRun: FeatureWorkflowRunSummary | null = effectiveStatus && metadata?.workflowCommand &&
@@ -273,31 +273,30 @@ export class FeatureWorkflowSummaryProjector {
       ? this.#dependencies.evaluateContinueReadiness(...readinessArguments)
       : null;
     const readiness = continueReadiness ?? baseReadiness;
-    const canCreateUiRequirements = mcpDesign
-      ? !hasRunningWorkflow && !hasDesignArtifacts &&
-        (item.stateFolder === "01_SUBMITTED" || item.stateFolder === "02_READY_TO_DEVELOP")
-      : isWorkflowReady && !hasRunningWorkflow && uiRequirementDecision === "requires_ui" && !hasDesignArtifacts;
-    const canRefineFeature = mcpRefine
+    const canCreateUiRequirements = isWorkflowReady && !hasRunningWorkflow &&
+      uiRequirementDecision === "requires_ui" && !hasDesignArtifacts &&
+      (item.stateFolder === "01_SUBMITTED" || item.stateFolder === "02_READY_TO_DEVELOP");
+    const canRefineFeature = !featureDesignPrerequisite(uiRequirementDecision, hasDesignArtifacts) && (mcpRefine
       ? !hasRunningWorkflow && !hasRefinementArtifacts && !mcpRefineNeedsDeepDiveRecovery &&
         (item.stateFolder === "01_SUBMITTED" || item.stateFolder === "02_READY_TO_DEVELOP")
       : isWorkflowReady && !hasRunningWorkflow &&
         (item.stateFolder === "01_SUBMITTED" ||
           (item.stateFolder === "02_READY_TO_DEVELOP" && !hasRefinementArtifacts)) &&
-        (uiRequirementDecision === "no_ui" || (uiRequirementDecision === "requires_ui" && hasDesignArtifacts));
-    const canStartImplementing = mcpStart
-      ? !hasRunningWorkflow && item.stateFolder === "02_READY_TO_DEVELOP"
-      : readiness.ready && validation.needsValidationCount === 0 && !hasRunningWorkflow &&
-        hasRefinementArtifacts && item.stateFolder === "02_READY_TO_DEVELOP";
+        (uiRequirementDecision === "no_ui" || (uiRequirementDecision === "requires_ui" && hasDesignArtifacts)));
+    const canStartImplementing = readiness.ready && validation.needsValidationCount === 0 &&
+      !hasRunningWorkflow && hasRefinementArtifacts && item.stateFolder === "02_READY_TO_DEVELOP";
     const humanReviewPhase = this.#dependencies.getHumanReviewPhase(item);
     const hasUnresolvedHumanReviewPhase = this.#dependencies.hasUnresolvedHumanReviewPhase(item);
     const missingQualityGateCount = this.#dependencies.countMissingQualityGates(item);
-    const canContinueImplementing = mcpContinue
-      ? !hasRunningWorkflow && item.stateFolder === "03_IN_PROGRESS" && !implementationCompleted
-      : (continueReadiness?.ready ?? false) && validation.needsValidationCount === 0 &&
-        !hasRunningWorkflow && hasContinuationArtifacts && item.stateFolder === "03_IN_PROGRESS" &&
-        (!implementationCompleted || hasUnresolvedHumanReviewPhase || missingQualityGateCount > 0);
+    const canRecoverContinuation = this.#dependencies.metadataStoreEnabled &&
+      this.#dependencies.recipeSourceFor("continueImplementing") === "devcycle-mcp" &&
+      item.stateFolder === "03_IN_PROGRESS" && compatibilityRecoveryKind(item, validateDevCycleImplementationArtifacts(item.folderPath)) === "status";
+    const canContinueImplementing = (((continueReadiness?.ready ?? false) && hasContinuationArtifacts) || canRecoverContinuation) &&
+      validation.needsValidationCount === 0 && !hasRunningWorkflow &&
+      item.stateFolder === "03_IN_PROGRESS" &&
+      (!implementationCompleted || hasUnresolvedHumanReviewPhase || missingQualityGateCount > 0 || canRecoverContinuation);
     const projectedReadiness = item.stateFolder === "03_IN_PROGRESS" &&
-      (canContinueImplementing || implementationCompleted)
+      !canRecoverContinuation && hasContinuationArtifacts && (canContinueImplementing || implementationCompleted)
       ? { ready: true, reasons: [] }
       : readiness;
     const canAcceptHumanReviewFindings = validation.needsValidationCount === 0 && !hasRunningWorkflow &&
@@ -360,7 +359,10 @@ export class FeatureWorkflowSummaryProjector {
       canReviewManualTestPack: false,
       canRecordManualTestPass: false,
       canRecordManualTestFail: false,
-      workflowMessage: this.#dependencies.createMessage({
+      workflowMessage: canRecoverContinuation && canContinueImplementing
+        ? "Continue Implementing will repair the stale lifecycle status, verify the files, then resume implementation. Existing phase evidence is preserved; Design and Refine are not required."
+        : this.#dependencies.createMessage({
+        readinessReasons: projectedReadiness.reasons,
         humanReviewCompleted: Boolean(userCodeReviewCompletedAt && manualTestsCompletedAt),
         hasDesignArtifacts,
         hasRefinementArtifacts: item.stateFolder === "03_IN_PROGRESS"

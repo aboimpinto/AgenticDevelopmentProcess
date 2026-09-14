@@ -50,7 +50,7 @@ function addValidManualCase(target: ReturnType<typeof fixture>, taskId = "AC-UI-
 describe("generic acceptance-aware manual test delivery", () => {
   it("binds all generic Gherkin scenarios", () => {
     const specification = readFileSync(join(import.meta.dirname, "generic-manual-test-delivery-classification.feature"), "utf8");
-    expect(specification.match(/^\s*Scenario:/gm)).toHaveLength(4);
+    expect(specification.match(/^\s*Scenario:/gm)).toHaveLength(5);
     expect(specification).not.toMatch(/FEAT-\d+|EPIC-\d+|Phase \d+/i);
   });
 
@@ -86,6 +86,14 @@ describe("generic acceptance-aware manual test delivery", () => {
     const model = await buildManualTestDeliveryModel(target.context, target.options);
     expect(model.tests).toHaveLength(1);
     expect(model.coverageMap.find((entry) => entry.sourceId === "AC-DOMAIN-001")?.coverageStatus).toBe("automated");
+  });
+
+  it("does not hide an uncovered criterion behind one valid manual case", async () => {
+    const target = fixture(["AC-UI-001: The owner sees the account panel.", "AC-UI-002: Keyboard navigation preserves focus."]);
+    addValidManualCase(target);
+    const model = await buildManualTestDeliveryModel(target.context, target.options);
+    expect(model.tests).toHaveLength(1);
+    expect(model.applicability).toBe("incomplete");
   });
 
   it("rejects generic placeholder instructions and never reports ready", async () => {

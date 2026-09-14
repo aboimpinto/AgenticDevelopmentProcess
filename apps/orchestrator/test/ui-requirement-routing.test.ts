@@ -27,7 +27,7 @@ describe("UI requirement routing prompt", () => {
   });
 
   it("versions cached UI requirement decisions when routing rules change", () => {
-    expect(orchestratorSource).toContain("ui-requirement-v2-command-refactor-no-ui");
+    expect(orchestratorSource).toContain("ui-requirement-v3-explicit-decision");
     expect(orchestratorSource).toContain("createUiRequirementSourceHash,");
   });
 });

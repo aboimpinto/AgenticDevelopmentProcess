@@ -46,7 +46,7 @@ export interface DetailBladeProps {
   onRefineFeature: (item: WorkItemCard) => void;
   onSelectItem: (itemId: string) => void;
   onStartImplementing: (item: WorkItemCard, autonomous: boolean) => void;
-  onStartDeepDive: (item: WorkItemCard) => void;
+  onStartDeepDive: (item: WorkItemCard, focus?: string) => void;
   onOpenDeepDiveRecovery: (session: import("@hepha/shared").DeepDiveSession, item: WorkItemCard) => void;
   onLinkFeatureToEpic: (
     item: WorkItemCard,
@@ -67,8 +67,8 @@ export interface DetailBladeProps {
   workItems: readonly WorkItemCard[];
   selectedProject: ProjectSummary | null;
   selectedSourceIssue: WorkItemSourceIssue | null;
-  onGenerateManualTestPack: (item: WorkItemCard) => Promise<void>;
-  onReviewManualTestPack: (item: WorkItemCard, packId: string) => Promise<void>;
+  onGenerateManualTestPack: (item: WorkItemCard, packId?: string, guidance?: string) => Promise<void>;
+  onReviewManualTestPack: (item: WorkItemCard, packId: string, testId?: string) => Promise<void>;
   onRecordManualTestResult: (
     item: WorkItemCard,
     packId: string,

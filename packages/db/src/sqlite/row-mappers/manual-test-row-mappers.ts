@@ -19,6 +19,7 @@ export interface ManualTestVerificationPackRow {
 }
 
 export interface ManualTestVerificationReviewRow {
+  reviewed_test_ids_json?: string | null;
   id: string;
   project_id: string;
   card_key: string;
@@ -61,6 +62,7 @@ export function mapManualTestVerificationPackRow(row: ManualTestVerificationPack
 
 export function mapManualTestVerificationReviewRow(row: ManualTestVerificationReviewRow): ManualTestVerificationReviewRecord {
   return {
+    ...(row.reviewed_test_ids_json != null ? { reviewedTestIds: JSON.parse(row.reviewed_test_ids_json) as string[] } : {}),
     id: row.id,
     projectId: row.project_id,
     cardKey: row.card_key,

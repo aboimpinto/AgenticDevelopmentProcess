@@ -20,6 +20,7 @@ import {
 import { renderPackToPdf } from "./pdf-renderer.js";
 import { hasReusablePackArtifacts } from "./current-pack.js";
 import { buildManualTestDeliveryModel, hashManualTestDeliveryModel } from "./delivery-model.js";
+import { prepareSteeredManualCases } from "./steered-pack-preparation.js";
 
 // ---------------------------------------------------------------------------
 // Pack Generation (orchestrator)
@@ -28,6 +29,11 @@ import { buildManualTestDeliveryModel, hashManualTestDeliveryModel } from "./del
 export interface GeneratePackOptions {
   readonly context: ManualTestAdapterContext;
   readonly sourceOptions: SourceDiscoveryOptions;
+  readonly replacePackId?: string;
+  readonly guidance?: string;
+  readonly runPrompt?: (prompt: string) => Promise<string>;
+  /** All user-facing generation requests assess coverage; internal artifact-only calls may omit this. */
+  readonly assessCoverage?: boolean;
 }
 
 export interface GeneratePackResult {
@@ -64,7 +70,9 @@ export async function generatePack(
 
   try {
     // 1. Discover sources
-    const model = await buildManualTestDeliveryModel(context, sourceOptions);
+    let model = await buildManualTestDeliveryModel(context, sourceOptions);
+    const expectedCurrent = await context.store.getCurrentManualTestPack(context.projectId, context.cardKey);
+    if (options.replacePackId && expectedCurrent?.id !== options.replacePackId) throw new Error("The current pack changed. Refresh before regenerating.");
     if (model.manifestEntries.length === 0) {
       return {
         success: false,
@@ -75,6 +83,11 @@ export async function generatePack(
         errors: ["No source items discovered."],
         applicability: "incomplete", manualTestCount: 0, invalidManualTestCount: 0, isReady: false,
       };
+    }
+
+    if (options.assessCoverage || options.replacePackId || options.guidance?.trim()) {
+      await prepareSteeredManualCases({ ...options, model, expectedPackId: expectedCurrent?.id ?? null });
+      model = await buildManualTestDeliveryModel(context, sourceOptions);
     }
 
     // 2. Normalize and create manifest entries
@@ -90,6 +103,9 @@ export async function generatePack(
     );
     if (
       existingCurrentPack
+      && !options.replacePackId
+      && !options.assessCoverage
+      && !options.guidance?.trim()
       && existingCurrentPack.state === "current"
       && existingCurrentPack.supersededAt === null
       && existingCurrentPack.manifestHash === manifestHash
@@ -152,7 +168,8 @@ export async function generatePack(
     // Write manifest
     const manifestJson = JSON.stringify({
       schemaVersion: "hepha-test-delivery/v2",
-      renderingVersion: 7,
+      renderingVersion: 8,
+      guidance: options.guidance?.trim() ?? "",
       entries: manifestEntries,
       classifications: coverageMap,
       manualTests: tests,
@@ -188,6 +205,13 @@ export async function generatePack(
       pdfError = error instanceof Error ? error.message : String(error);
     }
 
+    // Sources can change while PDF rendering is in flight. Never publish a
+    // candidate against a different feature revision or replacement target.
+    const publicationCurrent = await context.store.getCurrentManualTestPack(context.projectId, context.cardKey);
+    if ((publicationCurrent?.id ?? null) !== (expectedCurrent?.id ?? null)
+      || hashManualTestDeliveryModel(await buildManualTestDeliveryModel(context, sourceOptions)) !== manifestHash) {
+      throw new Error("Feature sources or pack changed during generation. Refresh and retry.");
+    }
     // 8. Write current-link.json
     const currentLink = {
       packId,

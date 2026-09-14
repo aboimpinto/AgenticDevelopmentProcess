@@ -9,6 +9,7 @@ export type ManualTestPackDashboardState =
   | "render_failed";
 
 export interface ManualTestPackDashboardStatus {
+  readonly authoringProgress?: { state: "running" | "paused" | "assessed"; completedBatches: number; totalBatches: number; proposedCases: number; message: string };
   readonly state: ManualTestPackDashboardState;
   readonly currentPackId: string | null;
   readonly currentVersion: string | null;
@@ -24,6 +25,8 @@ export interface ManualTestPackDashboardStatus {
   readonly manualTestCount?: number;
   readonly invalidManualTestCount?: number;
   readonly isReady?: boolean;
+  readonly coverageIssues?: readonly string[];
+  readonly manualCases?: readonly { id: string; title: string; preconditions: readonly string[]; steps: readonly string[]; expectedResult: string; application?: string; setupData?: string | null; isReviewed?: boolean; result?: "pass" | "fail" | null }[];
   readonly message: string;
 }
 
@@ -41,6 +44,8 @@ export interface ManualTestVerificationActionInput {
   cardId: string;
   projectId: string;
   packId?: string;
+  /** Optional human guidance for proposing additional manual scenarios. */
+  guidance?: string;
   reviewId?: string;
   testId?: string;
   /** Test result for record-success/record-failure. */

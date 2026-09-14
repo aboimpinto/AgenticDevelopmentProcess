@@ -64,6 +64,17 @@ export interface FeatReadinessResult {
   reasons: FeatReadinessReason[];
 }
 
+export interface FeatArtifactValidationResult {
+  readonly valid: boolean;
+  readonly errors: ReadonlyArray<{
+    readonly code: string;
+    readonly message: string;
+    readonly path: string;
+  }>;
+}
+
+export type FeatArtifactValidator = (folderPath: string) => FeatArtifactValidationResult;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -152,6 +163,7 @@ export function evaluateFeatReadiness(
   _metadataStoreEnabled: boolean,
   hasDesignArtifacts: boolean,
   uiRequirementDecision: FeatureUiRequirementDecision | null = "unknown",
+  artifactValidator?: FeatArtifactValidator,
 ): FeatReadinessResult {
   // Readiness describes entry into preparation/implementation. A terminal
   // work item is intentionally not ready, but it also has no recoverable
@@ -188,16 +200,18 @@ export function evaluateFeatReadiness(
     return { ready: reasons.length === 0, reasons };
   }
 
-  // 1. Required document checks. A V2/V3 execution contract is a live
-  // machine boundary: validate it on every readiness evaluation rather than
-  // trusting a prior scanner projection. Legacy Markdown-only features retain
-  // their compatibility projection unless that projection already reports a
-  // missing artifact.
+  // 1. Required document checks. An action-specific validator is authoritative
+  // even when the producer's artifact policy reports complete: per-action
+  // recipe settings may select a different consumer contract. Without one,
+  // legacy Markdown-only features retain their compatibility projection unless
+  // it reports a missing artifact. A V2/V3 execution contract is always live.
   const hasExecutionContract = existsSync(resolve(item.folderPath, PHASE_EXECUTION_CONTRACT_FILE));
-  if (!hasRefinementArtifacts || hasExecutionContract) {
-    const artifactResult = item.stateFolder === "03_IN_PROGRESS"
-      ? validateImplementationContinuationArtifacts(item.folderPath)
-      : validateRefineArtifacts(item.folderPath);
+  if (artifactValidator || !hasRefinementArtifacts || hasExecutionContract) {
+    const artifactResult = artifactValidator
+      ? artifactValidator(item.folderPath)
+      : item.stateFolder === "03_IN_PROGRESS"
+        ? validateImplementationContinuationArtifacts(item.folderPath)
+        : validateRefineArtifacts(item.folderPath);
     if (!artifactResult.valid) {
       for (const err of artifactResult.errors) {
         reasons.push({
@@ -278,8 +292,16 @@ export function evaluateStartImplementing(
   metadataStoreEnabled: boolean,
   hasDesignArtifacts: boolean,
   uiRequirementDecision: FeatureUiRequirementDecision | null = "unknown",
+  artifactValidator?: FeatArtifactValidator,
 ): FeatReadinessResult {
-  const result = evaluateFeatReadiness(item, validation, metadataStoreEnabled, hasDesignArtifacts, uiRequirementDecision);
+  const result = evaluateFeatReadiness(
+    item,
+    validation,
+    metadataStoreEnabled,
+    hasDesignArtifacts,
+    uiRequirementDecision,
+    artifactValidator,
+  );
 
   const manualBootstrap = manualBootstrapReason(item);
   if (manualBootstrap) {
@@ -320,12 +342,20 @@ export function evaluateContinueImplementing(
   metadataStoreEnabled: boolean,
   _hasDesignArtifacts: boolean,
   _uiRequirementDecision: FeatureUiRequirementDecision | null = "unknown",
+  artifactValidator?: FeatArtifactValidator,
 ): FeatReadinessResult {
   // UI classification and design artifacts are prerequisites for *starting*
   // implementation. Once a FEAT has entered IN_PROGRESS, they must not strand
   // a partially completed phase: continuation still enforces refinement,
   // validation, Deep-Dive, and folder-state safety checks below.
-  const baseResult = evaluateFeatReadiness(item, validation, metadataStoreEnabled, false, "no_ui");
+  const baseResult = evaluateFeatReadiness(
+    item,
+    validation,
+    metadataStoreEnabled,
+    false,
+    "no_ui",
+    artifactValidator,
+  );
   const result: FeatReadinessResult = {
     reasons: baseResult.reasons,
     ready: baseResult.ready,

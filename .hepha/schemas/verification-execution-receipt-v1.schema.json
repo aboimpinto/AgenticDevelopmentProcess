@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feature",
+    "checks"
+  ],
+  "properties": {
+    "feature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "checks": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "command",
+          "cwd",
+          "success",
+          "exitCode",
+          "tests",
+          "passed",
+          "failed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[\\w.-]+$",
+            "maxLength": 120
+          },
+          "kind": {
+            "enum": [
+              "test",
+              "static",
+              "preparation",
+              "discovery"
+            ]
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "testedRevision": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "exitCode": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "passed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "diagnostic": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "reports": {
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10000
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{64}$"
+                }
+              }
+            }
+          },
+          "reportPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "reportSha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "extraReportPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "extraReportSha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "logPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "logSha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "artifacts": {
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10000
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{64}$"
+                }
+              }
+            },
+            "description": "Checksum-bound supporting artifacts such as build provenance. Never counted as executed tests."
+          }
+        },
+        "dependentRequired": {
+          "reportPath": [
+            "reportSha256"
+          ],
+          "extraReportPath": [
+            "extraReportSha256"
+          ],
+          "logPath": [
+            "logSha256"
+          ]
+        },
+        "allOf": [
+          {
+            "not": {
+              "required": [
+                "reports",
+                "reportPath"
+              ],
+              "properties": {
+                "reports": {},
+                "reportPath": {}
+              }
+            }
+          },
+          {
+            "not": {
+              "required": [
+                "reports",
+                "extraReportPath"
+              ],
+              "properties": {
+                "reports": {},
+                "extraReportPath": {}
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

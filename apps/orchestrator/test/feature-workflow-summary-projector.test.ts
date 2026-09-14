@@ -72,6 +72,19 @@ function build(
 }
 
 describe("feature workflow summary projector", () => {
+  it("preserves the recovery step instead of replacing it with the current phase label", () => {
+    const metadata = { workflowCommand: "continue-implementing", workflowCurrentNodeId: "implementation-recovery", workflowCurrentStep: "Recovering implementation lifecycle state",
+      workflowRunId: "recovery-run", workflowStartedAt: "2031-01-01", workflowStatus: "running" } as StoredCardMetadata;
+    expect(build(harness().projector, feature, metadata)?.activeRun?.currentStep).toBe("Recovering implementation lifecycle state");
+  });
+  it.each(["native-hepha", "devcycle-mcp"] as const)("requires current UI classification and design before %s refinement", (source) => {
+    const item = { ...feature, stateFolder: "01_SUBMITTED" } as WorkItemCard;
+    const metadata = { uiRequirementDecision: "requires_ui", uiRequirementSourceHash: "classifier:document" } as StoredCardMetadata;
+    const current = harness({ hasCompleteRefinementArtifacts: () => false, recipeSourceFor: () => source });
+    expect(build(current.projector, item, metadata)).toMatchObject({ canRefineFeature: false, canCreateUiRequirements: true });
+    expect(build(current.projector, item, { ...metadata, uiRequirementSourceHash: "stale" })).toMatchObject({ canRefineFeature: false, canCreateUiRequirements: false, uiRequirementDecision: "unknown" });
+    expect(build(harness({ hasCompleteRefinementArtifacts: () => false, artifactExists: () => true, recipeSourceFor: () => source }).projector, item, metadata)).toMatchObject({ canRefineFeature: true, canCreateUiRequirements: false });
+  });
   it("returns no EPIC workflow projection without persisted run metadata", () => {
     const epic = { ...feature, kind: "epic" } as WorkItemCard;
     expect(build(harness().projector, epic)).toBeNull();
@@ -96,7 +109,7 @@ describe("feature workflow summary projector", () => {
     expect(buildProgress).toHaveBeenCalledOnce();
   });
 
-  it("exposes MCP compatibility actions from lifecycle folders without native Hepha artifact gates", () => {
+  it("uses provider-selected readiness gates for MCP compatibility actions", () => {
     const recipeSourceFor = () => "devcycle-mcp" as const;
     const staleValidation = {
       ...validation,
@@ -110,14 +123,14 @@ describe("feature workflow summary projector", () => {
       hasCompleteRefinementArtifacts: () => false,
       recipeSourceFor,
     }).projector, submitted, null, staleValidation)).toMatchObject({
-      canCreateUiRequirements: true,
-      canRefineFeature: true,
+      canCreateUiRequirements: false,
+      canRefineFeature: false,
     });
     expect(build(harness({
       evaluateReadiness: () => ({ ready: false, reasons: [] }),
       hasCompleteRefinementArtifacts: () => false,
       recipeSourceFor,
-    }).projector, ready, null, staleValidation)?.canStartImplementing).toBe(true);
+    }).projector, ready, null, staleValidation)?.canStartImplementing).toBe(false);
     expect(build(harness({
       hasCompleteRefinementArtifacts: () => true,
       recipeSourceFor,
@@ -139,8 +152,11 @@ describe("feature workflow summary projector", () => {
       hasCompleteContinuationArtifacts: () => false,
       recipeSourceFor,
     }).projector, feature, null, staleValidation)).toMatchObject({
-      canContinueImplementing: true,
-      readiness: { ready: true, reasons: [] },
+      canContinueImplementing: false,
+      readiness: {
+        ready: false,
+        reasons: [expect.objectContaining({ code: "invalid_refine_artifacts" })],
+      },
     });
   });
 

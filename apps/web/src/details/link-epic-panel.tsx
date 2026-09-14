@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { WorkItemCard } from "@hepha/shared";
+import { isCompletionReadinessRunning } from "../workflow/completion-recovery-activity.js";
 
 export function LinkEpicPanel({
   item,
@@ -16,6 +17,7 @@ export function LinkEpicPanel({
   onLinkFeatureToEpic: (item: WorkItemCard, operation: "link" | "relink" | "unlink", targetEpicCardId?: string) => void;
 }) {
   const [selectedEpicId, setSelectedEpicId] = useState("");
+  const disabled = isLinkingEpic || isCompletionReadinessRunning(item);
 
   const currentParentEpicIds = item.linkedEpics.length > 0
     ? item.linkedEpics.map((rel) => rel.externalId)
@@ -45,7 +47,7 @@ export function LinkEpicPanel({
           <span style={{ fontSize: "0.85em", color: "#666" }}>Target EPIC ID:</span>
           <input
             className="field-input"
-            disabled={isLinkingEpic}
+            disabled={disabled}
             onChange={(event) => setSelectedEpicId(event.target.value)}
             placeholder="e.g. EPIC-004"
             style={{ marginTop: "4px", width: "100%" }}
@@ -57,7 +59,7 @@ export function LinkEpicPanel({
         <div className="feature-workflow-button-row" style={{ marginTop: "8px" }}>
           <button
             className="mini-button validation-action"
-            disabled={isLinkingEpic || !selectedEpicId.trim()}
+            disabled={disabled || !selectedEpicId.trim()}
             onClick={() => onLinkFeatureToEpic(item, "link", selectedEpicId.trim())}
             title="Link this FEAT to the selected EPIC"
             type="button"
@@ -67,7 +69,7 @@ export function LinkEpicPanel({
           </button>
           <button
             className="mini-button validation-action"
-            disabled={isLinkingEpic || !selectedEpicId.trim() || !hasParent}
+            disabled={disabled || !selectedEpicId.trim() || !hasParent}
             onClick={() => onLinkFeatureToEpic(item, "relink", selectedEpicId.trim())}
             title="Relink this FEAT from its current EPIC to the selected EPIC"
             type="button"
@@ -77,7 +79,7 @@ export function LinkEpicPanel({
           </button>
           <button
             className="mini-button validation-action"
-            disabled={isLinkingEpic || !hasParent}
+            disabled={disabled || !hasParent}
             onClick={() => onLinkFeatureToEpic(item, "unlink")}
             title="Unlink this FEAT from its parent EPIC"
             type="button"

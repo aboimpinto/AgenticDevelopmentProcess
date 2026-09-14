@@ -79,7 +79,25 @@ describe("DevCycle MCP compatibility request", () => {
     expect(prompt).toContain("Do not modify product implementation repositories during refinement");
     expect(prompt).toContain("AUTOMATABLE or MANUAL_TEST_REQUIRED");
     expect(prompt).toContain("ManualTestObligations.json");
+    expect(prompt).toContain("[contract:<taskId>]");
+    expect(prompt).toContain("numbered `### Task` heading or status prose is descriptive and is never task identity");
+    expect(prompt).toContain("validate the complete provider-owned refinement set as one contract");
     expect(prompt).toContain("This test cannot be automated and the user needs to test it manually.");
+  });
+
+  it("includes deterministic provider diagnostics when repairing existing refinement artifacts", () => {
+    const prompt = renderDevCycleMcpCompatibilityPrompt(createDevCycleMcpCompatibilityRequest({
+      autonomous: true,
+      featureId: "FEAT-R",
+      featurePath: "/memory/feature-r",
+      operation: "refineFeature",
+    }), [
+      "[MANUAL_TEST_TRACEABILITY_MISMATCH] ManualTestObligations.json: taskId must bind exactly once",
+    ]);
+
+    expect(prompt).toContain("HEPHA found these deterministic validation errors");
+    expect(prompt).toContain("[MANUAL_TEST_TRACEABILITY_MISMATCH] ManualTestObligations.json");
+    expect(prompt).toContain("Repair every item before reporting COMPLETED");
   });
 
   it("gives autonomous continuation delegated authority instead of human approval stops", () => {

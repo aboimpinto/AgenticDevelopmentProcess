@@ -1,7 +1,9 @@
+import { isUnresolvedQualityGate } from "@hepha/shared";
 import type { WorkItemCard, FeatureImplementationEvidenceSummary, FeatureFindingSummary, FeatureWorkflowRunSummary } from "@hepha/shared";
 import { getCompletedFeatureTimestamp } from "./board-types.js";
 import { formatDateTime } from "./board-helpers.js";
 import { AlertTriangle, BadgeCheck, Clock3, Loader2 } from "lucide-react";
+import { isCompletionReadinessRunning } from "../workflow/completion-recovery-activity.js";
 
 // ─── Helper functions ─────────────────────────────────────────────────────
 
@@ -9,7 +11,7 @@ function countMissingQualityGates(phases: FeatureImplementationEvidenceSummary["
   return phases.reduce(
     (count, phase) =>
       isResolvedPhaseQualitySummary(phase)
-        ? count + phase.gates.filter((gate) => gate.status === "missing").length
+        ? count + phase.gates.filter(isUnresolvedQualityGate).length
         : count,
     0,
   );
@@ -250,6 +252,15 @@ function getValidationBadges(item: WorkItemCard): ValidationBadge[] {
   const implementationCompleted = Boolean(workflow?.implementationCompleted);
   const recoveredWorkflowOutcome = getSupersededWorkflowRecoveryOutcome(item, workflow, implementationCompleted);
   const missingQualityGateCount = countMissingQualityGates(item.implementationEvidence?.phaseQualityGates ?? []);
+  const completionQualityCount = (item.completionRecovery?.phaseGaps?.filter(gap => gap.kind !== "coverage_confirmation").length ?? 0) + missingQualityGateCount;
+  const reviewOnly = !completionQualityCount && !!item.completionRecovery?.phaseGaps?.some(gap => gap.kind === "coverage_confirmation")
+    && item.completionRecovery.blockers.every(blocker => blocker.id.startsWith("phase-recovery-"));
+  if (item.completionRecovery && !item.completionRecovery.ready && !activeRun && !isCompletionReadinessRunning(item)) badges.push({
+    icon: AlertTriangle,
+    label: completionQualityCount ? `${completionQualityCount} quality gap${completionQualityCount === 1 ? "" : "s"}` : reviewOnly ? "Coverage review pending" : "Completion blocked",
+    title: reviewOnly ? "Review the existing coverage links in the phase. No test repair is required." : "Open the affected phase to inspect and repair its quality gaps. Completion Readiness summarizes the remaining checks.",
+    tone: reviewOnly ? "warning" : "blocked",
+  });
 
   const openFindings = workflow?.findings.filter((finding) => finding.status !== "closed") ?? [];
   const runningFinding = openFindings.find((finding) => finding.status === "agent_running") ?? null;
@@ -305,7 +316,7 @@ function getValidationBadges(item: WorkItemCard): ValidationBadge[] {
     });
   }
 
-  if (!activeRun && implementationCompleted && missingQualityGateCount > 0) {
+  if (!activeRun && implementationCompleted && missingQualityGateCount > 0 && !item.completionRecovery) {
     badges.push({
       icon: AlertTriangle,
       label: `${missingQualityGateCount} quality gap${missingQualityGateCount === 1 ? "" : "s"}`,

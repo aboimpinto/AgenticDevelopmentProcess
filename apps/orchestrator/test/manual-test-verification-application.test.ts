@@ -24,7 +24,7 @@ function fixture(overrides: {
       message: "generated", errors: [], applicability: overrides.generateApplicability ?? "applicable",
       manualTestCount: 1, invalidManualTestCount: 0, isReady: true,
     })),
-    queryPackStatus: vi.fn(async () => ({ state: "current" as const, currentPackId: "pack", currentVersion: "v1", hasMarkdown: true, hasPdf: true, isStale: false, isReviewed: true, currentReviewId: "review", failedCount: 0, passedCount: 2, hasResults: true, message: "current" })),
+    queryPackStatus: vi.fn(async () => ({ state: "current" as const, isReady: true, currentPackId: "pack", currentVersion: "v1", hasMarkdown: true, hasPdf: true, isStale: false, isReviewed: true, currentReviewId: "review", failedCount: 0, passedCount: 2, hasResults: true, message: "current" })),
     recordAllPasses: vi.fn(async () => ({ success: true, resultId: "result", findingId: null, message: "passed", errors: [] })),
     recordPackReview: vi.fn(async () => ({ success: true, reviewId: "review", message: "reviewed", errors: [] })),
     recordTestResult: vi.fn(async () => ({ success: true, resultId: "result", findingId: "finding", message: "failed", errors: [] })),
@@ -47,6 +47,41 @@ function fixture(overrides: {
 }
 
 describe("manual-test verification application", () => {
+  it("records all current manual cases while coverage is unresolved without starting completion", async () => {
+    const target = fixture();
+    target.operations.queryPackStatus.mockResolvedValue({ ...(await target.operations.queryPackStatus()), isReady: false,
+      manualCases: [{ id: "MT-001", isReviewed: true, result: "pass" }] } as never);
+    expect((await target.application.review({ projectId: "project", cardId: "card", packId: "pack" })).success).toBe(true);
+    const result = await target.application.recordResult({ projectId: "project", cardId: "card", packId: "pack", reviewId: "review" }, "pass");
+    expect(result.success).toBe(true);
+    expect(target.operations.recordAllPasses).toHaveBeenCalledOnce();
+    expect(target.metadataStore.recordFeatureHumanReview).not.toHaveBeenCalled();
+    expect(target.maybeStartCompletion).not.toHaveBeenCalled();
+  });
+  it("records an individual pass without bulk acceptance when coverage is incomplete", async () => {
+    const target = fixture();
+    target.operations.queryPackStatus.mockResolvedValue({ ...(await target.operations.queryPackStatus()), isReady: false, manualCases: [{ id: "MT-001" }] } as never);
+    const result = await target.application.recordResult({ projectId: "project", cardId: "card", packId: "pack", reviewId: "review", testId: "MT-001" }, "pass");
+    expect(result.success).toBe(true);
+    expect(target.operations.recordTestResult).toHaveBeenCalledWith(expect.objectContaining({ testId: "MT-001", result: "pass" }));
+    expect(target.operations.recordAllPasses).not.toHaveBeenCalled();
+    expect(target.metadataStore.recordFeatureHumanReview).not.toHaveBeenCalled();
+    expect(target.maybeStartCompletion).not.toHaveBeenCalled();
+  });
+  it("forwards steering and exact replacement identity without accepting manual verification", async () => {
+    const target = fixture();
+    await target.application.generate({ projectId: "project", cardId: "card", packId: "pack", guidance: "Include error recovery" });
+    expect(target.operations.generatePack).toHaveBeenCalledWith(expect.objectContaining({ replacePackId: "pack", guidance: "Include error recovery" }));
+    expect(target.metadataStore.recordFeatureHumanReview).not.toHaveBeenCalled();
+  });
+  it("refuses stale pack results without persisting acceptance", async () => {
+    const target = fixture();
+    target.operations.queryPackStatus.mockResolvedValueOnce({ ...(await target.operations.queryPackStatus()), isStale: true });
+    const result = await target.application.recordResult({ projectId: "project", cardId: "card", packId: "pack", reviewId: "review" }, "pass");
+    expect(result.success).toBe(false);
+    expect(target.operations.recordAllPasses).not.toHaveBeenCalled();
+    expect(target.metadataStore.recordFeatureHumanReview).not.toHaveBeenCalled();
+  });
   it("returns typed target errors without invoking pack operations", async () => {
     const missing = fixture({ project: null });
     await expect(missing.application.generate({ projectId: "missing", cardId: "card" })).resolves.toEqual(expect.objectContaining({ success: false, message: "Project not found." }));
@@ -66,6 +101,7 @@ describe("manual-test verification application", () => {
     expect(result).toEqual(expect.objectContaining({ success: true, packId: "pack", state: "current" }));
     expect(target.operations.generatePack).toHaveBeenCalledWith(expect.objectContaining({
       sourceOptions: expect.objectContaining({ featDescriptionPath: "/feature.md", epicDescriptionPath: "/epic.md" }),
+      assessCoverage: true,
     }));
     expect(target.notifyChanged).toHaveBeenCalledWith("project", "manual-test-pack.generated", "WORK-X");
   });

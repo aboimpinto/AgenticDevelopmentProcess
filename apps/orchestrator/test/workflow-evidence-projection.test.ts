@@ -16,7 +16,8 @@ afterEach(() => {
 
 const verification = {
   blockedReason: null,
-  checks: [],
+  checks: [{ checkId: "check-ordering", intent: "test", command: ["node", "--test"], workingDirectory: ".",
+    outcome: "passed", exitCode: 0, required: true, outputSummary: "1 passed", description: "Ordering", duration: 1, startedAt: "start" }],
   duration: 1,
   failedRequiredChecks: [],
   persistenceWarning: null,

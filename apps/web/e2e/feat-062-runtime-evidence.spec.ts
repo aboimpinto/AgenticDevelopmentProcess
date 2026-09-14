@@ -8,6 +8,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test";
+import { isRuntimeFeatureEvidenceV1 } from "@hepha/shared";
 import type {
   FeatureWorkflowSummary,
   RouteIdentityV1,
@@ -150,8 +151,12 @@ function featureSummary(overrides: Record<string, Partial<RuntimePhaseEvidenceSu
     summary("contract-runtime", 3, "Runtime execution"),
     summary("contract-terminal", 4, "Terminal execution"),
     summary("contract-recovery", 5, "Recovery execution"),
-  ].map((value) => ({ ...value, ...overrides[value.phaseExecutionContractId!] }));
-  return { schemaVersion: "runtime-execution/v1", projectId: "hepha", cardKey: CARD_KEY, phases: values };
+  ].map((value) => summary(value.phaseExecutionContractId!, value.phaseNumber!, value.phaseTitle, { ...value, ...overrides[value.phaseExecutionContractId!],
+    executionModes: (overrides[value.phaseExecutionContractId!]?.invocationCount ?? 0) > 0 ? ["orchestrated"] : [],
+  }));
+  const result = { schemaVersion: "runtime-execution/v1" as const, projectId: "hepha", cardKey: CARD_KEY, phases: values };
+  expect(isRuntimeFeatureEvidenceV1(result), "The runtime fixture must satisfy the same aggregate contract as the server").toBe(true);
+  return result;
 }
 
 function attempt(

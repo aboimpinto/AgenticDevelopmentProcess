@@ -1,6 +1,6 @@
 /** Protects durable workflow fields from free-form worker edits. */
 export function renderPhaseMachineOwnedStateRule() {
-  return "- Do not edit reserved machine fields: `**Status:**`, FeatureTasks.md Status cells, the entire Phase Task Ledger, `## Hepha Task State`, or any Quality Gate Evidence cell. Hepha writes those deterministically from durable workflow events. Return gate evidence in your worker result; Hepha persists it after validating the handoff. You may update normal narrative/traceability sections only.";
+  return "- Do not edit reserved machine fields: `**Status:**`, FeatureTasks.md Status cells, the entire Phase Task Ledger, `## Hepha Task State`, or any Quality Gate Evidence cell. Hepha writes those deterministically from durable workflow events. Return gate evidence in your worker result; Hepha persists it after validating the handoff. You may update normal narrative/traceability sections. The developer may also revise future gate applicability with a recorded scope reason: synchronize the phase gate contract, native execution contract and matching not-started gate ledger rows. Preserve active/completed task state and machine-owned evidence cells; return applicability evidence for HEPHA to project.";
 }
 
 /** Defines the only accepted decision vocabulary and physical Markdown row shape. */

@@ -48,6 +48,9 @@ export class FeatureCompletionApplication {
     }
 
     if (!this.#dependencies.shouldStart(currentFeature)) {
+      if (currentFeature.completionRecovery && !currentFeature.completionRecovery.ready) throw new Error(
+        `Complete Feature is blocked. Open Completion Readiness for recovery actions: ${currentFeature.completionRecovery.blockers.map(blocker => blocker.message).join("; ")}`,
+      );
       const missingQualityGateCount = this.#dependencies.countMissingQualityGates(currentFeature);
       if (missingQualityGateCount > 0) {
         throw new Error(
@@ -55,7 +58,7 @@ export class FeatureCompletionApplication {
         );
       }
       throw new Error(
-        "Complete Feature is available only after all phases are resolved, user code review and manual tests are recorded, all findings are closed, the Human Review Findings phase is resolved, and phase quality gates have no missing decisions.",
+        "Complete Feature is available only after all phases are resolved, user code review and manual test acknowledgement are recorded, all findings are closed, the Human Review Findings phase is resolved, and phase quality gates have no missing decisions.",
       );
     }
 

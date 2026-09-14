@@ -297,9 +297,9 @@ export function validateManualTestCase(test: ManualTestCase): string[] {
   if (test.steps.length === 0) errors.push("At least one executable action is required.");
   test.steps.forEach((value, index) => check(`Step ${index + 1}`, value));
   check("Expected result", test.expectedResult);
-  if (!/^(?:open|launch|start|connect|sign in|log in|select|click|tap|enter|submit|run)\b/i.test(test.steps[0] ?? "")) {
-    errors.push("The first step must name a concrete action the tester can perform.");
-  }
+  // Executability is established by the case's application, prerequisites,
+  // actions and observable outcome together, then human review. A verb whitelist
+  // cannot distinguish a useful instruction from a vague one (or cover languages).
   return errors;
 }
 
@@ -485,14 +485,14 @@ export function buildPackStatus(options: {
   const reviewMatchesCurrentPack = currentPack !== null
     && currentReview !== null
     && currentReview.packId === currentPack.id;
-  const isReviewed = reviewMatchesCurrentPack && currentReview.state === "current";
+  const isReviewed = reviewMatchesCurrentPack && currentReview.state === "current" && currentReview.reviewedTestIds == null;
   const reviewIsValid = isReviewValidForPack(
     currentReview?.state ?? "invalidated",
     packState,
   );
 
-  const failedCount = testResults.filter((r) => r.result === "fail").length;
-  const passedCount = testResults.filter((r) => r.result === "pass").length;
+  const failedCount = new Set(testResults.filter((r) => r.result === "fail").map((r) => r.testId)).size;
+  const passedCount = new Set(testResults.filter((r) => r.result === "pass").map((r) => r.testId)).size;
   const hasResults = testResults.length > 0;
   const applicability = options.applicability ?? "incomplete";
   const manualTestCount = options.manualTestCount ?? 0;
@@ -516,6 +516,7 @@ export function buildPackStatus(options: {
     reviewIsValid,
     hasCurrentPack,
     failedCount,
+    passedCount,
     hasResults,
     allPhasesResolved,
     applicability,
@@ -555,6 +556,7 @@ function buildStatusMessage(options: {
   reviewIsValid: boolean;
   hasCurrentPack: boolean;
   failedCount: number;
+  passedCount: number;
   hasResults: boolean;
   allPhasesResolved: boolean;
   applicability: "applicable" | "not_applicable" | "incomplete";
@@ -589,9 +591,12 @@ function buildStatusMessage(options: {
   }
 
   if (applicability === "incomplete") {
-    return invalidManualTestCount > 0
-      ? `Manual test package is incomplete: ${invalidManualTestCount} invalid case definition(s) were rejected.`
-      : "Manual test package is incomplete: one or more criteria are uncovered and no executable manual case exists.";
+    const caseSummary = manualTestCount > 0
+      ? `${manualTestCount} executable manual case(s) exist.`
+      : "No executable manual cases are available yet.";
+    return `Manual test package is incomplete: ${caseSummary} ${invalidManualTestCount > 0
+      ? `${invalidManualTestCount} case-definition or prerequisite issue(s) remain unresolved.`
+      : "Acceptance coverage or stored pack verification remains unresolved."}`;
   }
 
   if (manualTestCount === 0) {
@@ -611,7 +616,9 @@ function buildStatusMessage(options: {
   }
 
   if (hasResults && failedCount === 0) {
-    return "Manual tests recorded: all passing. Feature is eligible for completion.";
+    return options.passedCount >= manualTestCount && manualTestCount > 0
+      ? "All manual cases have passing results; remaining feature gates still apply."
+      : "Some manual cases have results; execute and record the remaining cases before completion.";
   }
 
   return "The verification pack is current and reviewed. Record manual test results.";

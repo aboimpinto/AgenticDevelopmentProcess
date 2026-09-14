@@ -1,3 +1,5 @@
+import { completionSourceOptions } from "./completion-recovery-context.js";
+import { captureImplementationPlan } from "../../manual-test-verification/accepted-feature-scope.js";
 import type { CardMetadataStore } from "@hepha/db";
 import type { FeatureWorkflowActionInput, FeatureWorkflowActionResponse, ProjectSummary, WorkItemCard } from "@hepha/shared";
 import type { StoredProject } from "../../projects/stored-project.js";
@@ -103,6 +105,7 @@ export class StartImplementationApplication {
     const previousFailureBrief = this.dependencies.resolvePreviousFailure(feature);
     const forcedRecoveryPhaseNumber = this.dependencies.findFailurePhase(previousFailureBrief ?? "");
     await this.dependencies.seedManualTestSkips({ cardKey, feature, project, runId });
+    captureImplementationPlan(feature.folderPath, feature.externalId, completionSourceOptions(feature, await this.dependencies.scanProject(project)), true);
     await this.dependencies.metadataStore.recordFeatureWorkflowRun({
       cardKey, command: "start-implementing", currentNodeId: "create-branch",
       currentStep: `Creating branch ${branchName}`, projectId: project.id, runId, status: "running",

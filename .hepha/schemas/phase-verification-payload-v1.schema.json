@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Host-produced phase verification payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["phaseId", "role", "status", "checks"],
+  "properties": {
+    "phaseId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "role": { "enum": ["entry_gate", "planning", "implementation", "evidence_only", "integration", "final_checkpoint"] },
+    "status": { "enum": ["passed", "failed", "blocked", "not_applicable"] },
+    "reason": { "type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 16384 },
+    "checks": {
+      "type": "array", "maxItems": 10000,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "intent", "required", "outcome", "command", "cwd", "exitCode", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "intent": { "enum": ["build", "test", "lint", "coverage"] },
+          "required": { "type": "boolean" },
+          "outcome": { "enum": ["passed", "advisory", "coverage-unavailable", "failed", "timed-out", "policy-blocked", "skipped", "zero-selection"] },
+          "command": { "type": "array", "minItems": 1, "maxItems": 256, "items": { "type": "string", "minLength": 1 } },
+          "cwd": { "type": "string", "minLength": 1 },
+          "exitCode": { "type": ["integer", "null"] },
+          "evidence": { "type": "string", "maxLength": 131072 },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "enum": ["not_applicable", "blocked", "failed"] } } },
+      "then": { "properties": { "reason": {} }, "required": ["reason"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "not_applicable" } } },
+      "then": { "properties": { "checks": { "type": "array", "maxItems": 0 } } }
+    }
+  ]
+}

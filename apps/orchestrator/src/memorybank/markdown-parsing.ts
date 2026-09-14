@@ -58,7 +58,8 @@ export function extractMarkdownField(markdown: string, labels: readonly string[]
 
     const tableLine = markdown
       .split(/\r?\n/)
-      .find((line) => new RegExp(`\\|\\s*\\*{0,2}${escapedLabel}\\*{0,2}\\s*\\|`, "i").test(line));
+      .find((line, index, lines) => !isMarkdownTableSeparator(lines[index + 1] ?? "")
+        && new RegExp(`\\|\\s*\\*{0,2}${escapedLabel}\\*{0,2}\\s*\\|`, "i").test(line));
     if (!tableLine) continue;
 
     const cells = tableLine
@@ -69,4 +70,10 @@ export function extractMarkdownField(markdown: string, labels: readonly string[]
     if (labelIndex >= 0 && cells[labelIndex + 1]) return cells[labelIndex + 1];
   }
   return null;
+}
+
+/** A column label is not a field value. Recognise aligned Markdown headers too. */
+export function isMarkdownTableSeparator(line: string): boolean {
+  const cells = line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|");
+  return cells.length >= 2 && cells.every(cell => /^\s*:?-{3,}:?\s*$/.test(cell));
 }

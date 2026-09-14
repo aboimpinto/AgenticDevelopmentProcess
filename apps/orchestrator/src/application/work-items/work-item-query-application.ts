@@ -22,6 +22,7 @@ export interface WorkItemDecorationInput {
 }
 
 export interface WorkItemQueryDependencies {
+  readonly enrich?: (project: StoredProject, items: WorkItemCard[]) => Promise<WorkItemCard[]>;
   readonly decorate: (input: WorkItemDecorationInput) => WorkItemCard;
   readonly hydrateRelations: (items: WorkItemCard[]) => WorkItemCard[];
   readonly metadataStore: Pick<
@@ -88,9 +89,10 @@ export class WorkItemQueryApplication {
       }),
     );
 
+    const enrichedItems = this.#dependencies.enrich ? await this.#dependencies.enrich(project, items) : items;
     return {
       ...scannedResult,
-      items: items.sort((left, right) => {
+      items: enrichedItems.sort((left, right) => {
         const folderComparison =
           this.#dependencies.stateFolders.indexOf(left.stateFolder) -
           this.#dependencies.stateFolders.indexOf(right.stateFolder);

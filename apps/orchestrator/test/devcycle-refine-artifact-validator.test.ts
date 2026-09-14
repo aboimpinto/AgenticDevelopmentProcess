@@ -56,6 +56,49 @@ function createFixture() {
 }
 
 describe("DevCycle refine artifact validator", () => {
+  it("reads relocated feature and phase metadata after introductory sections without rewriting artifacts", () => {
+    const root = createFixture();
+    const feature = resolve(root, "FeatureTasks.md");
+    writeFileSync(feature, readFileSync(feature, "utf8").replace("**Status**: READY_TO_DEVELOP", "## Applicability notes\n\nIndependent gates are declared below.\n\n**Feature ID**: WORK\n**Status**: IN_PROGRESS"));
+    for (let phase = 0; phase <= 8; phase++) {
+      const path = resolve(root, "Phases", `phase-${phase}-example.md`);
+      writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: PENDING", "## Verification contract\n\n```json\n{\"needTestCoverage\":false}\n```\n\n**Feature**: WORK\n**Status**: COMPLETED"));
+    }
+    writeFileSync(feature, readFileSync(feature, "utf8").replaceAll("| PENDING |", "| COMPLETED |"));
+    const before = readFileSync(feature, "utf8");
+    expect(validateDevCycleImplementationArtifacts(root)).toEqual({ valid: true, errors: [] });
+    expect(readFileSync(feature, "utf8")).toBe(before);
+  });
+  it.each(["IN_PROGRESS (all phases accepted; awaiting human checks)", "03_IN_PROGRESS (handoff pending)"])("accepts an annotated lifecycle header without rewriting it: %s", status => {
+    const root = createFixture();
+    const path = resolve(root, "FeatureTasks.md");
+    const document = readFileSync(path, "utf8").replace("**Status**: READY_TO_DEVELOP", `**Status**: ${status}`);
+    writeFileSync(path, document);
+    expect(validateDevCycleImplementationArtifacts(root)).toEqual({ valid: true, errors: [] });
+    expect(readFileSync(path, "utf8")).toBe(document);
+  });
+
+  it.each(["COMPLETED (all phases accepted)", "IN_PROGRESS / COMPLETED", "IN_PROGRESS unexpected text", "UNKNOWN (IN_PROGRESS)"])("does not infer an admitted status from invalid or conflicting metadata: %s", status => {
+    const root = createFixture();
+    const path = resolve(root, "FeatureTasks.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: READY_TO_DEVELOP", `**Status**: ${status}`));
+    expect(validateDevCycleImplementationArtifacts(root).errors).toContainEqual(expect.objectContaining({ code: "INVALID_FEATURE_STATUS" }));
+  });
+
+  it.each(["02_READY_TO_DEVELOP", "READY_TO_DEVELOP"])("accepts only declared equivalent refinement status %s", status => {
+    const root = createFixture();
+    const path = resolve(root, "FeatureTasks.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: READY_TO_DEVELOP", `**Status**: ${status}`));
+    expect(validateDevCycleRefineArtifacts(root)).toEqual({ valid: true, errors: [] });
+  });
+
+  it("rejects a valid task status when the feature header itself is invalid", () => {
+    const root = createFixture();
+    const path = resolve(root, "FeatureTasks.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: READY_TO_DEVELOP", "**Status**: UNKNOWN") + "\n## Historical note\n**Status**: READY_TO_DEVELOP\n");
+    expect(validateDevCycleRefineArtifacts(root).errors).toContainEqual(expect.objectContaining({ code: "INVALID_FEATURE_STATUS" }));
+  });
+
   it("accepts the legacy DevCycle phase plan without native Hepha V3 artifacts", () => {
     const result = validateDevCycleRefineArtifacts(createFixture());
 
@@ -109,6 +152,23 @@ describe("DevCycle refine artifact validator", () => {
         path: "Phases/phase-1-example.md",
       })],
     });
+  });
+
+  it("does not mistake prohibitions against human gates for deferred human decisions", () => {
+    const root = createFixture();
+    writeFileSync(resolve(root, "Phases", "phase-1-example.md"), [
+      "# Phase 1: Example",
+      "",
+      "**Status**: PENDING",
+      "",
+      "### Task 1.1: Preserve autonomous acceptance",
+      "",
+      "No item may defer a product decision to a user, owner, or manual sign-off.",
+      "Fail if a manual sign-off is introduced.",
+      "- [ ] No placeholder, human approval gate, or ambiguous fallback remains.",
+    ].join("\n"), "utf8");
+
+    expect(validateDevCycleRefineArtifacts(root)).toEqual({ valid: true, errors: [] });
   });
 
   it("rejects manual-test obligations that do not resolve to a durable phase-ledger task", () => {

@@ -80,7 +80,8 @@ describe("generic workflow summary Gherkin integration", () => {
     expect(build(projector(), { ...item, kind: "epic" } as WorkItemCard)).toBeNull();
     expect(build(projector())?.canContinueImplementing).toBe(true);
     expect(build(projector(false, {
-      evaluateContinueReadiness: () => ({
+      evaluateContinueReadiness: () => ({ ready: true, reasons: [] }),
+      evaluateReadiness: () => ({
         ready: false,
         reasons: [{
           blocking: true,
@@ -88,7 +89,6 @@ describe("generic workflow summary Gherkin integration", () => {
           message: "Completion evidence is not available yet.",
         }],
       }),
-      recipeSourceFor: () => "devcycle-mcp",
     }))?.readiness).toEqual({ ready: true, reasons: [] });
     for (const workflowStatus of ["failed", "blocked", "cancelled"] as const) {
       expect(build(projector(false, {

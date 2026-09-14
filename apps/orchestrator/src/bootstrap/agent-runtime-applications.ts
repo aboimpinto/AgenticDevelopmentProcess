@@ -353,6 +353,10 @@ export function createAgentRuntimeApplications(dependencies: AgentRuntimeApplica
 
   return {
     agentTaskRuntime,
+    runtimeProviderForConnection: (id: Parameters<typeof dependencies.routingConnectionStore.getConnection>[0]) => {
+      const connection = dependencies.routingConnectionStore.getConnection(id);
+      return connection ? providerIdForConnection(connection) : null;
+    },
     createDetachedCompletionWorkerApplication,
     directHostRuntimeEvidenceStore,
     implementationWorkerApplication,
@@ -390,6 +394,9 @@ function findRuntimeParent(
 
 function classifyNestedProcessFailure(error: unknown): PiAttemptProcessResult {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/hepha_(?:model_context_unknown|high_reasoning_required|context_budget_exceeded|input_usage_budget_exceeded|model_request_rejected)/.test(message)) {
+    return { status: "failed", exitCode: 78, failureCode: "safety_rejected" };
+  }
   if (message.includes("timed out") || message.includes("timeout")
     || message.includes("stalled after") || message.includes("maximum runtime")) {
     return { status: "timed_out", exitCode: null, failureCode: "timed_out" };

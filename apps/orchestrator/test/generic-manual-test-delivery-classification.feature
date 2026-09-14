@@ -1,6 +1,12 @@
 Feature: Acceptance-aware test delivery
   Test delivery separates human workflows from automated and deferred evidence.
 
+  Scenario: A valid manual case cannot hide an uncovered criterion
+    Given one executable manual case covers one acceptance criterion
+    And another acceptance criterion has no coverage
+    When the delivery model is evaluated
+    Then the pack remains incomplete
+
   Scenario: Backend-only criteria need no manual package
     Given every acceptance criterion has automated evidence and no human-operable surface
     When Hepha builds the test delivery

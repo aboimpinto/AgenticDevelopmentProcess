@@ -121,7 +121,7 @@ When the user says `autonomous`, continue through phases in execution-contract o
 2. Complete or skip only that phase's scoped work.
 3. Update durable task evidence and narrative notes in the phase document. Hepha owns lifecycle/status fields and FeatureTasks status cells.
 4. Run focused verification.
-5. Run a review pass for code-relevant phases.
+5. Run review when needCodeReview is true.
 6. Fix blocking review findings and rerun focused verification.
 7. Record completion or skip evidence; Hepha deterministically writes `COMPLETED` or `SKIPPED` after validating it.
 8. Rescan phases from disk.
@@ -192,6 +192,8 @@ Gherkin/Playwright E2E use exactly `passed`, `failed`, or `not_applicable`.
 Failed, timed-out, skipped, or crashing required checks use `failed` and cannot
 complete the active task.
 
+The phase declarations are authoritative: needCodeReview and needTestCoverage are independent booleans; all four combinations are valid. Ordered native tasks and explicit configured checks retain their own obligations. Phase identifiers, positions, titles and file types never select gates. Developers can revise declarations with before/after values, implemented scope, reason and evidence, without hiding failures. Reuse valid evidence for unchanged inputs. Ordinary missing tests or rejected reviews remain same-phase repair work; escalate only a concrete impasse or repeated lack of a meaningful repair path.
+
 ## Phase Quality Gate Evidence
 
 Agents write evidence in phase documents. Hepha owns the machine-readable
@@ -203,7 +205,7 @@ by RefineFeature use this table:
 | --- | --- | --- |
 | Changed files | satisfied/waived/not applicable/missing | Use `satisfied` when the exact changed paths are recorded; use a justified waiver only where appropriate. |
 | Tests | satisfied/waived/not applicable/missing | Exact test files and commands, or a waiver explaining why tests are not useful for this phase. |
-| Gherkin/Playwright E2E | satisfied/waived/not applicable/missing | Required for browser/UI behavior changes; otherwise explain why unit, contract, or integration coverage is enough. |
+| Gherkin/Playwright E2E | satisfied/waived/not applicable/missing | Required only at the explicitly assigned workflow execution owner; retain EPIC E2E updates and execution links alongside phase TwinTests. |
 | Code review | satisfied/waived/not applicable/missing | Phase review report path, or an explicit waiver and risk rationale. |
 
 Rules:
@@ -212,17 +214,8 @@ Rules:
 
 - Keep every Quality Gate Evidence entry on exactly one physical Markdown table row: it must start and end with `|` and contain the three template columns. Put all evidence in the third cell on that same line; never wrap or continue a gate row onto a following line.
 
-- Production code changes require automated tests or an explicit waiver.
-- Browser/UI behavior changes require Gherkin/Playwright E2E evidence or an
-  explicit accepted waiver.
-- Code-relevant phases require a persisted code-review report or an explicit
-  waiver.
-- A planning, health-check, documentation-only, or test-only phase may use
-  `not applicable` or `waived`, but the justification must explain why no
-  runnable behavior, browser behavior, or production code review is involved.
-- A production code phase that only changes comments may waive code review only
-  when the evidence names the files and states that no executable behavior
-  changed.
+- Follow the declared coverage and review flags with scope reasons for N/A. Execute independently required checks even when both flags are false.
+- UI changes may require frontend TwinTests and EPIC E2E updates. Run full-workflow E2E at its declared owner; a passing TwinTest never waives it.
 - Do not claim a phase is complete with a required `missing` gate. Supply the
   missing evidence or justification and let Hepha retain the lifecycle state.
 - Do not mark a phase complete while an EPIC acceptance scenario assigned to
@@ -235,24 +228,15 @@ When all implementation phase work is already completed but one or more phase
 quality gates are `missing`, do not redo completed implementation tasks. Work
 only the missing gates:
 
-- Missing `Code review`: run the normal phase code-review gate against the
-  changed files recorded in that phase, write a persisted report under
-  `<FEAT folder>/code-reviews/`, and update the phase `Code review` row to
-  `satisfied` with the report path if approved. If no review is needed, change
-  the row to `waived` only with a file-specific rationale such as comment-only
-  production changes with no executable behavior change.
-- Missing `Tests`: add focused automated coverage when production behavior
-  changed, or change the row to `waived`/`not applicable` only with a precise
-  phase-scope rationale.
-- Missing `Gherkin/Playwright E2E`: add browser E2E evidence for browser/UI
-  behavior changes, or record an explicit accepted waiver explaining why unit,
-  contract, or integration tests cover the risk.
+- Missing `Code review`: inspect the declared review obligation and existing report. When required, repair findings and obtain approval for the applicable scope. If scope changed, record a justified declaration revision; do not infer review applicability from file types or directly overwrite machine-owned decision cells.
+- Missing `Tests`: inspect the declared acceptance coverage and required commands. Reuse valid execution and assertion evidence, repair missing meaningful coverage, and execute missing or invalidated required checks. A justified declaration revision must preserve actual failures and the remaining obligations.
+- Missing `Gherkin/Playwright E2E`: inspect the assigned workflow obligation and original execution evidence. Repair and execute that obligation at its declared owner; isolated tests cannot replace a required full-workflow check.
 - Preserve completed phase implementation task checkboxes. Do not broaden scope
   beyond the missing gate unless a review finding requires a fix.
 
 ## Review Rules
 
-For code-relevant phases:
+When needCodeReview is true:
 
 1. Perform a dedicated review pass after implementation and focused checks.
 2. Review changed files first, then required phase/status/evidence context.

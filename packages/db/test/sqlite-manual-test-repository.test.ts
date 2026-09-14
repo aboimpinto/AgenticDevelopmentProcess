@@ -56,6 +56,29 @@ const result: ManualTestResultRecord = {
 };
 
 describe("SqliteManualTestRepository", () => {
+  it("persists case-scoped reviews without promoting them to whole-pack approval", async () => {
+    const { database, repository } = createRepository();
+    try {
+      await repository.recordManualTestReview({ ...review, reviewedTestIds: ["manual-a"] });
+      expect((await repository.getCurrentManualTestReview(pack.projectId, pack.cardKey))?.reviewedTestIds).toEqual(["manual-a"]);
+      await repository.recordManualTestReview({ ...review, reviewedTestIds: ["manual-a", "manual-b"] });
+      expect((await repository.getCurrentManualTestReview(pack.projectId, pack.cardKey))?.reviewedTestIds).toEqual(["manual-a", "manual-b"]);
+      await repository.recordManualTestReview({ ...review, reviewedTestIds: null });
+      expect((await repository.getCurrentManualTestReview(pack.projectId, pack.cardKey))?.reviewedTestIds).toBeUndefined();
+    } finally { database.close(); }
+  });
+  it("a new pack clears only manual acceptance while preserving user code review", async () => {
+    const { context, database, repository } = createRepository();
+    try {
+      context.ensure();
+      context.run("insert into hepha_card_metadata (project_id, card_key, kind, external_id, title, state_folder, created_at, updated_at, manual_tests_completed_at, user_code_review_completed_at) values (?, ?, 'feature', 'EXAMPLE', 'Example', '03_IN_PROGRESS', 'now', 'now', 'accepted', 'reviewed')", [pack.projectId, pack.cardKey]);
+      await repository.recordManualTestPack(pack);
+      expect(context.get("select manual_tests_completed_at, user_code_review_completed_at from hepha_card_metadata")).toEqual({ manual_tests_completed_at: null, user_code_review_completed_at: "reviewed" });
+      context.run("update hepha_card_metadata set manual_tests_completed_at = 'accepted-again'");
+      await repository.recordManualTestPack(pack);
+      expect(context.get("select manual_tests_completed_at from hepha_card_metadata")).toEqual({ manual_tests_completed_at: "accepted-again" });
+    } finally { database.close(); }
+  });
   it("exposes only the complete manual-test repository method inventory", () => {
     expect(
       Object.getOwnPropertyNames(SqliteManualTestRepository.prototype)

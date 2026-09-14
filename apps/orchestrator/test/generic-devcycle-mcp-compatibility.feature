@@ -9,9 +9,22 @@ Feature: Generic DevCycle MCP recipe-source compatibility
   Scenario: MCP compatibility uses one selected model
     Given the DevCycle MCP recipe source is configured
     When a supported feature workflow action is selected
-    Then the action remains available from its lifecycle folder without native artifact gates
+    Then preparation actions remain available from their lifecycle folders
     And one MCP-enabled worker calls the mapped recipe tool
     And the same worker executes the returned procedure locally
+
+  Scenario: MCP refinement completion requires provider-selected artifact validation
+    Given the DevCycle MCP refinement worker exits successfully
+    But its provider-owned refinement artifacts are invalid
+    When the orchestrator evaluates the terminal refinement result
+    Then the refinement run fails with deterministic artifact diagnostics
+    And the feature is not presented as ready for implementation
+
+  Scenario: MCP implementation admission uses the same artifact authority
+    Given provider-owned refinement artifacts are invalid
+    When Start Implementing is requested through the DevCycle MCP route
+    Then the request is rejected before a workflow run or manual-test mutation is recorded
+    And the dashboard does not offer Start Implementing
 
   Scenario: MCP implementation telemetry stays phase-scoped
     Given the DevCycle MCP recipe source is configured for implementation

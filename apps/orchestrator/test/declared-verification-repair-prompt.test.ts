@@ -72,7 +72,7 @@ describe("declared verification repair prompt", () => {
     expect(prompt).toContain("phase and task remain IN_PROGRESS");
     expect(prompt).toContain("Do not mark the task or phase complete");
     expect(prompt).toContain("HEPHA reruns the complete declared verification profile");
-    expect(prompt).toContain("Verification Repair Result: BLOCKED");
-    expect(prompt).toContain("Verification Repair Result: REPAIRED");
+    expect(prompt).toContain("outcome `blocked`");
+    expect(prompt).toContain("outcome `repaired`");
   });
 });

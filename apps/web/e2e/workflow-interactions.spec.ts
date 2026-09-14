@@ -8,6 +8,10 @@
  */
 
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { scanFeaturePhaseQualityGates } from "../../orchestrator/src/memorybank/phase-quality-projection.js";
 import type {
   FeatureWorkflowSummary,
   ManualTestPackDashboardStatus,
@@ -188,6 +192,7 @@ function manualTestStatus(overrides: Partial<ManualTestPackDashboardStatus> = {}
     hasPdf: false,
     hasResults: false,
     isReviewed: true,
+    isReady: true,
     isStale: false,
     message: "Manual test pack is ready for result recording.",
     passedCount: 0,
@@ -236,6 +241,10 @@ async function installFixture(page: Page, item: WorkItemCard, packStatus = manua
   });
   await page.route("**/api/projects/hepha/work-items", async (route) => {
     await route.fulfill({ body: JSON.stringify(workItemsResponse), contentType: "application/json", status: 200 });
+  });
+  await page.route("**/api/projects/hepha/completion-readiness", async route => {
+    requests.push({ body: route.request().postDataJSON(), path: new URL(route.request().url()).pathname });
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ items: [item], assessment: item.completionRecovery, message: "Current evidence reassessed; human acceptance remains explicit." }) });
   });
   await page.route("**/api/projects/hepha/work-items/feat-056-test/document", async (route) => {
     await route.fulfill({
@@ -291,6 +300,7 @@ async function installFixture(page: Page, item: WorkItemCard, packStatus = manua
   await page.route("**/api/start-implementing", recordWorkflowAction);
   await page.route("**/api/continue-implementing", recordWorkflowAction);
   await page.route("**/api/complete-feature", recordWorkflowAction);
+  await page.route("**/api/phase-quality/resolve", recordWorkflowAction);
   await page.route("**/api/feature-human-review", recordWorkflowAction);
   await page.route("**/api/feature-findings", recordWorkflowAction);
   await page.route("**/api/delivery/status?*", async (route) => {
@@ -346,6 +356,206 @@ function expectNoBrowserErrors(browserErrors: readonly string[]) {
 }
 
 test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
+  test("Existing refresh recovers confirmed coverage without repeating human verification", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false,
+      readiness: { ready: true, reasons: [] }, userCodeReviewCompletedAt: NOW, manualTestsCompletedAt: null });
+    item.phases.forEach(phase => { phase.status = "completed"; });
+    const { requests, browserErrors } = await installFixture(page, item);
+    await page.route("**/api/projects/hepha/completion-readiness", async route => {
+      const body = route.request().postDataJSON();
+      requests.push({ body, path: "/api/projects/hepha/completion-readiness" });
+      const confirmed = body.confirm === true && body.confirmProposalId === "coverage-proposal";
+      item.completionRecovery = { assessedAt: NOW, ready: confirmed,
+        blockers: confirmed ? [] : [{ id: "phase-recovery-1", phaseNumber: 1, action: "phase", actionLabel: "Fix Phase 1 quality gaps", message: "1 quality gap in Phase 1" }],
+        phaseGaps: confirmed ? [] : [{ id: "phase-1-acceptance_coverage", phaseNumber: 1, phaseTitle: item.phases.find(phase => phase.number === 1)!.title,
+          kind: "acceptance_coverage", title: "Acceptance coverage and test evidence", details: ["AC-01 coverage needs confirmation"], sourceIds: ["AC-01"], instruction: "Verify the existing manual case mapping.",
+          proposalId: "coverage-proposal", proposedLinks: [{ sourceId: "AC-01", kind: "manual", evidenceId: "MT-01", stepNumbers: [2], explanation: "Step 2 checks the expected confirmation." }] }],
+        ...(confirmed ? {} : { proposal: { id: "coverage-proposal", links: [{ sourceId: "AC-01", kind: "manual" as const, evidenceId: "MT-01", stepNumbers: [2], explanation: "Step 2 checks the expected confirmation." }] } }) };
+      if (confirmed) item.featureWorkflow!.manualTestsCompletedAt = NOW;
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ items: [item], assessment: item.completionRecovery,
+        message: confirmed ? "Current evidence satisfies completion readiness." : "Review existing evidence links; no test results were changed." }) });
+    });
+    const detail = await openFeatureDetail(page);
+    const readiness = detail.getByRole("region", { name: "Complete Feature readiness" });
+    await readiness.getByRole("button", { name: "Refresh Completion Readiness" }).click();
+    await expect(readiness.getByText("1 quality gap in 1 phase. Resolve them in the phases above.")).toBeVisible();
+    await expect(readiness.getByText("AC-01 coverage needs confirmation")).toHaveCount(0);
+    await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    await readiness.getByRole("button", { name: "Fix Phase 1 quality gaps", exact: true }).click();
+    const recovery = detail.getByRole("region", { name: "Phase 1 completion quality gaps" });
+    await expect(recovery.getByRole("button", { name: "Verify / repair phase quality gaps" })).toBeFocused();
+    await expect(recovery.getByText("Step 2 checks the expected confirmation.")).not.toBeVisible();
+    await recovery.getByText("Acceptance coverage and test evidence — 1 criteria", { exact: true }).click();
+    await expect(recovery.getByText("Step 2 checks the expected confirmation.")).toBeVisible();
+    await recovery.getByRole("button", { name: "I confirm these evidence links cover the listed criteria" }).click();
+    await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeEnabled();
+    expect(requests.filter(request => ["/api/complete-feature", "/api/feature-human-review", "/api/manual-tests/record-pass"].includes(request.path))).toEqual([]);
+    expect(requests.filter(request => request.path === "/api/projects/hepha/completion-readiness").map(request => request.body)).toEqual([
+      { cardId: item.id, reassess: true, verifyExisting: true }, { cardId: item.id, confirmProposalId: "coverage-proposal", confirm: true },
+    ]);
+    expectNoBrowserErrors(browserErrors);
+  });
+
+  test("Phase-owned recovery dispatches a real repair without a finding or automatic completion", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false,
+      readiness: { ready: true, reasons: [] }, userCodeReviewCompletedAt: NOW, manualTestsCompletedAt: NOW });
+    item.phases.forEach(phase => { phase.status = "completed"; });
+    item.completionRecovery = { ready: false, assessedAt: NOW,
+      blockers: [{ id: "phase-recovery-1", phaseNumber: 1, action: "phase", actionLabel: "Fix Phase 1 quality gaps", message: "1 quality gap in Phase 1" }],
+      phaseGaps: [{ id: "phase-1-acceptance_coverage", phaseNumber: 1, phaseTitle: item.phases.find(phase => phase.number === 1)!.title,
+        kind: "acceptance_coverage", title: "Acceptance coverage and test evidence", details: Array.from({ length: 14 }, (_, i) => `AC-${i + 1}: Missing evidence link`),
+        sourceIds: Array.from({ length: 14 }, (_, i) => `AC-${i + 1}`), instruction: "Inspect existing reports first." }] };
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    const readiness = detail.getByRole("region", { name: "Complete Feature readiness" });
+    await expect(readiness.getByText(/Missing evidence link/)).toHaveCount(0);
+    await readiness.getByRole("button", { name: "Fix Phase 1 quality gaps" }).click();
+    const phase = detail.getByRole("region", { name: "Phase 1 completion quality gaps" });
+    const repair = phase.getByRole("button", { name: "Verify / repair phase quality gaps" });
+    await expect(repair).toBeFocused();
+    await expect(phase.getByText("AC-14: Missing evidence link")).not.toBeVisible();
+    const guidance = phase.getByRole("textbox", { name: "Additional repair guidance (optional)" });
+    const repairBox = await repair.boundingBox(), guidanceBox = await guidance.boundingBox();
+    expect(repairBox!.y - (guidanceBox!.y + guidanceBox!.height)).toBeGreaterThanOrEqual(12);
+    await repair.click();
+    await expect.poll(() => requests.filter(request => request.path === "/api/phase-quality/resolve").length).toBe(1);
+    expect(requests.find(request => request.path === "/api/phase-quality/resolve")?.body).toEqual(expect.objectContaining({ gate: "completion_recovery", phaseNumber: 1, action: "repair", note: "" }));
+    expect(requests.filter(request => ["/api/feature-findings", "/api/complete-feature", "/api/feature-human-review"].includes(request.path))).toEqual([]);
+    await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    expectNoBrowserErrors(browserErrors);
+  });
+
+  test("Refresh completion readiness reloads blockers without granting human acceptance", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false,
+      readiness: { ready: false, reasons: [{ code: "invalid_refine_artifacts", message: "Invalid saved lifecycle metadata.", blocking: true }] },
+    });
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    const readiness = detail.getByRole("region", { name: "Complete Feature readiness" });
+    await expect(readiness.getByText("Invalid saved lifecycle metadata.")).toBeVisible();
+    const refreshBox = await readiness.getByRole("button", { name: "Refresh Completion Readiness" }).boundingBox();
+    const reasonBox = await readiness.getByText("Invalid saved lifecycle metadata.").boundingBox();
+    expect(reasonBox!.y - (refreshBox!.y + refreshBox!.height)).toBeGreaterThanOrEqual(12);
+    item.featureWorkflow!.readiness = { ready: true, reasons: [] };
+    item.featureWorkflow!.canRecordUserCodeReview = true;
+    const refreshed = page.waitForResponse(r => r.url().endsWith("/api/projects/hepha/completion-readiness") && r.request().method() === "POST");
+    await readiness.getByRole("button", { name: "Refresh Completion Readiness" }).click();
+    await refreshed;
+    await expect(readiness.getByText("Invalid saved lifecycle metadata.")).toHaveCount(0);
+    await expect(readiness.getByText("User code review is pending.")).toBeVisible();
+    await expect(readiness.getByText("Manual tests are pending.")).toBeVisible();
+    await expect(readiness.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    expect(requests.filter(r => ["/api/complete-feature", "/api/feature-human-review", "/api/phase-quality/resolve"].includes(r.path))).toEqual([]);
+    expectNoBrowserErrors(browserErrors);
+  });
+
+  test("A human requests one phase gate repair or explicitly justifies its waiver", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false });
+    item.phases.forEach(phase => { phase.status = "completed"; });
+    const gates = item.implementationEvidence!.phaseQualityGates[0]!.gates;
+    gates[0]!.status = "missing";
+    gates[2]!.status = "missing";
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    await detail.locator('[data-phase-number="1"]').getByText("2 verification issues — how to resolve").click();
+    const issue = detail.getByRole("region", { name: "Phase 1 — Automated tests", exact: true });
+    await expect(issue.getByRole("button", { name: "Waive this gate", exact: true })).toBeDisabled();
+    await issue.getByRole("textbox").fill("Add the missing integration scenarios for retries.");
+    await issue.getByRole("button", { name: "Verify / repair this gate", exact: true }).click();
+    await expect.poll(() => requests.filter(r => r.path === "/api/phase-quality/resolve").length).toBe(1);
+    expect(requests.find(r => r.path === "/api/phase-quality/resolve")?.body).toEqual({ projectId: PROJECT.id, cardId: item.id, phaseNumber: 1, gate: "tests", action: "repair", note: "Add the missing integration scenarios for retries.", confirmWaiver: false, expectedUpdatedAt: NOW });
+    await page.route("**/api/phase-quality/resolve", async route => {
+      requests.push({ path: "/api/phase-quality/resolve", body: route.request().postDataJSON() });
+      gates[0]!.status = "waived"; gates[0]!.justification = "Human approved documentation-only scope.";
+      await route.fulfill({ json: { filesChanged: [], filesCreated: [], items: [item], project: PROJECT, summary: "Human waiver recorded." } });
+    });
+    await issue.getByRole("textbox").fill("No production output in this phase; documentation-only changes.");
+    await expect(issue.getByRole("button", { name: "Waive this gate", exact: true })).toBeDisabled();
+    await issue.getByRole("checkbox").check();
+    await issue.getByRole("button", { name: "Waive this gate", exact: true }).click();
+    await expect(detail.locator('[data-phase-number="1"]').getByText("tests: waived", { exact: true })).toBeVisible();
+    expect(requests.at(-1)?.body).toEqual(expect.objectContaining({ action: "waive", gate: "tests", phaseNumber: 1, confirmWaiver: true }));
+    await expect(detail.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    expect(requests.filter(r => r.path === "/api/complete-feature")).toEqual([]);
+    expectNoBrowserErrors(browserErrors);
+  });
+  test("Checkpoint build diagnostics remain distinct from missing tests", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false });
+    item.phases.forEach(phase => { phase.status = "completed"; });
+    item.implementationEvidence!.phaseQualityGates[0]!.gates = [
+      { gate: "tests", status: "satisfied", justification: "Host test execution passed", evidencePaths: ["phase.md.verification.json"] },
+      { gate: "build", status: "missing", justification: "Build emitted warnings despite exit zero", evidencePaths: ["phase.md.verification.json"] },
+      { gate: "lint", status: "satisfied", justification: "Host lint execution passed", evidencePaths: ["phase.md.verification.json"] },
+    ];
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    await detail.locator('[data-phase-number="1"]').getByText("1 verification issue — how to resolve").click();
+    const issue = detail.getByRole("region", { name: "Phase 1 — Build", exact: true });
+    await expect(issue.getByText("Recorded verification has not passed. Inspect the outcome and diagnostics below.", { exact: true })).toBeVisible();
+    await expect(issue.getByText("Recorded diagnostic: Build emitted warnings despite exit zero", { exact: true })).toBeVisible();
+    await expect(detail.getByRole("button", { name: "Complete Feature", exact: true })).toBeDisabled();
+    expect(requests.filter(request => request.path === "/api/complete-feature")).toEqual([]);
+    expectNoBrowserErrors(browserErrors);
+  });
+  test("Document-only phase gates stay N/A while real verification gaps remain on their own phase", async ({ page }) => {
+    const root = mkdtempSync(join(tmpdir(), "hepha-browser-applicability-"));
+    try {
+      const item = makeFeature({ implementationCompleted: true, canStartImplementing: false, canContinueImplementing: false });
+      item.phases = item.phases.slice(0, 2);
+      item.phases.forEach((phase, index) => {
+        phase.documentPath = join(root, `phase-${index}.md`);
+        writeFileSync(phase.documentPath, index === 0
+          ? "### Test Verification\nNot applicable: documentation-only output.\n### Code Review\nNot required: documentation-only output.\n### Preservation\nNo unrelated change was modified (`generated.d.ts` preserved untouched)."
+          : "## Changed Files\n- `packages/service.ts`\n### Test Verification\nRequired: execute service tests.\n### Code Review\nRequired for the service changes.");
+      });
+      item.implementationEvidence!.phaseQualityGates = scanFeaturePhaseQualityGates(item.phases, []);
+      const { requests, browserErrors } = await installFixture(page, item);
+      const detail = await openFeatureDetail(page);
+      const planning = detail.locator('[data-phase-number="1"]');
+      await expect(planning.getByText("tests: N/A", { exact: true })).toBeVisible();
+      await expect(planning.getByText("Review: N/A", { exact: true })).toHaveAttribute("title", "documentation-only output.");
+      await expect(planning.locator(".phase-quality-issues")).toHaveCount(0);
+      await expect(planning.getByText("Completed", { exact: true })).toBeVisible();
+      const code = detail.locator('[data-phase-number="2"]');
+      await code.getByText("2 verification issues — how to resolve", { exact: true }).click();
+      await expect(code.getByText("Phase 2 — Automated tests", { exact: true })).toBeVisible();
+      await expect(detail.getByRole("region", { name: "Complete Feature readiness", exact: true }).getByText("2 phase quality gate(s) are missing.", { exact: true })).toBeVisible();
+      expect(requests.filter(r => ["/api/continue-implementing", "/api/complete-feature"].includes(r.path))).toEqual([]);
+      expectNoBrowserErrors(browserErrors);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+  test("Phase cards expand their own verification issues without a duplicate completion list", async ({ page }) => {
+    const item = makeFeature({ implementationCompleted: true, canStartImplementing: false, canContinueImplementing: false,
+      hasContinuationArtifacts: false, lastRun: { command: "start-implementing", status: "failed", error: "INVALID_FEATURE_STATUS: task header is malformed", runId: "failed", startedAt: NOW, completedAt: NOW, currentNodeId: null, currentStep: null, summary: null, workflowProgress: null },
+      readiness: { ready: false, reasons: [{ blocking: true, code: "invalid_refine_artifacts", message: "INVALID_FEATURE_STATUS: task header is malformed" }] } });
+    item.implementationEvidence!.phaseQualityGates = [1, 2].map(phaseNumber => ({ phaseNumber, phaseTitle: `Phase ${phaseNumber}`, phaseStatus: "COMPLETED", changedFiles: ["src/sample.ts"], codeFiles: ["src/sample.ts"], testFiles: [], documentationFiles: [], warnings: [], gates: [
+      { gate: "tests", status: "missing", evidencePaths: [], justification: null },
+      { gate: "code_review", status: "missing", evidencePaths: [], justification: null },
+    ] }));
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    const readiness = detail.getByRole("region", { name: "Complete Feature readiness", exact: true });
+    const first = detail.locator('[data-phase-number="1"]');
+    const second = detail.locator('[data-phase-number="2"]');
+    await expect(first.getByText("Phase 1 — Automated tests", { exact: true })).not.toBeVisible();
+    await first.getByText("2 verification issues — how to resolve", { exact: true }).click();
+    await expect(first.getByText("Phase 1 — Automated tests", { exact: true })).toBeVisible();
+    await expect(first.getByText("Evidence missing or not recognised; this is not a recorded failure.")).toBeVisible();
+    await expect(first.getByText(/If an existing review/)).toBeVisible();
+    await expect(first.getByText(/If tests were already executed/)).toBeVisible();
+    await expect(second.getByText("Phase 2 — Code review", { exact: true })).not.toBeVisible();
+    await second.getByText("2 verification issues — how to resolve", { exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(second.getByText("Phase 2 — Code review", { exact: true })).toBeVisible();
+    await first.getByText("2 verification issues — how to resolve", { exact: true }).click();
+    await expect(first.getByText("Phase 1 — Automated tests", { exact: true })).not.toBeVisible();
+    await expect(readiness.getByText(/How to resolve/)).toHaveCount(0);
+    await expect(readiness.getByText(/Phase [12] —/)).toHaveCount(0);
+    await expect(detail.getByRole("button", { name: /Inspect Phase/ })).toHaveCount(0);
+    await expect(readiness.getByText(/INVALID_FEATURE_STATUS/).first()).toBeVisible();
+    expect(requests.filter(r => ["/api/continue-implementing", "/api/complete-feature"].includes(r.path))).toEqual([]);
+    expectNoBrowserErrors(browserErrors);
+  });
   test("opens the selected FEAT detail and starts an eligible workflow", async ({ page }) => {
     const item = makeFeature({ canStartImplementing: true, canContinueImplementing: false });
     const { browserErrors, requests } = await installFixture(page, item);
@@ -410,7 +620,7 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     await expect(progress).toContainText("Implementation Loop");
     await expect(progress).toContainText("Post-processing phase routing and estimates");
     await expect(
-      detail.locator(".validation-panel").filter({ hasText: "Workflow readiness" }).getByText("Running", { exact: true }),
+      detail.getByRole("region", { name: "Current workflow", exact: true }).getByText("Running", { exact: true }),
     ).toBeVisible();
     await expect(detail.getByText("Recovery Actions", { exact: true })).toHaveCount(0);
     const activePhase = detail.locator(".phase-row").filter({ hasText: "Phase 2" });
@@ -430,6 +640,22 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
       body: { autonomous: true, cardId: item.id, projectId: PROJECT.id },
       path: "/api/continue-implementing",
     });
+    expectNoBrowserErrors(browserErrors);
+  });
+
+  test("Continue admits lifecycle repair without offering Design or Refine", async ({ page }) => {
+    const item = makeFeature({ canStartImplementing: false, canContinueImplementing: true,
+      canCreateUiRequirements: false, canRefineFeature: false, hasContinuationArtifacts: false,
+      uiRequirementDecision: "unknown", readiness: { ready: false, reasons: [] },
+      workflowMessage: "Continue Implementing will repair the saved lifecycle status before resuming." });
+    const { requests, browserErrors } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    await expect(detail.getByText(item.featureWorkflow!.workflowMessage, { exact: true })).toBeVisible();
+    await expect(detail.getByRole("button", { name: "Design Feature", exact: true })).toHaveCount(0);
+    await expect(detail.getByRole("button", { name: "Refine Feature", exact: true })).toHaveCount(0);
+    await detail.getByRole("button", { name: "Continue Implementing", exact: true }).click();
+    await expect(page.getByText("Workflow action recorded.")).toBeVisible();
+    expect(requests).toContainEqual({ body: { autonomous: true, cardId: item.id, projectId: PROJECT.id }, path: "/api/continue-implementing" });
     expectNoBrowserErrors(browserErrors);
   });
 
@@ -522,6 +748,41 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     expectNoBrowserErrors(browserErrors);
   });
 
+  test("Submitted UI feature exposes Design after Deep-Dive without recovery errors", async ({ page }) => {
+    const item = makeFeature({
+      canStartImplementing: false, canCreateUiRequirements: true, canRefineFeature: false,
+      hasDesignArtifacts: false, hasRefinementArtifacts: false,
+      readiness: { ready: true, reasons: [] }, uiRequirementDecision: "requires_ui",
+      workflowMessage: "This FEAT needs UI requirements before refinement.",
+      lastRun: { ...makeWorkflow().lastRun!, command: "deep-dive-feature", summary: "Completed feature Deep-Dive." },
+    }, { stateFolder: "01_SUBMITTED", stateLabel: "Submitted", phases: [] });
+    const { browserErrors, requests } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    await expect(detail.getByText("This FEAT needs UI requirements before refinement.", { exact: true })).toBeVisible();
+    await expect(detail.getByRole("button", { name: "Design Feature" })).toBeEnabled();
+    await expect(detail.getByRole("button", { name: "Refine Feature" })).toBeDisabled();
+    await expect(detail.getByRole("button", { name: "Start FEAT Deep-Dive" })).toBeEnabled();
+    await detail.getByRole("button", { name: "Design Feature" }).click();
+    await expect(page.getByText("Workflow action recorded.")).toBeVisible();
+    expect(requests).toContainEqual({ path: "/api/design-feature", body: { autonomous: true, cardId: item.id, projectId: PROJECT.id } });
+    expect(requests.some(request => request.path === "/api/refine-feature")).toBe(false);
+    expectNoBrowserErrors(browserErrors);
+  });
+
+  test("UI feature exposes Refine after design becomes available", async ({ page }) => {
+    const item = makeFeature({ canStartImplementing: false, canCreateUiRequirements: false,
+      canRefineFeature: true, hasDesignArtifacts: true, hasRefinementArtifacts: false,
+      readiness: { ready: true, reasons: [] }, uiRequirementDecision: "requires_ui",
+    }, { stateFolder: "01_SUBMITTED", stateLabel: "Submitted", phases: [] });
+    const { browserErrors, requests } = await installFixture(page, item);
+    const detail = await openFeatureDetail(page);
+    await expect(detail.getByRole("button", { name: "Refine Feature" })).toBeEnabled();
+    await detail.getByRole("button", { name: "Refine Feature" }).click();
+    await expect(page.getByText("Workflow action recorded.")).toBeVisible();
+    expect(requests).toContainEqual({ path: "/api/refine-feature", body: { autonomous: true, cardId: item.id, projectId: PROJECT.id } });
+    expectNoBrowserErrors(browserErrors);
+  });
+
   test("shows Design Feature when the current Deep-Dive requires UI artifacts", async ({ page }) => {
     const item = makeFeature({
       canCreateUiRequirements: true,
@@ -533,7 +794,7 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
       },
       uiRequirementDecision: "requires_ui",
       uiRequirementReason: "This FEAT changes provider configuration forms.",
-    });
+    }, { stateFolder: "01_SUBMITTED", stateLabel: "Submitted" });
     const { browserErrors, requests } = await installFixture(page, item);
     const detail = await openFeatureDetail(page);
 
@@ -713,10 +974,10 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     const { browserErrors } = await installFixture(page, item);
     const detail = await openFeatureDetail(page);
 
-    await expect(detail.getByText("Completion", { exact: true })).toBeVisible();
-    await expect(detail.getByText("Blocked", { exact: true })).toBeVisible();
+    await expect(detail.getByRole("region", { name: "Complete Feature readiness", exact: true })).toBeVisible();
+    await expect(detail.getByRole("region", { name: "Complete Feature readiness", exact: true }).getByText("Blocked", { exact: true })).toBeVisible();
     await expect(detail.getByText("Implementation is not yet completed.")).toBeVisible();
-    await expect(detail.getByRole("button", { name: "Complete Feature" })).toHaveCount(0);
+    await expect(detail.getByRole("button", { name: "Complete Feature" })).toBeDisabled();
     expectNoBrowserErrors(browserErrors);
   });
 
@@ -729,7 +990,7 @@ test.describe("Workflow Interactions (FEAT-057 / FEAT-056)", () => {
     const { browserErrors } = await installFixture(page, item);
     const detail = await openFeatureDetail(page);
 
-    await expect(detail.getByLabel("Completion").getByText("Ready", { exact: true })).toBeVisible();
+    await expect(detail.getByRole("region", { name: "Complete Feature readiness", exact: true }).getByText("Ready", { exact: true })).toBeVisible();
     await expect(detail.getByText("All completion conditions satisfied.")).toBeVisible();
     await expect(detail.getByRole("button", { name: "Complete Feature" })).toBeEnabled();
     expectNoBrowserErrors(browserErrors);

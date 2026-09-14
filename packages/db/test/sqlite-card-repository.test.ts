@@ -55,6 +55,15 @@ const session: StoredDeepDiveSession = {
 };
 
 describe("SqliteCardRepository", () => {
+  it("round trips interview focus separately from source and preserves it across answers", async () => {
+    const { database, repository } = createRepository();
+    try {
+      const focused = { ...session, focus: "Explore accessibility and mobile error states" };
+      expect(await repository.createDeepDiveSession(focused)).toEqual(focused);
+      const saved = (await repository.getDeepDiveSession(focused.id))!;
+      expect(await repository.updateDeepDiveSession({ ...saved, status: "question_round" })).toEqual({ ...focused, status: "question_round" });
+    } finally { database.close(); }
+  });
   it("exposes only card reconciliation, preparation evidence, and session methods", () => {
     expect(
       Object.getOwnPropertyNames(SqliteCardRepository.prototype)

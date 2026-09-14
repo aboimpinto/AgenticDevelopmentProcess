@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verification repair response v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["phaseId", "taskId", "outcome"],
+  "properties": {
+    "phaseId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "taskId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "outcome": { "enum": ["repaired", "blocked", "advisory_accepted"] },
+    "reason": { "type": "string", "minLength": 1, "pattern": "\\S", "maxLength": 16384 }
+  },
+  "allOf": [{
+    "if": { "properties": { "outcome": { "enum": ["blocked", "advisory_accepted"] } } },
+    "then": { "properties": { "reason": {} }, "required": ["reason"] }
+  }]
+}

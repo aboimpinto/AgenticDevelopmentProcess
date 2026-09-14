@@ -7,13 +7,16 @@
  */
 
 import React from "react";
-import { formatDuration } from "@hepha/shared";
+import { formatDuration, isPhaseQualityWarning } from "@hepha/shared";
 import { AlertTriangle, CheckCircle2, Clock3, Loader2 } from "lucide-react";
 
-import type { RuntimePhaseEvidenceSummaryV1 } from "@hepha/shared";
+import type { CompletionRecoveryBlocker, PhaseCompletionQualityGap, RuntimePhaseEvidenceSummaryV1 } from "@hepha/shared";
+import { PhaseCompletionQualityGaps } from "./phase-completion-quality-gaps.js";
 import { RuntimeEvidencePanel } from "./runtime-evidence-panel.js";
 import type { RuntimePhaseEvidenceSnapshot } from "./use-runtime-evidence-controller.js";
 import type { PhaseRowDisplay } from "./workflow-presentation.js";
+import type { PhaseQualityBlocker } from "./phase-quality-blockers.js";
+import { PhaseQualityIssues, type ResolvePhaseGate } from "./phase-quality-issues.js";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +33,14 @@ export interface RuntimeEvidenceListBinding {
 }
 
 export interface WorkflowPhaseListPanelProps {
+  readonly recoveryBlockers?: readonly CompletionRecoveryBlocker[];
+  readonly completionGaps?: readonly PhaseCompletionQualityGap[];
+  readonly onConfirmCoverage?: (proposalId: string) => void;
   readonly phases: readonly PhaseRowDisplay[];
+  readonly blockers?: readonly PhaseQualityBlocker[];
+  readonly warnings?: readonly PhaseQualityBlocker[];
+  readonly onResolveGate?: ResolvePhaseGate;
+  readonly gateActionDisabled?: boolean;
   readonly runtimeEvidence?: RuntimeEvidenceListBinding;
 }
 
@@ -39,6 +49,13 @@ export interface WorkflowPhaseListPanelProps {
 export function WorkflowPhaseListPanel({
   phases,
   runtimeEvidence,
+  blockers = [],
+  warnings = [],
+  onResolveGate,
+  gateActionDisabled = false,
+  completionGaps = [],
+  recoveryBlockers = [],
+  onConfirmCoverage,
 }: WorkflowPhaseListPanelProps) {
   if (phases.length === 0) {
     return (
@@ -61,6 +78,8 @@ export function WorkflowPhaseListPanel({
         {phases.map((phase) => (
           <li
             key={phase.executionContractId ?? phase.number ?? "unknown"}
+            data-phase-number={phase.number}
+            tabIndex={-1}
             className={`phase-row ${phase.isCurrent ? "phase-row-current" : ""} ${
               phase.isBlocked ? "phase-row-blocked" : ""
             } ${phase.isCompleted ? "phase-row-completed" : ""}`}
@@ -80,11 +99,13 @@ export function WorkflowPhaseListPanel({
                 <Clock3 size={14} />
               )}
             </span>
-            <span className="phase-row-content">
+            <div className="phase-row-content">
               <strong className="phase-row-title">
                 {phase.number !== null ? `Phase ${phase.number}` : ""}{" "}
                 {phase.title}
               </strong>
+              {completionGaps.some(gap => gap.phaseNumber === phase.number && gap.kind !== "coverage_confirmation") && <span className="evidence-gate evidence-gate-missing">Completion quality gaps</span>}
+              {completionGaps.some(gap => gap.phaseNumber === phase.number && gap.kind === "coverage_confirmation") && <span className="evidence-gate">Coverage review pending</span>}
               <span className={`phase-row-status ${phase.isCompleted ? "phase-status-complete" : phase.isBlocked || phase.hasError ? "phase-status-blocked" : phase.isActive ? "phase-status-active" : ""}`}>
                 {phase.statusLabel}
               </span>
@@ -121,11 +142,11 @@ export function WorkflowPhaseListPanel({
                   <span className="evidence-gate-list phase-row-gates" aria-label={`Quality gates for ${phase.title}`}>
                     {phase.evidence.gates.map((gate) => (
                       <span
-                        className={`evidence-gate ${gate.status === "satisfied" ? "evidence-gate-ok" : gate.status === "waived" || gate.status === "not_applicable" ? "evidence-gate-waived" : gate.status === "missing" ? "evidence-gate-missing" : ""}`}
+                        className={`evidence-gate ${isPhaseQualityWarning(gate) ? "evidence-gate-waived" : gate.status === "satisfied" ? "evidence-gate-ok" : gate.status === "waived" || gate.status === "not_applicable" ? "evidence-gate-waived" : gate.status === "missing" ? "evidence-gate-missing" : ""}`}
                         key={gate.gate}
                         title={gate.justification ?? `${gate.gate}: ${gate.status}`}
                       >
-                        {gate.gate.replace("gherkin_e2e", "E2E").replace("code_review", "Review")}: {gate.status.replace("not_applicable", "N/A")}
+                        {gate.gate.replace("gherkin_e2e", "E2E").replace("code_review", "Review")}: {isPhaseQualityWarning(gate) ? "Warning" : gate.status.replace("not_applicable", "N/A")}
                       </span>
                     ))}
                   </span>
@@ -134,6 +155,13 @@ export function WorkflowPhaseListPanel({
                   ))}
                 </>
               )}
+              {phase.number != null && recoveryBlockers.filter(blocker => blocker.action === "external" && blocker.phaseNumber === phase.number).map(blocker => <section key={blocker.id} className="phase-quality-issue" aria-label="Phase artifact issue">
+                <p>{blocker.message}</p>
+                {blocker.prerequisite && <p className="gate-message">{blocker.prerequisite}</p>}
+              </section>)}
+              <PhaseQualityIssues warnings blockers={warnings.filter(warning => warning.phaseNumber === phase.number)} onResolve={onResolveGate} disabled={gateActionDisabled} />
+              <PhaseQualityIssues blockers={blockers.filter(blocker => blocker.phaseNumber === phase.number)} onResolve={onResolveGate} disabled={gateActionDisabled} />
+              <PhaseCompletionQualityGaps gaps={completionGaps.filter(gap => gap.phaseNumber === phase.number)} disabled={gateActionDisabled} onRepair={onResolveGate} onConfirm={onConfirmCoverage} />
               {runtimeEvidence && phase.executionContractId === null && phase.runtimeExecutions.length > 0 ? (
                 <PhaseAttributedRuntimeEvidence executions={phase.runtimeExecutions} />
               ) : runtimeEvidence ? (() => {
@@ -157,7 +185,7 @@ export function WorkflowPhaseListPanel({
                   />
                 );
               })() : null}
-            </span>
+            </div>
           </li>
         ))}
       </ul>

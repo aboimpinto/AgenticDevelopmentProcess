@@ -43,3 +43,4 @@ export * from "./agent-routing.js";
 export * from "./agent-routing-matrix.js";
 export * from "./work-item-lifecycle.js";
 export * from "./effort-estimation.js";
+export * from "./workflow/completion-recovery-contracts.js";

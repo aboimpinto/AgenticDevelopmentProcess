@@ -1,5 +1,821 @@
 # Hepha Workflow Control-Flow Map
 
+## Common phase policy and current conformance gap
+
+The [common phase completion policy](phase-completion-policy.md) is the agreed
+target for every phase. Task prompts define work; independent Need Code Review
+and Need Test Coverage flags select their loops; configured commands/actions
+produce evidence. Identifiers never select different completion rules. Ordinary
+gate failures keep repair in the same phase, while an architectural/authority
+impasse or repeated lack of meaningful progress requires explicit escalation.
+All declared work and gates must pass before advancing.
+
+The compatibility transitions below still describe the implemented runtime:
+`WF-MCP-PHASE-QUALITY-ADMISSION` repairs unresolved evidence in the same phase
+before escalating repeated lack of progress.
+That behavior is a conformance gap, not a phase-specific exception authorized by
+the policy. Migrating requests, results and document projections to one validated
+JSON contract and routing repair before advancement remains implementation work.
+This documentation update does not change transition code or certify that work.
+
+## Collective verification and diagnosis recovery
+
+```mermaid
+flowchart LR
+  worker[Scoped worker settles] -->|WF-VERIFICATION-DIAGNOSIS-HANDOFF| diagnosis[Validate and bind diagnosis]
+  diagnosis --> refresh[Reconcile current evidence]
+  refresh --> partial[Retain partial proof and exact remaining obligation]
+  partial --> action[Next explicit repair, execution or investigation]
+  refresh --> complete[Full proof awaits existing acceptance gates]
+```
+
+Planning, implementation, independent review and readiness share the versioned
+`verificationContract` policy. The accepted project/phase contract owns test
+layers, selection, repositories, fixtures and required integration boundaries;
+HEPHA does not add a universal test stack or feature-specific test tags.
+
+`WF-VERIFICATION-DIAGNOSIS-HANDOFF`: a still-owned phase repair invocation may
+publish one `HEPHA_VERIFICATION_DIAGNOSIS_V1` handoff. HEPHA validates its exact
+selected criterion IDs and bounded source-cited diagnoses, then persists the
+latest outcome per phase before automatic refresh. Missing handoffs become
+investigation, not a pass or a missing-test inference. Invalid handoffs fail
+publication. Cancelled/replaced invocations cannot publish.
+
+Readiness preserves valid partial evidence separately from approvable full
+coverage. Complementary reports may collectively establish a criterion; an
+unproved required boundary keeps only that criterion unresolved. Persisted
+partial contributions are included in its phase repair instructions. Diagnoses
+are routing context, not execution reports or a reason to repeat full assessment.
+
+Reference/provenance validation treats each manual or automated contribution
+independently. Completeness checks run on the full criterion group, never on an
+isolated manual link: mixed evidence is allowed, manual-only proof cannot settle
+an explicit automation requirement, and unrelated criteria cannot lend each other
+automation. An explicit unresolved obligation retains all valid partial evidence.
+An invalid additional link appends its diagnostic without replacing the original
+reason, execution prerequisites or source-cited diagnosis. Approval revalidation
+uses the same grouped rule; it never silently discards valid manual contributions.
+
+Configured action routing receives current pack/review-bound manual outcomes,
+validated partial links and preserved diagnoses. Historical phase prose cannot
+revoke those outcomes. The routing stage owns only the exact remaining work,
+not coverage, execution or acceptance. Assessment version v11 and configured
+action version v3 invalidate old cached conclusions while preserving valid
+source-bound approvals, test results and unchanged manual packs.
+
+Current diagnoses refine only still-unresolved criteria. A cited missing
+implementation routes to a subsequent explicit phase repair, not overwritten
+by the presence of a configured suite. Evidence-linkage or unknown-context
+findings route to investigation. Source/configuration changes invalidate stale
+diagnoses; changing only an invocation ID does not invalidate unchanged evidence.
+An unchanged repair/investigation requires new source context or human guidance.
+Environment retry still requires prerequisite acknowledgement and real preflight;
+acknowledgement is never proof. Documented runner-owned bounded setup/cleanup is
+allowed only under existing project and action permissions. No automatic
+external provisioning or feature completion is introduced.
+
+Static command adapters remain intentionally bounded. Unsupported cases are
+investigation, not missing tests. Action routing also receives phase source
+context; model-suggested commands remain untrusted preflight inputs. The accepted
+project verification matrix defines required tests and regression scope.
+
+## Incremental manual verification and recoverable authoring
+
+```mermaid
+flowchart TD
+  Case[Validated case in current pack] -->|WF-MANUAL-CASE-VERIFY: explicit human review and result| Result[Case-scoped result; other gates unchanged]
+  Interrupted[Interrupted authoring with saved batches] -->|WF-MANUAL-AUTHORING-RESUME: human retries unchanged inputs| Remaining[Assess remaining batches before publication]
+```
+
+`WF-MANUAL-CASE-VERIFY` separates case validity from aggregate coverage. A human
+can explicitly review a validated case in the exact current pack and record its
+observed pass/fail even if another criterion is uncovered. A scoped review does
+not approve the whole pack. Stale/superseded artifacts remain blocked. Bulk
+acceptance still requires a ready, wholly reviewed pack. Individual results only
+settle manual acceptance after every required case has passed and the whole pack
+is ready and reviewed; other feature gates remain authoritative.
+
+`WF-MANUAL-AUTHORING-RESUME` divides authoring into batches of at most three
+criteria. Each complete, validated proposal batch is atomically checkpointed.
+Timeouts preserve the published pack and saved drafts; retrying with identical
+sources, guidance and pack identity resumes the remaining batches. Changed
+inputs start a fresh assessment. Sources are rechecked at each batch boundary.
+The dashboard shows durable progress and interrupted-run recovery. No draft,
+checkpoint, regeneration or case review constitutes a passing test result.
+
+## Completion readiness refresh (WF-COMPLETION-READINESS-REFRESH)
+
+WF-COMPLETION-EXISTING-EXECUTION distinguishes identified tests from executed
+coverage. Structured, validated execution suggestions carry test paths, a
+configured command and any concrete environment prerequisite. The owning phase
+shows these outside collapsed details and offers **Run existing verification**.
+The phase action retains explicit setup acknowledgement. The user Refresh action
+may instead authorize actual worker preflight without claiming setup is available;
+neither acknowledgement nor discovery is evidence. Missing execution alone cannot
+justify test creation or production edits. An actual failing run permits one
+phase-scoped correction and rerun under the existing project authority, never
+weakened assertions. Missing setup stays blocked; imported reports trigger
+automatic reassessment.
+Legacy pending proposals retain their valid links while unresolved decisions
+are upgraded. Manual captions consume refreshed server status without creating
+new human results. See WJ-2026-075 and paired Gherkin scenario CR-05.
+
+```mermaid
+flowchart LR
+  DisplayedReadiness -->|WF-READINESS-EXECUTION-HANDOFF: explicit user refresh| FreshInspection[Inspect all feature phases and configured verification scope]
+  FreshInspection --> FreshExecution[Snapshot sources and rerun every distinct related check]
+  FreshInspection -->|plan or command admission diagnostic; continue while defects resolve| PlanCorrection[Correct check classification and scope without executing]
+  FreshInspection -->|recoverable worker error; retain scope and saved progress| FreshInspection
+  PlanCorrection --> FreshInspection
+  FreshInspection -->|explicit spending cap reached| InspectionStopped[Preserve partial inspection; no tests or fallback]
+  InspectionStopped -->|later user Refresh; validate source and checkpoint identity| FreshInspection
+  FreshExecution -->|WF-COMPLETION-READINESS-REFRESH: validate reports and unchanged sources then assess| CurrentEvidence[Assess phases, gates, reviews and fresh collective coverage]
+  FreshExecution -->|receipt or native-report validation diagnostic| EvidenceRepair[Return diagnostic, plan and current evidence to verification agent]
+  EvidenceRepair -->|correct receipt or rerun affected configured checks; revalidate sources and reports| FreshExecution
+  FreshExecution -->|recoverable worker error; retain completed reports| EvidenceRepair
+  EvidenceRepair -->|correction worker error; include failure in next prompt| EvidenceRepair
+  EvidenceRepair -->|repeated or cycling validation defects after diagnosis| FreshBlocked[Keep readiness blocked; retain attempts and specific diagnosis]
+  FreshExecution -->|changed source, cancellation, runtime or authority boundary| FreshBlocked
+  CurrentEvidence -->|owned refresh starts, notify project| RefreshingCard[Feature card shows spinning Refreshing readiness, not Idle]
+  RefreshingCard -->|WF-COMPLETION-RECOVERY-UI-LOCK: server lock or local pending request| RecoveryControls[Disable refresh and conflicting mutations; preserve drafts and read-only navigation]
+  RecoveryControls -->|server lock released and local request settled| SettledCard
+  RefreshingCard -->|lock released on success or failure, notify project| SettledCard[Feature card shows current settled status]
+  CurrentEvidence --> EvidenceSnapshot[Verify receipt reports and current pack-bound human results without changing pack]
+  EvidenceSnapshot -->|complete index fits| ProposedCoverage[Tool-free evidence link proposals]
+  ProposedCoverage -->|WF-CONFIGURED-VERIFICATION-ROUTING: unresolved execution actions| ConfiguredTargets[Select canonical target from static project configuration]
+  CurrentEvidence -->|upgrade cached action decisions without repeating coverage| ConfiguredTargets
+  ConfiguredTargets -->|known existing run, merge shared requirements| ExecutionPrerequisite[Phase shows required setup and existing verification]
+  ConfiguredTargets -->|WF-VERIFICATION-SETUP-INSPECT: explicit phase repair request| VerificationInspection[Investigate findings, correct scoped defects and execute affected checks]
+  VerificationInspection -->|publish results and automatically reassess| CurrentEvidence
+  VerificationInspection -->|completed repair changed source; still owns run| FreshInspection
+  ExecutionPrerequisite -->|WF-COMPLETION-EXISTING-EXECUTION: explicit request after setup acknowledgement| ExistingExecution[Preflight and run existing checks without implementing duplicates]
+  ExistingExecution -->|actual report or explicit environment blocker, automatically reassess| CurrentEvidence
+  EvidenceSnapshot -->|large index| EvidencePages[Inspect every identity in bounded extraction pages]
+  EvidencePages -->|each validated stage| AssessmentCheckpoint[Atomic stage checkpoint bound to full prompt and current authority fingerprint]
+  AssessmentCheckpoint -->|all pages validated| CompactAssessment[Lossless identity and source factoring, shortest catalogue with exact report-reference remapping, per-criterion final assessment]
+  CompactAssessment -->|all decisions validated| ProposedCoverage
+  CompactAssessment -->|WF-COVERAGE-RESPONSE-CORRECTION: invalid response schema| SchemaCorrection[Save value-free field diagnostic and correct using identical evidence]
+  SchemaCorrection -->|corrected response passes unchanged validation| ProposedCoverage
+  SchemaCorrection -->|distinct field defect; preserve evidence| SchemaCorrection
+  SchemaCorrection -->|repeated defect or runtime boundary| AssessmentRetry
+  CompactAssessment -->|failure or irreducible overflow| AssessmentRetry
+  AssessmentRetry -->|same inputs after retry or restart| AssessmentCheckpoint
+  EvidencePages -->|failure or context overflow| AssessmentRetry[Assessment incomplete - retry refresh without test repair]
+  AssessmentRetry --> CurrentEvidence
+  ProposedCoverage -->|WF-COMPLETION-COVERAGE-CONFIRM: explicit human confirmation| BoundCoverage[Pack and source-bound confirmation receipts]
+  ProposedCoverage --> CoverageReview[Amber phase coverage review, no repair dispatch or generated repair instructions]
+  BoundCoverage -->|new report, unchanged per-link bindings| RetainedCoverage[Retain unaffected explicit confirmations]
+  RetainedCoverage --> CurrentEvidence
+  BoundCoverage --> CurrentEvidence
+  CurrentEvidence -->|WF-COMPLETION-PHASE-GAPS: unresolved verification evidence| PhaseGaps[Grouped gaps and managed repair instructions in owning phase]
+  PhaseGaps -->|human selects phase repair| ScopedRepair[Existing phase repair worker with server-reloaded gap context]
+  ScopedRepair -->|WF-PHASE-REPAIR-READINESS: settled attempt, not proof| CurrentEvidence
+  CurrentEvidence -->|remaining human or environment blocker| RecoveryAction[Manual verification, user review or external prerequisite]
+  CurrentEvidence -->|all gates satisfied| ReadyForExplicitCompletion
+```
+
+Receipt binding compares equivalent literal POSIX/Bash arguments and operators,
+including quoted paths, escaped spaces and separately bound console capture.
+Harmless presentation differences proceed directly to native report validation;
+they require neither receipt rewriting nor a model repair. The raw command is
+retained. Assignment syntax, empty arguments, descriptor order, selected tests
+and native report destinations remain significant. No shell text is executed to
+compare commands; unsupported expansion/grammar retains exact matching and the
+existing diagnostic recovery path. This policy is independent of project and
+runner. Evidence counts, freshness and coverage assessment remain independent.
+
+`WF-READINESS-EXECUTION-HANDOFF` is owned by
+`CompletionReadinessVerificationApplication.refresh`. The dashboard explicitly
+sends `verifyExisting: true` with `reassess: true`; confirmation and assignment
+cannot carry it. `FreshFeatureVerificationApplication` starts before coverage
+assessment regardless of historical ready/blocked/investigation status.
+A bounded read-only worker inspects all phases, accepted requirements, linked
+repositories, configured runners and shared setup. The server validates phase
+accounting only after the full inspection. Its sole write exception is a bounded
+run-local partial inspection checkpoint. A spending stop preserves that checkpoint
+and sessions; a later explicit Refresh reuses only structurally valid navigation
+with unchanged primary-source and feature fingerprints, then re-reads selected
+sources in all linked repositories. Missing, changed or malformed checkpoints
+require fresh inspection. They never prove execution or coverage. Operator caps
+are optional, separate from model context, and never bypassed with automatic
+retries/fallback. The feature displays the actionable failure, not raw telemetry.
+The server validates complete phase
+accounting and unique cwd/command checks before a verification-only worker runs
+all related checks, including previous passes and relevant existing regressions.
+Before the execution snapshot, HEPHA publishes the admitted inventory into
+FeatureDescription TestPlan and Phase Verification References. The inspection
+worker may propose exact stale command-literal replacements using the shared
+verification.inventory.commands JSON exchange. The host validates its schema,
+allowed sections, admitted replacement commands and complete write set; it
+preserves acceptance criteria, gate declarations, lifecycle and human evidence.
+Corrections retain before/after documents and configuration reasons in the run
+folder. Publication updates the feature fingerprint before saving a reusable plan;
+cached plans never replay literal replacements. No framework-specific document
+patches or production-code repair are authorized. Ordinary assessment-only refresh
+still has no write authority. Generated-output snapshot handling remains separate.
+
+One check may satisfy several phases; unrelated suites are excluded. A containing
+suite is permitted when reliable filtering is unsupported, with explanation.
+Run-local native reports and a run-bound receipt must account for every check.
+Failed/skipped/zero checks and missing receipts cannot establish readiness;
+receipt/import diagnostics return to the verification agent within the same Refresh.
+The worker receives the exact diagnostic, rejected receipt, selected plan, current
+native reports and references to project configuration and Phase/Task criteria.
+It corrects recording/linkage defects from real execution or reruns only affected
+configured checks and necessary dependencies. Unaffected passing evidence is reused.
+The unchanged shared importer revalidates every result; worker prose never grants
+success. Rejected receipts and responses are retained in run-local recovery audits.
+Distinct validation defects can continue beyond two corrections. The same diagnostic
+set appearing three times, including cycles, escalates after a diagnosis attempt;
+new timestamps, hashes or assurance text alone do not reset this progress guard.
+Source and workflow ownership are rechecked on every iteration. Provider/budget
+errors are not receipt retries. Historical reports cannot fill current-run holes.
+Source-content snapshots include tracked and nonignored untracked files across
+selected repositories. Feature documents use a separate semantic fingerprint.
+Filesystem read budgets are IO safety limits, not model token-window limits.
+This recovery authorizes receipt repair and execution of selected checks, not
+implementation/test edits or changed acceptance scope. Substantive plan changes,
+production failures and external authority gaps require their owning repair path;
+they cannot be resolved by relabelling evidence. Cancellation/replacement ownership
+is checked before settlement.
+Validated fresh checks may replace an old automated phase-gate verdict only when
+the inspected plan explicitly maps that check to the phase and automated gate.
+Code review and other human gates are never replaced, nor are unrelated layers.
+This is a current evidence projection; historical phase files are not rewritten.
+
+The worker's automatic refresh calls the assessment application directly, without
+execution authority. It never starts another worker. A returned repair remains
+failed/unresolved if its selected gate still lacks evidence, a report failed, or
+assessment could not finish. Confirmation-only coverage may remain for the user;
+it does not itself trigger another test run. Another explicit Refresh does run
+all related checks again. WJ-2026-094 and FV-01 through FV-06 replace CR-13's
+historical-pass reuse policy. CR-14 retains explicit repair settlement coverage;
+CR-15 retains large routing coverage on the assessment/phase-action path.
+
+Configured action routing is a separate bounded assessment, not another copy of
+the large coverage prompt. Static Playwright configuration supplies target IDs,
+commands and paths without evaluating project code. Unsupported or ambiguous
+configuration leads to an explicit investigate-and-repair action. Shared runs retain all their
+criteria and prerequisites in one execution action. Saved action bindings are
+invalidated by configuration or decision changes; configuration is checked again
+before dispatch. Failed preflight and reassessment cannot discard the prerequisite
+gate. Existing proposals, passing results and human authority remain unchanged.
+See WJ-2026-078 and paired Gherkin/server scenario CR-09.
+
+Routing uses the same pinned model limits, token counter and shared whole-refresh
+spending budget as coverage assessment (WJ-2026-093). Production requests are no
+longer rejected by a fixed character ceiling. Output, framing, provider-wrapper
+and schema-correction headroom are reserved. At 50% occupancy, exact source-line
+factoring is attempted; at 80%, complete criteria are packed into smaller groups
+targeting 75% occupancy. If a single criterion's source context still cannot fit,
+the existing bounded, checkpointed source-fact extraction accounts for all pages
+and retains citations, scope and negative qualifications. Irreducible non-source
+context fails before buying extraction. Partitioning never drops criteria,
+configuration targets, prerequisites or current manual outcomes. The legacy
+injected runner without model metadata retains a conservative compatibility bound;
+the production application always supplies its pinned session policy.
+
+Repeated partial references are grouped in the routing wire projection by exact
+criterion, evidence identity and manual-step sequence. Identical explanations
+appear once; distinct explanations remain separate assertions, not extra test
+executions. Original durable links and approval bindings are not rewritten.
+Assessment instructions request reuse of unchanged explanation text instead of
+creating new paraphrases and explicitly prohibit empty optional test-path arrays.
+Compaction start/completion/failure notifications use the existing feature-card
+activity channel. CR-15 pairs the full large-input routing-to-verification journey
+with browser and server-only tests, without feature-specific thresholds or IDs.
+
+The existing Refresh button POSTs to the project-scoped completion-readiness
+application. Explicit Refresh first runs fresh feature verification. The
+assessment-only service remains an opt-in recovery path for a feature that reached the end
+but could not complete after verification gaps; ordinary unenrolled scans and
+normal completion remain unchanged. It reads the configured project paths,
+phases, explicit task/wave ledgers, quality gates, source readiness, findings,
+code-review acceptance and current manual evidence. Only unresolved coverage
+without implementation blockers invokes the bounded, tool-free model route.
+
+Fresh inspection distinguishes test execution from static checks, preparation
+and discovery. Non-test checks may have no test paths; their successful logs
+are required for the plan but never provide automated coverage. Test source selections may overlap within one profile: distinct filters,
+assemblies, namespaces and configurations can execute different tests from the
+same files. Reject identical canonical cwd/command executions, not shared file
+ownership. The inspector compares actual delegated selections before choosing
+one covering execution for equivalent/full-subset runs; it preserves all source
+references and phase obligations. One plan handoff decodes a single
+unambiguous JSON value, including fenced or prose-wrapped output, locally before
+the existing semantic validator. It never extracts nested fragments from malformed
+JSON or chooses between competing payloads. Inspection and correction share a
+valid JSON template with the required phase numbers and explicit placeholder
+replacement instructions; examples are not execution authority. Raw responses remain diagnostic;
+only the validated canonical `inspection-selected.json` plan proceeds to execution.
+`FeatureDescription.md` describes or explicitly links the test inventory: owning
+repositories, test locations/identities, configured checks and obligation mappings.
+Implementation updates it when tests are added, renamed, moved, replaced or removed.
+Legacy features may resolve existing authoritative phase/planning references and
+record the inventory gap; verification does not rewrite feature documentation.
+
+A validated inspection persists `manual-test-verification/inspection-baseline.json`
+before execution. A later explicit Refresh revalidates feature identity, requirements,
+inspection contract/project configuration, phase mappings and content snapshots for
+the project, MemoryBank and selected repositories. Dirty source and newly added tests
+invalidate the baseline. Invalid/missing configuration or test source, corrupt data
+or unavailable snapshot support returns to inspection. Unchanged plans retain check
+selection with new invocation/report destinations; every check still executes again.
+No old report or approval is copied. Source drift during inspection stops before
+execution. The baseline survives execution failure and process restart.
+Inline-code prose such as glob patterns is not a competing payload; inline JSON
+alternatives still are. Malformed output receives a categorized syntax, delimiter,
+incomplete, ambiguous or missing-payload diagnostic with line/column and recovery
+guidance, without echoing source excerpts. The correction worker receives this
+diagnosis and the saved response; successful correction resumes normal execution.
+Admission rejection is not an immediate workflow stop: only exhausted correction
+or a runtime/authority failure ends the attempt without tests.
+Unresolved typed plan and command-admission errors get targeted corrections while
+validation progresses, each with the existing three-minute worker runtime limit.
+The same diagnostic set recurring three times, including cycles, escalates after
+a root-cause diagnosis attempt. Distinct defects can continue beyond two corrections.
+Semantic correction reads the saved canonical candidate and aggregate diagnostics,
+distinguishing original check failures from dependent references. Configuration
+errors name the field, cwd and resolved path. A rejected check does not manufacture
+a phase error, and check-ID ordering has no significance. Workers may return small
+`checkUpdates`/`phaseUpdates` for diagnosed entries; HEPHA merges them into the saved
+candidate, rejects duplicate/unrelated/unknown-field updates, and applies the same
+complete validator before persisting the plan. Complete plans remain compatible.
+Raw correction output remains auditable and runtime bounds stay unchanged.
+Semantic correction
+preserves unaffected scope, and is instructed to inspect only configuration needed
+for those errors, not repeat feature/workspace inspection. Formatting wrappers
+alone require no correction worker. Recoverable inspection worker errors resume
+with the original scope, saved progress and exact failure. Execution and evidence
+correction worker errors similarly return to the evidence-recovery boundary;
+completed reports are retained and only unresolved configured work is rerun.
+Runtime policy codes, provider route exhaustion, spending/authority errors and
+cancellation do not enter these retries. Correction state records attempt, reason and start time; readiness
+projects the reason and elapsed seconds while correction is active. See WJ-2026-098
+and `verification-plan-handoff.feature` for shared parser/HTTP execution regressions.
+For linked repository verification, command `cwd` is independent of source
+ownership. Relative `configurationFiles` explicitly bind their owning Git
+repositories; matching `testPaths` can reference those repositories without
+rewriting a package wrapper or dropping the delegated runner. Unbound selections
+and symlink escapes are rejected. Configured test directories enumerate tracked
+and nonignored source for containment and freshness, without treating shared
+files across command directories as proof of duplicate execution. Baseline reuse and execution freshness snapshot
+all bound repositories, including owners from which no command launches. This
+uses the existing plan fields and does not grant additional execution authority.
+See WJ-2026-118 and `verification-multi-repository.feature`.
+
+Receipt capture normalization applies to test and non-test checks. An added
+checksum-bound run-owned console redirect, including a single parenthesized
+literal AND-list, preserves the selected command and its exit semantics. Native
+stdout reports still need verified identities/counts; health logs cannot certify
+coverage. Scoped multi-repository working-tree claims must match the command
+repository and explicitly configured source owners; unbound or alternative
+hashes remain invalid. See WJ-2026-119 and `receipt-health-capture.feature`.
+
+Native execution display names are not globally unique keys. The shared importer
+retains every passing parameterized record and checks exact totals; repeated
+labels use report-local execution references, or bound native execution IDs in
+TRX. Available TRX assembly and method context remains visible. Multiple native
+reports retain their checksum scope instead of rejecting shared method names.
+Repeated report bytes, duplicated TRX execution IDs, failed/skipped results and
+count mismatches remain invalid. These references identify report occurrences,
+not stable TestPlan entries or unique coverage contributions. Assessment still
+compares the documented inventory and actual assertions with acceptance criteria;
+passing execution cannot certify an unasserted requirement. See WJ-2026-120 and
+`execution-display-names.feature`.
+
+The FEATURE card projects server-owned inspection, plan correction, preparation,
+actual planned test-tool dispatch, report validation and evidence-assessment
+stages. An active verification worker is not feature finalization. Failed or
+interrupted runs clear active labels; labels never certify success. See WJ-2026-096
+and paired browser/Twin scenario FV-08.
+
+Phase/repair receipts and Refresh reports use one evidence importer:
+`readRecoveryExecutionEvidence`. Refresh supplies its run directory, run ID
+and inspected check identities to that importer; it has no separate report
+validator. The importer owns checksums, reporter parsing, revision provenance,
+counts, deduplication and diagnostics. Current-run/source-snapshot guards remain
+at the Refresh orchestration boundary; historical results cannot substitute.
+The shared execution prompt contract takes the output destination and rerun/repair
+authority as parameters, rather than maintaining a Refresh-specific receipt format.
+Successful static/preparation/discovery logs may be empty, but never prove test
+coverage. Independent valid reports remain importable when another check is
+rejected; required failures still block completion. See WJ-2026-097 and the shared
+unit/HTTP integration scenarios in `unified-verification.feature`.
+
+HEPHA creates `receipt-context.json` before dispatch with its own invocation ID
+and selected checks. The shared JSON template includes that concrete `runId`.
+After successful worker return, ownership and source checks, the receipt producer
+normally supplies an omitted root ID in its fresh owned directory and preserves
+the original as `receipt.worker.json`. This is best-effort enrichment, never an
+admission gate: the shared importer accepts absent/null/empty receipt IDs without
+rewriting the receipt. `verifiedAt` is optional audit metadata: missing, malformed,
+old or future values alone do not block valid execution evidence. Validation never
+compares this worker-authored field with the current wall clock, so an unchanged
+receipt cannot change admission merely because time advances. Preserve the raw
+value rather than guessing or repairing it. HEPHA's existing workflow start/end
+records remain separate from any claimed test execution timestamp.
+Current output-directory and source guards remain in force. An explicitly
+conflicting ID, mismatched command or invalid native evidence remains rejected;
+adding an ID cannot establish a pass. Receipt structure comes from the current
+shared contract, not historical receipts. WJ-2026-101 supersedes the mandatory-ID
+behavior of WJ-2026-100; FV-10 through FV-13 cover normal ID production, conflict,
+successful ID-less import through HTTP and browser Refresh flows. WJ-2026-103
+supersedes WJ-2026-101's timestamp gate. FV-13 and FV-15 through FV-17 execute real
+test processes and reach readiness after human confirmation with old, absent,
+malformed or future receipt timestamps, including when runId also remains absent.
+Legacy multi-receipt conflict ordering remains unchanged: contradictory outcomes
+still need resolution; a timestamp error alone is not a test failure.
+
+The shared binding policy accepts a single literal `cd <configured cwd> &&`
+prefix as equivalent command presentation. It decodes quoted literal paths,
+escaped spaces and optional `cd --` without running a shell, then requires the
+same configured cwd and unchanged remaining command. It does not rewrite the
+receipt or native evidence. Different directories, filters, manifest options,
+report destinations, shell expansions and extra commands cannot be dismissed as
+formatting. FV-14 executes real synthetic tests through this shell prefix and
+reaches readiness through both HTTP and browser while preserving the receipt.
+See WJ-2026-102.
+
+Before persisting the execution baseline or creating receipt context, the fresh
+verification application runs `resolveVerificationCommands` on both inspected
+and reused plans. For built-in Cargo metadata/fmt/clippy/test/build/check commands
+with no explicit manifest option and no manifest discoverable from cwd, it binds
+the single Cargo.toml already declared in that check's configurationFiles.
+Multiple configured manifests require explicit selection; arbitrary command
+wrappers and custom subcommands are not reinterpreted. Existing options, cwd,
+test paths, phase mappings and report destinations are preserved. The result
+passes shared plan admission before dispatch. Original plan and before/after
+corrections are retained in run-local audit files; execution context, selected
+plan, importer binding and reusable baseline all receive the corrected command.
+No previous receipt is consulted and no evidence is rewritten to match a plan.
+FV-18 covers current execution and the next Refresh; a server integration test
+also upgrades a legacy cached omission without requiring another inspection.
+This is configured command resolution, not code/test repair authority. See
+WJ-2026-104. Optional runId and timestamp policies are unchanged.
+
+The shared `verification-setup/v2` instruction contract requires dependencies to
+be traced to actual runner configuration and fixture/hook implementations.
+Generated planning, recovery prose, previous receipts, cached reasons and sibling
+projects cannot establish a prerequisite. Inspection records precise setting/call
+references; execution rechecks actual setup rather than copying old availability
+claims. Runner-owned bounded setup is eligible under the existing authority and
+does not require an already-running fixture. Missing scenario state arrangement
+is diagnosed separately from missing service startup. Independent checks proceed.
+The changed inspection prompt participates in the existing baseline contract hash:
+older plans are reinspected automatically, without deleting historical evidence.
+This is a model inspection policy, not a deterministic dependency-graph inference
+engine; tests prove contract delivery, cache invalidation and actual execution with
+a controlled inspection adapter, not arbitrary live-model reasoning.
+
+Inspection follows aggregate wrappers to their underlying projects, filters and
+reporters. A wrapper hiding `--no-build` or emitting only totals must be represented
+by source-built native checks while retaining required guards/cleanup. Do not
+reinterpret aggregate totals as native results. Shared receipt import supports a
+bounded `reports: [{path, sha256}]` collection instead of legacy report fields,
+validating each file, hash, outcome, unique identity and aggregate count. A separate
+console log remains audit-only. Legacy and collection native bindings cannot be
+mixed. Hash-first `<hash> @ working tree (...)` and existing working-tree formats
+preserve full source qualifications and require one unambiguous hash. Optional
+receipt metadata, source snapshots and human acceptance remain unchanged.
+Both space-separated and hyphenated working-tree wording are accepted. Assessment
+semantics advance to `complete-execution-index/v12` so old cached interpretations
+cannot retain the formatting rejection.
+WJ-2026-105; FV-19 and setup-contract HTTP/shared importer scenarios.
+
+WJ-2026-106: shared invocation binding also accepts an added terminal
+`> <run-owned console log> [2>&1]` on an otherwise unchanged simple test command.
+The receipt binds that separate log and at least one independent native report;
+all normal native validation follows. Preserve raw commands and receipt bytes.
+Reject changed selection, replaced native outputs, existing redirect overrides,
+append mode, shell expansions/statements and logs outside the current run.
+No shell text is evaluated to establish equivalence. FV-20 runs an actual process
+which writes native JSON separately from redirected console output and reaches
+human-confirmable readiness. Negative cases retain real evidence rejection.
+
+`verificationExecutionPlan` projects only configured check fields and phase IDs.
+It excludes planner reasons and no-automation prose from the execution prompt.
+`ExecutionReceiptProducer` independently allowlists id/kind/cwd/command instead
+of serializing structurally wider check objects into receipt-context.json.
+The full plan remains unchanged for audit and subsequent coverage assessment.
+Execution starts from referenced configuration and fixture code and is instructed
+not to import old inspections/recovery narratives as setup authority. FV-21 proves
+the exclusion at both handoff boundaries and actual execution with a controlled
+adapter. This prevents automatic propagation; it does not claim to guarantee an
+arbitrary model's interpretation of repository files it subsequently reads.
+Assessment semantics advance to `complete-execution-index/v13`.
+
+Recovery additionally imports `verification/*.json` receipts using
+`phase-verification-receipt/v1`. A bounded local reader verifies the feature,
+command, working directory, tested revision, successful non-zero counts and
+SHA-256-bound reporter artifacts. Supported reporters are assertion-level
+Vitest/Jest JSON, native Playwright JSON, .NET TRX and Cargo test logs; unsupported reports remain explicit
+diagnostics, not passes. Discovery, unproven prebuilt execution, mismatched
+checksums, failed/empty reports and conflicting or superseded attempts do not
+establish coverage. Repeated receipts do not add tests. Exact executed test
+identities, not aggregate suite totals, inform human-reviewed criterion links.
+This is historical execution evidence, not proof of clean/current source HEAD.
+TRX is parsed with a bounded namespace-aware XML parser, rejects DTDs and
+requires unique passing results bound to test definitions and execution IDs.
+Playwright requires actual unqualified passing executions, not discovery,
+expected failures, retries, skipped results or flaky runs. Both reporters must
+reconcile every identity with complete non-zero totals. A `logPath/logSha256`
+alongside `reportPath/reportSha256` is verified audit context, not another test
+suite. Supplemental execution accepts `extraReportPath/extraReportSha256` or
+legacy `extraPath/extraSha256`; contradictory aliases fail closed.
+An explicit `working tree @ hash` or `hash + qualified working tree` baseline
+retains its source-state qualifications verbatim; it is never promoted to a
+clean-commit claim. New producers should use a hash and separate `treeState`.
+Unproven `--no-build` results and aggregate-only .NET console summaries stay
+excluded. Reuse existing source-built identity-level TRX rather than rerunning
+unrelated passing suites. Missing fixtures remain environment limitations.
+Importer semantics are included in the assessment version fingerprint so an
+upgrade reassesses formerly unsupported evidence without clearing human passes.
+Recovery also supplies bounded exact criterion mentions from source documents,
+including late repair tables omitted by ordinary excerpts. These source claims
+are mapping context only and cannot substitute for executed report evidence.
+
+The same snapshot includes authoritative current pack/review-bound manual
+results; an older Markdown PENDING claim cannot override a saved PASS. The
+latest result is used, and stale review bindings are rejected. Receipt/report
+and result fingerprints bind proposals and confirmations and are rechecked
+before publication and during subsequent scans. Changing evidence invalidates
+coverage decisions, not the unchanged package or its human review/results.
+This recovery-only snapshot never enters the canonical manual-package hash.
+Ordinary unenrolled flows still use their existing evidence policies.
+
+Unchanged background refresh reuses its assessment and explicitly reports
+that reuse; saved compaction details remain historical. The single supervised
+Refresh Completion Readiness action sends `reassess: true` and `verifyExisting: true`, incompatible with
+confirmation or phase assignment. After fresh execution, only this run's
+validated automated reports reach assessment. All acceptance criteria are checked,
+including criteria previously satisfied by historical automated evidence.
+Old automated mappings lose applicability without deleting their audit history;
+manual results remain saved and their applicability must be assessed separately.
+Background assessment preserves valid current bindings and does not execute.
+Current runtime capacity, spending limits, schema correction bounds and all
+recovery locks still apply. Reassessment alone grants no execution authority;
+the user-only handoff described above owns configured verification. Evidence
+manufacture, automatic confirmation and completion are never authorized. A fresh unresolved decision may remain
+blocked; reassessment is not a promise of approval.
+
+The recovery index retains every verified identity, including supplemental
+reports. There is no first-N identity or character prefix cutoff. A complete
+prompt fitting the model-derived planning target is assessed directly. Production
+readiness pins one approved plan and reads current local Pi SDK context/output limits for all
+permitted routes; the most restrictive effective capacity controls planning. Missing
+limits stop before dispatch. The provider hook checks the effective model again on
+every complete wire request. The old 94,000-byte target is only a compatibility
+default for injected assessment runners without model metadata, not the production
+route. Available context subtracts the actual requested output allowance and 4,096
+framing tokens. Readiness binds up to 16,384 output tokens on supported transports.
+Codex subscription requests omit unsupported output fields and reserve catalogue
+maximum output instead. Planning obtains the provider from the same connection
+resolver as execution; model names and display labels cannot select the contract.
+Local BPE token counts determine occupancy; bytes are diagnostics, not tokens.
+Optional operator-owned cumulative input spending caps never change these thresholds.
+At 50% use lossless identity/source/diagnostic compaction; remeasure, and at 80%
+use cited fact extraction and bounded evidence/criterion partitioning. Target 75%
+with another 2,048 tokens reserved for the provider wrapper. Local text token counts
+are not billed usage or exact provider chat/image accounting. Model windows come
+from effective SDK metadata, never model-family constants. Each refresh reads one
+bounded, read-only SDK snapshot using provider plus model identity, including user
+overrides, before planning. The display catalogue cache cannot trigger startup
+compaction or enlarge capacity. A manual catalogue scan is not required; missing,
+ambiguous or invalid live limits stop before dispatch rather than reverting to the
+cache. No model request or catalogue mutation is involved in this lookup.
+The server-owned recovery activity exposes running/completed/failed compaction,
+level and request token counts. Legacy byte-only activity is not relabelled as tokens.
+The card says Compacting context while running, then
+Context compacted — refreshing readiness until recovery settles. Saved completion
+of compaction remains visible in readiness; it is not completion approval. Locks
+remain active through compaction and final assessment; terminal cleanup removes
+the in-memory activity. A restart never revives a persisted compaction spinner.
+Lossless identity/source compaction is attempted before any retrieval call.
+If large source documents still prevent a fit, exact contiguous source passages
+are inspected in bounded pages once for all requested criteria (maximum 48 pages).
+Every page must account for every passage and criterion and cite only its supplied
+passage IDs. Extract concise, exact additional operative clauses rather than whole
+related paragraphs or repeated criteria. Keep conditions, prohibitions, uncertainty,
+negative evidence, evidence references and prerequisites. Each page explicitly
+attests completeness; incomplete extraction cannot produce a verdict. Quotes are
+bounded to 1,200 characters, page facts to 12,000 serialized UTF-8 bytes, and final
+source context to 24,000 locally counted tokens per criterion in production. The
+quote and fact byte limits are artifact/schema bounds, not model window thresholds.
+Oversized requests or valid JSON fact
+arrays exceeding count/byte limits are recursively subdivided into strictly smaller
+disjoint passage groups, with at most 96 stage visits. Successful children are
+checkpointed. Invalid JSON, missing accounting and fabricated quotes are not
+size retries. A single irreducible passage fails without repeated identical calls,
+truncation or a missing-test inference. Count and byte overflows are distinguished
+from an invalid facts array. Duplicate quote occurrences require
+an explicit occurrence index. Scope is resolved at the quote, including document
+changes inside a passage. Original text, offsets, scope, full-source digest and
+exact criterion memberships survive aggregation; no model-written summary replaces
+a requirement. A literal quote catalogue can share text while retaining separate
+scope, memberships and citations. All selected cross-page clauses are reunited.
+Criterion-scoped source selection avoids repeating discussions. It is
+retrieval, not a proof that omitted context is irrelevant or implementation missing.
+Already bounded complementary report evidence does not need raw identity retrieval.
+Before identity retrieval, the planner checks a lower-bound payload retaining all
+source clauses, manual steps, human outcomes and report metadata but no identities.
+If even that cannot fit for a criterion, it stops without buying futile identity
+retrieval. It does not discard requirements or infer missing client tests.
+Otherwise larger evidence inputs use
+lossless identity pages of at most 60,000 locally counted tokens (maximum 24),
+further limited by the current model planning target, to retrieve potentially
+relevant identities for the requested criteria. Every page must acknowledge
+its full count and cite only supplied indexes. A final bounded assessment sees
+the union of selected identities from all pages, the saved human outcomes and
+source context. If that union is too large, criteria are greedily packed into
+bounded groups (maximum 24), each retaining the exact union of selected cross-page
+identity indexes from every member. This avoids repeating shared evidence in one
+call per criterion. Each criterion remains whole;
+individual criterion evidence is never truncated. Oversized final contexts factor
+shared identity prefixes/suffixes and exact duplicate identities across reports.
+Report-specific ordered references preserve membership and provenance. Repeated
+source lines can be represented once with an ordered occurrence index. These
+encodings also share diagnostic origins and exclusion reasons without changing any
+diagnostic string, occurrence or ordering, or the adjacent saved human results. All
+prompt-only encodings reconstruct the entire original selected evidence and
+selected source excerpts; they are not model summaries or changes to package identity.
+The production planning budget tokenizes serialized prompts, reserves 1,800 tokens
+for each schema correction and enforces `HEPHA_READINESS_MAX_INPUT_TOKENS` when
+configured. Checkpoint hits consume no dispatch budget. Compatibility-only
+injected runners without model metadata retain their legacy byte-based test bounds.
+Spending limits are separate from context occupancy; the actual-model runtime guard remains
+authoritative and may reject a request for a smaller model context.
+Extraction is not a coverage decision; no partial proposal is
+published if extraction fails, references are invalid, or selected context
+still exceeds the bound. Such failures are assessment-retry blockers, not
+phase test-implementation gaps. Existing independent quality gates remain.
+
+Each validated extraction and final-assessment stage is atomically checkpointed
+under the feature's ignored manual-verification artifacts. Its key binds the
+exact prompt and current algorithm, source, pack, report and human-result
+fingerprints. Reloads run the same validation again; damaged, invalid or changed
+stages are dispatched afresh. A retry or application restart reuses matching
+completed work, never a failed stage. No partial proposal is published if a
+later criterion fails. Checkpoints are neither approvals nor test outcomes.
+An incomplete assessment is labelled as such in the manual-pass caption; it
+cannot establish that no gaps exist. Only satisfied gates and explicit required
+coverage confirmation produce green manual completion and enable the existing
+human-triggered Complete Feature action. No automatic finalization is introduced.
+
+Refresh activity notifications use the existing project-change stream. Start is
+published with the server lock held; settlement is published only after release,
+including failures. Card activity uses the existing `recovery-running` projection,
+not a guessed workflow run or a stale blocked verdict. It replaces the Idle stack
+and suppresses the generic completion-blocked badge only while the in-progress
+feature owns this activity. Terminal features ignore stale activity. Other
+features, stored results, approval requirements and completion gates are unchanged.
+
+The assessment algorithm version is part of the recovery fingerprint and is
+recorded alongside new decisions. A normal refresh after upgrade rejects old
+proposals/confirmations and reassesses unchanged source evidence once, without
+regenerating the manual package or clearing human results. Subsequent refreshes
+may reuse an unchanged current-version proposal. Restart alone cannot make an
+old decision current, and old proposals cannot be confirmed after upgrade.
+
+Refresh separates existing links awaiting confirmation from missing evidence.
+Confirmation-only criteria are amber review work, never red quality gaps or
+worker instructions; direct repair requests for them are rejected before dispatch.
+Mixed phases show only the genuine repair count, with both actions outside the
+collapsible details. Refresh groups genuinely unresolved criteria into the verification owner's acceptance
+coverage gap, and genuinely unfinished ledger evidence into its own phase's
+task gap. Unique completed task sections with completion timestamps reconcile
+stale ledger checkboxes without inventing work or changing recorded status.
+Ownership uses phase responsibility, not fixed phase numbers or incidental
+criterion mentions in planning; ambiguous ownership requires an explicit phase
+selection. The readiness panel summarizes gap counts and focuses real phase
+repair controls. It never creates generic findings for known coverage gaps.
+
+Managed phase sections are idempotent repair instructions, excluded from source
+fingerprints, manual coverage discovery and quality evidence parsing. They
+cannot prove their own resolution. Repair and semantic-link confirmation
+buttons remain outside collapsed phase details. Explicit repair reloads current
+gaps on the server, binds the phase document timestamp and dispatches the existing
+scoped worker. A worker return does not clear the gap; evidence reassessment does.
+
+Verified receipt imports carry typed revision, qualified source state, executed
+count and report hashes. Coverage validation consumes that proof rather than
+searching free-form text for an incidental commit from another repository.
+Human confirmation receipts also bind each link to its exact criterion, evidence
+and (for manual links) current human outcome. Adding or repairing one report
+preserves unchanged confirmations under the same source/package/algorithm;
+changed evidence loses only its affected links on refresh. Source/package or
+algorithm changes still require reassessment, and invalid execution never passes.
+
+The four `CR-*` journeys in `apps/web/e2e/features/completion-loop.feature` have
+one shared scenario catalog and one execution at each requested boundary:
+`completion-loop.spec.ts` drives the built React UI over real HTTP;
+`completion-loop-twin.integration.test.ts` drives the same production routes,
+applications, files and SQLite store without a browser. Only model/worker
+execution and unrelated portfolio data use controlled adapters. The contract
+test rejects missing, duplicate or renamed Gherkin mappings. These are paired
+test layers, not duplicate test implementations added to any client feature.
+Run `pnpm exec playwright test --config playwright.completion.config.ts` after
+building the web app for the isolated browser journeys; the ordinary Playwright
+suite also discovers them. Every fixture owns and closes its ephemeral server
+and database. No journey calls feature finalization or accesses a private project.
+
+The server automatically invokes the existing readiness refresh once after a
+phase quality repair settles, including failed attempts with partial evidence.
+It first persists the terminal repair outcome so reassessment does not see an
+active workflow. Cancelled or superseded runs do not trigger it. The repair lock
+is retained through reassessment, and a final project-change event refreshes
+the dashboard independently of popup lifetime. Refresh failures preserve the
+repair outcome and record a manual retry instruction. No confirmation, waiver,
+repair loop or finalization is dispatched automatically.
+
+Semantic mappings cite known criterion IDs, existing case steps or passing
+automation with command, revision, report and non-zero selection. They require
+explicit confirmation through the same endpoint, not another reconciliation
+button. Manual links cannot replace explicit automation requirements. Proposed
+mappings are validated by criterion: one invalid or contradictory mapping
+blocks that criterion without discarding unrelated valid proposals. Malformed
+envelopes and unknown criteria remain fail-closed. Confirmed
+links live in a separate recovery receipt bound to the exact pack, delivery model
+hash and source-document fingerprint; the original pack, reviews and results are
+not rewritten. A new source or pack invalidates the overlay. Duplicate recovery
+and manual generation are rejected. Refresh never runs tests, grants review
+approval, waives a gate, starts implementation or launches completion.
+
+For enrolled features subsequent scans and final completion admission reassess
+the recovery evidence. Current individually reviewed passing cases plus resolved
+coverage can satisfy the derived manual gate without a fabricated bulk result.
+Missing criteria offer an explicit repair-finding draft; known unique phase
+references also show a phase coverage badge. Unknown ownership stays at feature
+level, never arbitrarily Phase 7. Other blockers lead to existing phase/manual/
+human-review controls or a precise external prerequisite. The board displays
+remaining completion blockers separately from implementation phase completion.
+Transport/model errors preserve evidence; stale proposals cannot be confirmed.
+
+Compatibility header parsing accepts one structured status token followed by
+an optional parenthesised descriptive note. The note never supplies status;
+unknown tokens, conflicting folder states and unrelated trailing text remain
+invalid. Read-only evaluation preserves the original document. Admitted alias
+canonicalization preserves any descriptive note.
+
+Evidence: `devcycle-refine-artifact-validator.test.ts`, the completion readiness
+panel/controller tests, and the refresh scenario in `workflow-interactions.feature`
+and its Playwright implementation. Clearing artifact blockers must reveal the
+remaining human checks, not silently record acceptance.
+
+## Phase verification recovery (WF-PHASE-QUALITY-RESOLVE)
+
+`PhaseQualityResolutionApplication.resolve` owns the explicit human action
+from each phase's verification disclosure. `POST /api/phase-quality/resolve`
+selects a project, feature, phase and gate, never a client-supplied file path.
+Admission requires an in-progress feature, one resolved phase, an unresolved
+gate, a current contained phase document, and no active workflow or repair.
+
+A blocked Refresh also supplies repairable `verification_failure` gaps from its
+actual failed receipt entries and inspected phase/check mappings. The server
+revalidates command binding and run-local report checksums before projecting or
+dispatching **Fix failing tests / checks**. Historical satisfied gates cannot
+hide newer failed executions. Shared checks retain their mapped phase context;
+no phase number/title selects repair rules, and execution failures are not
+automatically labelled missing acceptance coverage.
+
+The repair goal requires tracing the owning tasks and comparing earlier green
+commands/reports with current configuration and committed/uncommitted history.
+The worker distinguishes regressions, changed verification scope, false-positive
+rules, environment differences and previously incomplete evidence. It repairs
+ordinary in-scope findings in its test/review loop, preserving real gates and
+escalating concrete impasses or repeated lack of progress. After a successful
+worker return for a fresh-failure repair, the server dispatches fresh verification
+before coverage assessment; it cannot accept the worker's prose or old receipt.
+Other completed repairs reassess first. When source changed since fresh verification,
+the server starts fresh verification automatically; unrelated errors remain actionable
+failures. Cancellation/successor ownership checks guard this handoff. See WJ-2026-121 and
+`fresh-verification-repair.feature`.
+
+```mermaid
+flowchart LR
+  PG[Unresolved phase gate] -->|WF-PHASE-QUALITY-RESOLVE: human request| PA{Validate current scope and authority}
+  PA -->|repair| PR[Investigate, correct and verify within scoped invocation, then reassess]
+  PA -->|confirmed justified waiver| PW[Persist waived decision and prior evidence]
+  PA -->|stale, active, failed waiver or invalid| PB[Remain blocked with diagnostic]
+```
+
+- **Verify / repair:** dispatch one bounded agent attempt with optional human
+  instructions. Inspect existing evidence first, implement missing tests or
+  minimal corrections when needed, and persist truthful phase verification.
+  Retain stable execution-contract identity when available. The worker report
+  is not a passing result. Do not advance phases or finalize automatically.
+- **Waive:** require explicit confirmation and a meaningful justification;
+  persist a dated human decision and preserve previous evidence. The result
+  remains `waived`, not `satisfied`. Reject known failures, rejected reviews,
+  stale state and concurrent work. Other gates and human acceptance remain.
+- **Complete Feature:** remain visible but disabled while quality, artifact
+  or human-check blockers exist. Clearing one gate does not authorize release.
+
+Coverage: `phase-quality-resolution.integration.test.ts` exercises real file
+writes and quality projection with an isolated worker; the corresponding
+Gherkin contract and workflow-interactions Playwright journey cover human
+repair instructions, waiver confirmation and remaining completion blockers.
+
 ## Authority and purpose
 
 This is the diagnostic map for Hepha workflow behavior. Use it to answer three
@@ -68,33 +884,40 @@ Design Feature, Refine Feature, Start Implementing, Continue Implementing, and
 Complete Feature keep `native-hepha` as their default recipe source. An explicit
 validated runtime policy may instead select `devcycle-mcp` globally or for one
 of those action identities. The selection is made from the action key before
-native admission, V3 artifact validation, branch preparation, phase routing, or
-completion gates run. It never derives authority from a FEAT identifier, phase
+choosing the matching artifact validator, branch preparation, phase routing,
+or completion gates. It never derives authority from a FEAT identifier, phase
 number, title, status prose, or generated Markdown.
 
-`FeatureWorkflowSummaryProjector.build` keeps the selected compatibility action
-available from the FEAT lifecycle folder without requiring native Deep-Dive,
-V3 artifact, or continuation projections. The HTTP boundary still resolves
-stable project/FEAT identity and rejects an already-running workflow.
+`FeatureWorkflowSummaryProjector.build` keeps preparation actions available
+from the relevant FEAT lifecycle folder, but Start and Continue require the
+selected provider's artifact contract to be valid. Dashboard enablement,
+readiness explanations, direct HTTP admission, refinement promotion, and
+manual-test seeding all use that same provider-selected authority. The HTTP
+boundary also resolves stable project/FEAT identity and rejects an
+already-running workflow.
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
-records one workflow run and dispatches
-one plan-bound Pi worker with the same registered action/model identity. That
+records one workflow run and dispatches a plan-bound Pi worker with the
+registered action/model identity. That
 worker receives the workspace-scoped `pi-mcp-adapter` and `.mcp.json`, calls the
 mapped DevCycle recipe once, validates the recipe's `pending_execution` client
-contract, and executes it locally. In autonomous mode the same Pi session and
-model may follow explicit MCP recipe handoffs through implementation, review,
-phase acceptance, and completion. Native workflow applications and prompts
+contract, and executes it locally. Preparation uses one session. Implementation
+uses one phase per session, including its review and acceptance. HEPHA owns the
+outer loop and selects each next action from rescanned durable evidence. Only
+explicit `autonomous: true` authorizes advancing to subsequent phases and
+finalization; false or omitted autonomy stops at the selected phase boundary.
+Each new session resolves its own registered command plan. Native workflow applications and prompts
 remain unchanged and are selected immediately when the policy says
 `native-hepha`.
 
 This route is a compatibility and diagnostic boundary, not new lifecycle
-authority. Legacy MCP output is intentionally not forced through Hepha's V3
-promotion and phase-state machinery because doing so would change the variable
-under comparison. It remains subject to provider-neutral Hepha lifecycle
-invariants: Deep-Dive owns target clarification; Refine may not publish
-human-sign-off, owner-attestation, CODEOWNER-approval, manual-acceptance, or
-user-choice implementation tasks; and autonomous/single-phase implementation
-has delegated decision authority plus automated review and acceptance.
+authority. Legacy MCP output is not forced through Hepha's native V3 document
+shape, but it must satisfy the complete DevCycle artifact contract before
+Refine may complete or implementation may start. It remains subject to
+provider-neutral Hepha lifecycle invariants: Deep-Dive owns target
+clarification; Refine may not publish human-sign-off, owner-attestation,
+CODEOWNER-approval, manual-acceptance, or user-choice implementation tasks; and
+autonomous/single-phase implementation has delegated decision authority plus
+automated review and acceptance.
 
 Refine is also a documentation-only planning boundary. Its worker discovers the
 stack and configured quality commands from manifests, lockfiles, workflows,
@@ -128,10 +951,13 @@ a phase.
 
 Provider ownership also selects artifact validation. DevCycle refinement and
 in-progress plans use their durable `FeatureTasks.md` plus phase-file lifecycle
-contract; native plans retain strict V3 validation. This keeps Continue
-readiness fail-closed without applying native V3 requirements to DevCycle-owned
-artifacts. DevCycle refinement publication additionally rejects deferred human
-decision tasks so a prompt violation cannot silently authorize Start.
+contract; native plans retain strict V3 validation. The selected validator is
+evaluated after Refine returns, before its completion metadata is written, and
+again before Start or Continue can dispatch. DevCycle refinement publication
+also rejects deferred human decisions and manual obligations that are not bound
+to exactly one stable `[contract:<taskId>]` phase-ledger item. Existing invalid
+artifacts are supplied to the next Refine worker as deterministic repair
+diagnostics rather than being mistaken for completed preparation.
 
 Runtime receipts record the selected action/model and the workflow summary
 records the MCP recipe source. For Start/Continue implementation telemetry, the
@@ -161,34 +987,213 @@ silently falling back to native instructions.
 flowchart LR
   Action["Supported feature action request"]
   Policy["Validated recipe-source policy"]
+  Admission["Provider-selected implementation admission"]
   Native["Existing native Hepha application"]
-  McpWorker["One plan-bound Pi model + MCP adapter"]
+  McpWorker["Bounded plan-bound Pi session + MCP adapter"]
   Invariants["Hepha lifecycle invariants<br/>Deep-Dive closure; no deferred human gates"]
   Recipe["DevCycle MCP recipe and autonomous handoffs"]
   ProviderArtifacts["Provider-specific artifact validator"]
   DeepDiveRecovery["Blocked result evaluation<br/>interactive FEAT Deep-Dive"]
-  Failure["Durable failed compatibility run"]
+  Failure["Refused admission or durable failed run"]
 
   Action --> Policy
   Policy -->|"native-hepha"| Native
-  Policy -->|"WF-RECIPE-SOURCE-MCP devcycle-mcp"| McpWorker
+  Policy -->|"WF-RECIPE-SOURCE-MCP<br/>preparation action"| McpWorker
+  Policy -->|"Start / Continue"| Admission
+  Admission -->|"valid provider artifacts"| McpWorker
+  Admission -.->|"WF-MCP-ARTIFACT-VALIDATION-FAIL<br/>invalid provider artifacts"| Failure
   McpWorker -->|"valid pending_execution contract"| Invariants
   Invariants --> Recipe
   Recipe --> ProviderArtifacts
   ProviderArtifacts -->|"valid artifacts + lifecycle postconditions"| ActionDone["Action completed"]
-  ProviderArtifacts -->|"WF-MCP-REFINE-POSTCONDITION-BLOCK<br/>no complete refinement artifacts"| DeepDiveRecovery
+  ProviderArtifacts -->|"WF-MCP-REFINE-POSTCONDITION-BLOCK<br/>FEAT remains outside Ready"| DeepDiveRecovery
   McpWorker -.->|"asset, transport, or contract failure"| Failure
-  ProviderArtifacts -.->|"invalid or deferred human gate"| Failure
+  ProviderArtifacts -.->|"WF-MCP-ARTIFACT-VALIDATION-FAIL<br/>invalid or deferred human gate"| Failure
+  ProviderArtifacts -->|"WF-MCP-SESSION-CONTINUE<br/>authorized remaining work + progress"| Admission
+  ProviderArtifacts -->|"WF-MCP-PHASE-QUALITY-ADMISSION<br/>resolved phase with unresolved verification"| QualityBlocked["Same-phase repair; reassess repeated lack of progress"]
+  Admission -->|"WF-MCP-PHASE-QUALITY-ADMISSION<br/>existing resolved-phase quality gap"| QualityBlocked
+  Admission -->|"WF-MCP-STATE-PROJECTION<br/>validate and canonicalize admitted state"| McpWorker
+  Admission -->|"WF-MCP-LIFECYCLE-RECOVERY<br/>isolated stale Ready header"| LifecycleRepair["One bounded lifecycle repair"]
+  ProviderArtifacts -->|"WF-MCP-LIFECYCLE-RECOVERY<br/>partial authorized start transition"| LifecycleRepair
+  LifecycleRepair -->|"unique In Progress location + valid unchanged evidence"| Admission
+  LifecycleRepair -->|"unverified, unsafe or exhausted"| Failure
 ```
 
 A terminal model process proves only that provider execution returned normally.
-For MCP refinement, Hepha rescans provider-independent postconditions before
-recording completion. The FEAT must be in `02_READY_TO_DEVELOP` and expose
-complete provider refinement artifacts. Otherwise the durable run is blocked at
-result evaluation, `refineCompletedAt` is withheld, repeat Refine is disabled,
-and the standard FEAT Deep-Dive action is exposed. This current-action blocker
-remains authoritative even when an earlier Deep-Dive consumed source markers;
-historical hashes and receipts remain audit-only evidence.
+For MCP refinement, Hepha rescans lifecycle state and validates the complete
+provider-owned artifact set before recording completion. If the FEAT remains
+outside `02_READY_TO_DEVELOP`, the run is blocked at result evaluation and the
+standard FEAT Deep-Dive action is exposed. If the FEAT was moved to Ready but
+its artifacts are invalid, the run fails with stable file/code diagnostics and
+Refine remains available to repair the existing output. Start is never exposed
+and direct Start requests are rejected before a run, branch, worker, or
+manual-test mutation is created.
+
+### Compatibility execution settlement and continuation
+
+Before evaluating `WF-MCP-PHASE-QUALITY-ADMISSION`, the legacy scanner reconciles
+declared obligations with recorded checkpoint outcomes and explicit Quality
+Metrics tables. Build/compile and lint results do not need duplicate rows in
+Quality Gate Evidence. Named passing partition counts with explicit zero failures
+are equivalent to repeated passed counts. Counted test, fixture, check, case,
+scenario and spec outcomes share one vocabulary for discovery, passing results
+and failures; a different count noun cannot turn a passing suite into unknown or
+hide a failed check. An exit-zero empty supporting target
+(`0 tests`, `zero tests`, or `no tests`) cannot certify testing alone, and does not
+erase other executed suites. Expected columns, discovery-only commands, skipped
+counts and timing/retry metadata cannot certify execution. Contradictory failures
+or warnings remain unresolved even beside a green metric summary.
+
+This representation reconciliation is deterministic and occurs before the guard:
+it does not rerun successful checks, rewrite evidence, create a worker, or enlarge
+the current phase's obligations. Remaining genuine gaps still block admission.
+Native JSON verification remains authoritative; malformed native results never
+fall back to Markdown. See WJ-2026-112 and WJ-2026-113.
+
+`WF-MCP-PHASE-QUALITY-ADMISSION` checks the persisted phase-quality projection
+before a continuation/finalization dispatch and after each implementation worker
+returns. A resolved phase with missing or unknown evidence, or a waiver without
+justification, enters same-phase repair rather than advancing. The worker's completion checkbox
+does not override that decision. These checks consume the current scanner
+projection; they do not upgrade file presence or prose claims into execution
+receipts or invent missing evidence.
+An indexed review with a latest needs-changes, blocked or unknown verdict remains
+unresolved even if a phase summary row claims approval. Unknown gate projections
+must remain visible; the scanner cannot discard them as empty evidence.
+
+Review field extraction excludes Markdown column headers: a `Decision` column
+does not override a report's explicit approval verdict. Changed-file inventory
+parsing retains wrapped list items and recognises supported non-JavaScript test
+names. Compatibility checkpoint tables are read by their named command/result
+columns, including nonzero recorded test outcomes even when no test file changed.
+Suite labels need not contain the word test: recorded counts and test commands
+also identify execution evidence, and Rust `_test.rs` / `_tests.rs` paths are
+recognised. Failed, discovery-only, or incomplete checkpoint results remain
+unresolved. Aggregate skipped/ignored counts are retained, not credited as passes
+or inferred to be missing feature coverage; explicit required-check or coverage
+gaps still block. Counted shorthand such as `32/32` and `6 OK` is recognised. Successful
+command-only summaries and explicitly empty supporting targets contribute no
+passing evidence but do not invalidate other executed suites. These supporting
+summaries alone cannot satisfy verification. This is phase evidence projection, not a substitute for native
+execution-report validation during fresh readiness verification.
+
+
+### JSON verification exchanges and phase-specific applicability
+
+`WF-PHASE-JSON-VERIFICATION` binds the native host verification result to the
+admitted phase role and configured check set before the phase-quality scanner
+uses it. JSON Schema controls shape; semantic validation controls phase/check
+membership, outcomes and configured argv/cwd. The schema and prompt projection
+share one contract source. Build and lint have separate quality-gate diagnostics.
+A migrated phase never recovers a pass from Markdown if JSON is missing/invalid.
+Unmigrated compatibility artifacts retain their existing explicit import lane.
+
+Every phase uses independent declared test, integration and code-review gates.
+Ordered tasks determine native obligations, including their required/profile/
+condition flags; compatibility summary fields and role/file heuristics cannot
+add gates. A no-verification phase automatically records N/A regardless of role.
+Developers may revise scope applicability with a reason and synchronized
+contract/ledger/gate rows; subsequent selection rereads the contract. Existing
+failed execution and unresolved reviews are preserved. Checkpoints execute their
+declared health checks without requiring edits or undeclared reviews. Browser
+E2E is an explicit acceptance obligation, not a consequence of UI source files;
+configured frontend/backend integration checks can satisfy phase acceptance.
+
+`WF-VERIFICATION-JSON-REPAIR` exchanges typed repair requests and responses with
+the exact phase/task binding and advisory authority. Invalid representation gets
+one same-action correction request, with explicit instructions not to rerun tests
+or edit source. Exhaustion is a protocol error, not a test failure. A valid repaired
+response triggers independent host verification; it cannot certify itself.
+Absent/unusable optional audit metadata never fails decision validation.
+
+```mermaid
+flowchart LR
+  Execute["Host executes declared checks"] -->|"WF-PHASE-JSON-VERIFICATION"| JSON["Validate and persist JSON result"]
+  JSON --> Admission["Bind configured scope and evaluate phase gates"]
+  RepairRequest["Typed request + exact response schema"] --> Worker["Scoped repair worker"]
+  Worker -->|"WF-VERIFICATION-JSON-REPAIR"| Validate["Validate response and authority"]
+  Validate -->|"one representation-only repair"| Worker
+  Validate -->|"repaired; host reruns"| Execute
+  Validate -->|"blocked or invalid after repair"| Stop["Concrete repair/protocol diagnostic"]
+```
+
+See [JSON exchange protocol](json-exchange-protocol.md) for implemented and
+pending message families. The new envelope is not yet universal across legacy
+worker actions.
+
+Gate applicability is read from native Quality Gate Evidence rows or compatibility
+checkpoint declarations. Justified Not Applicable applies independently of phase
+number/name; an actual production-code change conflicting with that declaration
+remains Unknown. Untouched-file preservation notes are not phase changes.
+Explicit required gates survive an absent changed-file inventory. A required
+code-review checkpoint with configured paired tests retains that test obligation;
+an assertion of passing tests is not imported as an execution receipt. Native
+decisions take precedence except for a recorded unresolved checkpoint failure.
+Compatibility review reports are indexed recursively within the feature's
+code-reviews folder without following symlink entries. Header Status verdicts are
+recognised, while conflicting phase ownership cannot approve either phase.
+Existing report verdicts are preserved as review evidence, not a fresh review or
+proof of current-HEAD coverage. Applicable test execution remains independently
+required; no product suites are invented for a documentation-only deliverable.
+
+For in-progress features, all phase checkboxes being completed no longer hides
+a failed implementation run. The dashboard keeps artifact errors visible and
+lists each phase/gate diagnostic in a collapsed disclosure on its phase card, with recognised references and conditional
+resolution steps: first inspect existing evidence, then repair references or run
+missing verification; address actual failures before obtaining a fresh passing
+result/review. Expanding verification issues is local, keyboard-accessible and launches no worker. Completion readiness retains the aggregate blockers without repeating the detailed phase list. Phase rows
+with unresolved quality evidence show Verification blocked. Human code review
+and manual outcomes remain separate obligations; this does not change release
+readiness policy or authorize any waiver.
+
+`DevCycleMcpCompatibilityApplication.executeImplementation` owns
+`WF-MCP-SESSION-CONTINUE`. A zero-exit session is transport success, never proof
+that the selected workflow scope is complete. After every session HEPHA rescans
+the feature, validates the matching lifecycle artifact profile, applies the
+canonical feature-status projection, and compares saved phase/task evidence.
+Fresh sessions retain the original durable run and use current folder paths.
+Resolved phases may not regress. Mere edits to timestamps or summary prose do
+not count as progress. Two consecutive returns without new completion evidence
+block with `IMPLEMENTATION_NO_PROGRESS`; an actual worker failure or persisted
+blocked phase stops immediately. Cancellation or replacement of the original
+run prevents subsequent dispatch and late terminal updates.
+
+An explicitly autonomous workflow resumes remaining work in fresh single-phase
+sessions, then dispatches the registered complete-feature action. A supervised
+workflow may resume partial tasks within its original phase but stops when that
+phase is resolved. A worker crossing that boundary produces a scope violation.
+Feature completion requires both a completed lifecycle folder and validated
+completed artifacts with no unfinished phases.
+
+`WF-MCP-STATE-PROJECTION` admits only declared folder aliases such as
+`03_IN_PROGRESS` for canonical document status `IN_PROGRESS`. Readiness is
+read-only; admitted execution normalizes the feature header. Arbitrary prefixes,
+contradictions with the actual lifecycle folder, and disagreement between a
+phase header and its inventory row fail validation. HEPHA reports these as
+implementation-state repair needs, while unresolved target decision markers
+remain Deep-Dive recovery. No feature identifier or phase ordinal selects an
+exception.
+
+`WF-MCP-LIFECYCLE-RECOVERY` adds a narrow exception to immediate failure, not
+to validation. Continue may admit an isolated stale `READY_TO_DEVELOP` header
+in an existing In Progress feature when all other implementation artifacts are
+valid. Scans remain read-only and `hasContinuationArtifacts` remains false until
+repair validates. The host changes only that header. An authorized Start whose
+worker has not moved the folder gets one lifecycle-only model repair session
+(120-second deadline, 60-second stall timeout) under the same run and routing
+authority. The repair prompt prohibits implementation, evidence changes, commits
+and pushes; these instructions are not a general filesystem sandbox.
+
+HEPHA independently rescans, rejects missing or duplicate feature identities,
+requires the expected In Progress destination and absent old location, validates
+the complete artifact profile, and compares every feature file except the single
+task-header status. Any extra edit, missing evidence, rejected repair, timeout,
+or recurring mismatch blocks for inspection without accepting a phase. Existing
+policy gates, unknown status values and phase projection disagreements are not
+auto-repaired. One recovery allowance applies per workflow; cancellation prevents
+late settlement or redispatch. The dashboard displays recovery as a separate
+current step. In-progress features expose Continue, not Design or Refine;
+voluntary Deep-Dive remains independent.
 
 ## Action-scoped readiness projection
 
@@ -275,12 +1280,47 @@ authentication, provider projection, secret, or context preparation is
 unavailable records only a safe preparation failure and never spawns or claims
 an actual route.
 
+Every Pi launch pins `--thinking high` and explicitly loads HEPHA's
+`model-request-guard`, even in no-tools/no-auto-extensions mode. Immediately
+before each provider request (including subsequent tool/session turns), the
+guard checks the effective High level and the runtime model's context/output
+limits. Unknown limits or unsupported reasoning reject instead of guessing.
+Repeated user/tool text may use a lossless reference encoding; system messages,
+tool arguments, signatures, source order and qualifications are not rewritten.
+Unique context is never truncated or treated as successfully assessed.
+
+The guard tokenizes the complete serialized provider payload with a local BPE
+tokenizer. It keeps the optional `HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS` spending cap separate
+from context capacity; there is no 64,000-token per-request ceiling. Capacity
+reserves requested output (model maximum when unspecified) and 4,096 framing tokens,
+then compares locally counted input tokens with remaining capacity. Readiness
+explicitly binds its smaller task output allowance at this same provider boundary
+only when supported. Codex subscription transport sends no output-limit field and
+reserves the catalogue maximum consistently with planning, including fallbacks.
+Catalogue discovery reads exact configured token capacities from the installed Pi
+SDK without model-network access; the rounded CLI table is not a capacity source.
+Provider identity is filtered before models enter the connection catalogue.
+Native Pi compaction runs after an agent run; HEPHA's request guard still runs
+before every provider call. Readiness assessment has no five-minute absolute
+deadline: a resettable 120-second observable-activity watchdog remains, alongside
+token spending and checkpoint/assessment bounds. This is not a coverage waiver
+or an automatic restart after a timeout. Manual-test authoring retains its existing deadline.
+See [token accounting](token-accounting.md) for supported tokenizer mappings and
+the distinction between local text counts and actual provider usage. These are
+admission guards, not a whole-workflow spend guarantee or
+a substitute for criterion-specific evidence aggregation. Diagnostics expose
+counts only, never request content or credentials. Pi swallows ordinary hook
+exceptions; policy refusal therefore exits the isolated child synchronously
+with code 78 before provider dispatch. It is recorded as `safety_rejected` and
+cannot consume a fallback/recovery route (`WF-MODEL-REQUEST-POLICY`).
+
 ```mermaid
 flowchart LR
   Plan["Accepted HandoffPlanV1"] -->|"WF-RUNTIME-PLAN-EXECUTE"| Guard["HandoffPlanExecutor.executeAttempt"]
   Guard --> Prepare["Exact connection + isolated context"]
   Prepare --> Spawn["Pinned provider/model process"]
   Spawn --> Receipt["Normalized terminal receipt + cleanup"]
+  Spawn -->|"WF-MODEL-REQUEST-POLICY before each provider request"| Budget["High reasoning + bounded context; refusal is terminal"]
   Guard -.->|"WF-RUNTIME-LAUNCH-REJECT"| Reject["Sanitized rejection; no substitute spawn"]
   Prepare -.->|"WF-RUNTIME-LAUNCH-REJECT"| Failed["Safe preparation failure; no actual route"]
 ```
@@ -422,6 +1462,8 @@ flowchart LR
   Wait -->|"WF-DD-COMPLETE"| Clarified
   Wait -.->|"WF-DD-FAIL"| Failed
   Clarified -->|"WF-DESIGN-EXECUTE when required"| Designed
+  Clarified -->|"WF-PREPARATION-CONTROLS authorized actions"| PreparationControls["Design or Refine controls"]
+  Clarified -->|"WF-DD-VOLUNTARY-FOCUS human exploration"| Wait
   Clarified -.->|"WF-DESIGN-FAIL"| Failed
   Clarified -->|"WF-REFINE-EXECUTE"| Ready
   Designed -->|"WF-REFINE-EXECUTE"| Ready
@@ -461,7 +1503,31 @@ as many times as new user-owned decisions are discovered; there is no fixed
 round limit. The detailed protocol and acceptance criteria are defined in
 [`refinement-deep-dive-loop.md`](refinement-deep-dive-loop.md).
 
-`WF-DEEP-DIVE-MARKER-GATE` makes Deep-Dive readiness marker-only. An unresolved `[NEEDS VALIDATION]` or
+`WF-PREPARATION-CONTROLS` renders normal preparation controls directly from
+backend availability flags. Submitted readiness may have no recovery reasons;
+that must not hide an authorized Design action. Design appears once, Refine
+remains disabled until authorized, and no-UI features do not show an unnecessary
+Design button. Playwright journeys exercise the dashboard and typed API request
+with synthetic server responses, including empty recovery diagnostics.
+
+`WF-DD-VOLUNTARY-FOCUS` allows a human to revisit any non-terminal FEAT without
+manufacturing validation markers. The dashboard offers an optional, bounded
+focus field and resumes existing interviews. Focus is stored separately from
+the source snapshot and supplied to opening and follow-up questions; only
+answered decisions may change requirements. New focus cannot silently replace
+an open interview. Another active workflow prevents Deep-Dive admission;
+terminal items remain read-only. Voluntary completion does not implicitly
+resume an unrelated implementation workflow.
+
+UI classification attempts are keyed by project, feature, and specification
+revision. Unknown or malformed decisions do not authorize refinement. Native
+and compatibility refinement share the same UI-design prerequisite: explicit
+no-UI classification, or requires-UI classification with design artifacts.
+Deep-Dive remains an optional way to clarify the decision, not a substitute for
+Design Feature. This gate currently checks the existing design artifact set;
+it does not introduce a new design-content or freshness validator.
+
+`WF-DEEP-DIVE-MARKER-GATE` makes required Deep-Dive readiness marker-only. An unresolved `[NEEDS VALIDATION]` or
 `[NEEDS_VALIDATION]` marker in the authoritative work-item description requires
 clarification; absence of those markers permits the next preparation action.
 File changes, phase-link updates, missing Deep-Dive history, and preparation
@@ -764,7 +1830,7 @@ path.
 
 **Manual-test delivery invariant:** every acceptance criterion is classified as
 `Manual`, `Automated`, `Deferred`, or `Uncovered` before delivery rendering.
-Only an explicit `ManualTestObligations.json` procedure that names a concrete
+Only an explicit `ManualTestObligations.json` or validated `ManualTestCases.json` procedure that names a concrete
 application or interface, exact preconditions and setup data, executable user
 actions, and observable results can become a manual case. Generic instructions
 such as “navigate to the feature area” or “perform the expected workflow” fail
@@ -773,11 +1839,53 @@ digests, immutable structures, startup validation, and unit/source properties
 use automated evidence instead of synthesized human steps. A backend-only
 feature with no valid manual case produces an informational artifact and
 `Manual Tests: Not Applicable`; it is never `Manual Test Pack Ready`.
-Readiness requires at least one valid executable manual case, and a package in
-which every case or criterion is missing cannot be ready. Automated evidence
+Readiness requires at least one valid executable manual case and no uncovered
+acceptance criteria or invalid cases. Partial coverage is not readiness. Automated evidence
 records `executed-passed`, `executed-failed`, `zero-tests-discovered`, or
 `not-executed`; an exit-zero command whose output reports no matching tests is
 zero selection, not passing coverage.
+
+### Manual pack recovery (`WF-MANUAL-PACK-REGENERATE`)
+
+Regeneration is available for current as well as stale/incomplete packs. An
+explicit replacement names the observed current pack; stale replacement requests
+fail without superseding it. Every user-facing generation or regeneration
+assesses criterion coverage and drafts missing human-executable scenarios,
+including requests with omitted, empty or whitespace-only guidance. Artifact-only
+internal calls may reuse unchanged inputs, but the HTTP application always
+requests assessment. It cannot silently fall back to formatting when the model
+is unavailable.
+
+Coverage assessment invokes the configured refinement route as a tool-free
+structured-output drafting call, not a refinement workflow. It receives bounded
+feature-local Markdown, existing cases and criterion coverage. Large source sets
+use explicitly labelled excerpts prioritising acceptance/scenario sections and
+human guidance; a full-source fingerprint still detects edits to omitted text.
+Missing prerequisites remain unresolved rather than inferred. Optional guidance
+adds emphasis; it neither enables assessment nor limits it to the named topics. The model may
+propose additional executable cases and report missing information; it cannot
+write files, run tests, alter gates, waive criteria or grant acceptance. Case
+schema, unique IDs, exact source references, unchanged sources and current-pack
+identity are checked before proposals enter `ManualTestCases.json`. Existing
+mandatory procedures are preserved. Guidance and proposal history remain local.
+
+Generation, stored readiness and result recording share the executable case
+contract. Recording uses manifest IDs, not a numeric-only Markdown naming rule.
+Unknown IDs, incomplete/legacy artifacts and stale-source requests fail closed.
+The dashboard shows cases, unresolved coverage, authoring progress and errors.
+
+The replacement archives the previous version, invalidates its pack review and
+clears only the manual-test acceptance timestamp. Old results remain evidence
+for the old pack; user code-review acceptance is unchanged. Review and actual
+human execution of the new applicable pack remain necessary before acceptance.
+
+```mermaid
+flowchart LR
+  Existing["Current or incomplete pack"] -->|"WF-MANUAL-PACK-REGENERATE: optional guidance"| Candidate["Assess coverage and draft missing cases"]
+  Candidate --> Validation["Validate cases, coverage and source freshness"]
+  Validation --> Gaps["Incomplete: show missing information"]
+  Validation --> Ready["New pack: await human review and execution"]
+```
 
 **No-progress invariant:** every same-phase repeat must either mutate durable
 FEAT/task/review/checkpoint evidence or choose a different route. The
@@ -860,11 +1968,10 @@ never reinterpret independent build, lint/typecheck, or test failures, which
 retain their normal repair/rerun circuit. RefineFeature creates or updates the
 project-owned coverage profile when the existing test configuration makes the
 LCOV command, report path, source selectors, improvement-attempt policy, and multi-stack ownership
-deterministic. A project without configured coverage returns to the existing
-Deep-Dive circuit to collect those decisions; RefineFeature never guesses or
-installs coverage tooling. The answer is persisted in that project profile, so
-later FEATs reuse it without another question unless the profile becomes
-missing, invalid, or ambiguous after a stack change. A workflow with no declared
+deterministic. Numeric measurement is optional. A project without configured numeric coverage
+continues with logical acceptance assessment and configured verification; missing
+instrumentation does not trigger Deep-Dive. RefineFeature never guesses or installs
+coverage tooling. Existing explicitly configured telemetry remains advisory. A workflow with no declared
 final checkpoint does not receive an invented checkpoint, coverage task, or
 profile mutation.
 
@@ -1025,3 +2132,417 @@ transition ID → owner method → input evidence → unit decision → Gherkin 
 - infrastructure helpers that do not choose the next workflow state.
 
 Those details may appear in evidence, but they cannot create a generic route.
+
+Phase TwinTests and EPIC E2E obligations are complementary. EPIC slices define the
+complete frontend-to-backend workflow; refinement assigns E2E test updates to
+relevant phases (including UI-only changes) and full-suite execution to an explicit
+phase/checkpoint. A green phase TwinTest never waives the assigned EPIC E2E gate.
+
+The shared `acceptance-responsibility/v1` policy is injected into native EPIC
+submission/refinement, FEAT extraction, Deep-Dive document/acceptance planning and
+phase/task verification. Native EPIC and FEAT renderers persist its ownership table.
+MCP planning/delivery recipes receive the same policy at the JSON-RPC boundary,
+including submit-epic and create-epic-features. The policy preserves distinct EPIC,
+FEAT, Phase and Task acceptance and many-to-many coverage; it creates no automatic
+one-to-one browser obligations. See `acceptance-responsibility-policy.md`.
+
+Every acceptance boundary applies the same meaningful-coverage assessment as bug
+repair: sufficient evidence for the agreed scope, important behavior actually
+asserted, and concrete remaining gaps. Inspect assertions and tested boundaries;
+record criterion-level evidence or missing behavior/importance/owner. Numeric
+coverage is diagnostic and never replaces behavioral acceptance evidence.
+
+### Structured compatibility phase gates (WJ-2026-114)
+
+The same reducer evaluates independent needCodeReview/needTestCoverage flags for
+every phase, plus all configured required commands. Workers receive the exact
+JSON schema. Missing/failed evidence returns to a scoped repair worker, which
+first inspects existing executions. The outer workflow rescans its result and
+continues once gates pass. Three returns with the same semantic evidence trigger
+reassessment and then escalation; report prose and audit timestamps do not reset
+progress. Unauthorized phase advancement is rejected. Justified applicability
+revisions are checked against the original declaration throughout repair.
+
+WJ-2026-115: a disabled acceptance-coverage flag with an active criterion
+assessment enters the same generic repair transition. Absence of numeric
+measurement does not enable/disable that gate. The producer schema and MCP
+recipes distinguish these concepts explicitly; no phase-specific route is added.
+
+### Declaration-based gate admission audit
+
+WF-MCP-PHASE-QUALITY-ADMISSION reconciles absent declarations before acceptance;
+changed-file inventory cannot invent applicability or certify execution. Canonical
+coverage accepts passing supporting health checks alongside a behavioral test.
+Required failures still return to same-phase repair. All producers use declared
+flags/commands rather than project names, phase positions or content categories.
+See phase-completion-policy.md for evidence reuse and legacy reconciliation.
+
+### Tokenizer capability and model API aliases
+
+WF-MODEL-REQUEST-POLICY starts with tokenizer capability resolution on the pinned
+provider/model before the generic Pi worker is spawned. Readiness and the worker
+request guard share that resolver. Asset-backed tokenizers prepare the correct
+immutable, checksum-verified revision before request token counting. Unsupported
+identities or invalid assets cannot proceed to provider/tool execution. Model API
+aliases are verified provider contracts, never project or feature gate exceptions.
+
+### Bound static command capture (WJ-2026-122)
+
+The shared receipt importer accepts an unchanged literal AND-list with terminal audit-log capture for static, preparation and discovery checks. This preserves command selection and exit status; the log does not claim to include earlier commands’ stdout. A failed command remains failed, altered control flow remains invalid, and native stdout test evidence still requires whole-list capture. This rule is independent of runner, project and phase identity.
+
+### Recovery control placement (WJ-2026-123)
+
+Each phase owns its repair controls and artifact diagnostics. Readiness displays a phase-gap summary without duplicating phase action buttons. Artifact ownership is resolved by matching the validator’s affected document to a uniquely declared phase document, never by parsing a phase number from message text. Feature-level or unknown ownership stays at feature level. Manual-verification messages appear beside the manual controls. The presentation change neither clears blockers nor changes admission or repair authority.
+
+### Phase applicability and optional health repair (WJ-2026-124)
+
+`WF-PHASE-HEALTH-WARNINGS` uses the independent coverage and code-review flags,
+never a project, phase identity, title or source-file heuristic. Legacy phase
+scanning reads the JSON in `Phase Gate Declarations` and its scope justification.
+Existing canonical gate records retain authority and justified revision checks.
+Repair evidence cannot silently enable an explicitly disabled coverage gate.
+Independently configured regression/E2E test failures still require resolution.
+
+Build and lint findings, including actual failures and unrecognized evidence,
+remain visible warnings with their original outcomes. They do not block phase
+acceptance, invalidate behavioral coverage through a supporting health-check
+reference, or trigger an automatic phase repair loop. Optional repair lives on
+the owning phase and requires a user action. No warning is fabricated as passed.
+Native verification task completion uses the same distinction and preserves the
+executor's raw result. Unknown execution without identified health checks is
+not automatically classified as a health warning.
+
+```mermaid
+flowchart LR
+  PhaseEvidence["Declared flags and observed evidence"] -->|WF-PHASE-HEALTH-WARNINGS| PhaseDecision["Tests/review decide acceptance; health findings stay optional"]
+```
+
+WJ-2026-125: required-review declarations express applicability, not a verdict.
+An indexed report must reach the existing approval/rejection evaluator; it must
+not be reduced to an evidence path behind a synthetic missing-review placeholder.
+
+
+### Project-owned verification command handoff
+
+Refinement supplies statically discovered commands in FeatureDescription.md TestPlan;
+developers validate and maintain them and Phase Verification References. The
+[authoring policy](project-test-plan-authoring.md) defines per-repository working
+directories, preparation, source inputs, generated outputs and evidence ownership.
+Native and MCP prompts share these responsibilities. Read-only coverage consumes
+the declarations; this change does not implement runtime generated-output handling
+or bypass the source snapshot guard. See WJ-2026-126.
+
+Manual verification presentation and recording (`WF-MANUAL-CASE-VERIFY`): top
+controls stay visible above scrolling instructions. Disabled actions explain stale
+packs, missing cases, missing review or active operations; paused regeneration
+explicitly says it did not finish. Reviewing all current validated manual cases
+and recording their passes is allowed even with incomplete acceptance coverage.
+Results remain bound to individual IDs and the exact current pack/review. Bulk
+recording cannot bypass failed findings or grant finalization while overall
+readiness is incomplete. Automated coverage assessment remains a separate concern.
+
+
+### Independent assessment and recoverable manual authoring (WJ-2026-132)
+
+Read-only completion coverage assessment uses available source-bound execution
+reports even if manual-pack generation or review is outstanding, or a separate
+phase/artifact gate remains unresolved. The evidence snapshot excludes stale
+manual passes. Assessment neither clears those independent blockers nor grants
+completion or human acceptance. Coverage confirmation retains its current-pack
+and unchanged-source/report/result checks.
+
+Manual generation returns rejected JSON/case-contract drafts to the same model
+with the exact diagnostic, rejected draft and original source/guidance contract.
+Recheck source and operation ownership before and after each dispatch; checkpoint
+only validated complete batches. Use shared repeated-diagnostic tracking (including
+cycles) to stop after three occurrences of the same unresolved defect; provider,
+cancellation and authority failures are not invalid-draft retries. Publish progress
+as correcting the current batch. Required case fields and placeholder rejection
+remain structural guards; a fixed opening-verb vocabulary cannot certify whether
+prose describes an executable action. Human review checks the complete procedure.
+
+Compatibility status parsing reads explicit header metadata or a relocated field
+block identifying its feature. Introductory section headings do not erase document
+identity. Competing declarations are unresolved; child-task metadata, fenced
+examples, quotations and comments cannot supply lifecycle authority. Canonicalization
+at an admitted boundary edits only the located token. Read-only scans never write.
+
+Phase recovery badges, artifact diagnostics and coverage controls occupy full-width
+rows. Only the phase title and lifecycle status share the heading row. This layout
+is independent of phase number, role, project and gate combination.
+
+
+The feature detail page presents human code review, manual test verification,
+and completion readiness in that order. After current manual passes are saved,
+it directs the user to Refresh Completion Readiness below for acceptance coverage
+assessment. This presentation order does not make manual completion a prerequisite
+for executing automated verification or assessing its coverage.
+
+### Explicit investigation must lead to repair (WJ-2026-133)
+
+The owning phase action is **Investigate and fix phase findings**. Its explicit
+repair authority covers diagnosis, minimal corrections to confirmed implementation,
+assertion, command or evidence-mapping defects, and affected configured checks.
+Mixed recovery groups retain every unresolved finding, configured target and
+prerequisite; independent human coverage confirmation is excluded. Current
+structured gap facts replace stale generated inspection-only prose in the prompt.
+Assessment and automatic configured-execution routing retain their narrower authority.
+
+Read earlier diagnoses and exact cited sources before repeating discovery. Continue
+focused corrections while execution evidence shows progress, within the bounded
+invocation. Stop on concrete scope/authority/environment blockers, an architectural
+impasse or repeated unchanged failures. Do not weaken assertions or fabricate results.
+Store narrative investigation detail as JSON under verification/, updating phase
+gates and project-owned test inventories only for substantive changes.
+
+After a completed repair, independent reassessment must validate actual evidence.
+The canonical source-changed result starts fresh verification automatically for the
+current feature, guarded by cancellation and successor ownership. It never grants
+human acceptance. Other assessment errors or failed workers do not trigger another
+execution; a failed handoff remains a truthful failed outcome.
+
+### Logical coverage and action authority (WJ-2026-134)
+
+Implementation gates, readiness assessment and phase repair share the logical
+acceptance coverage contract. The model compares the accepted FEAT/EPIC behavior
+with test setup, actions, assertions, shared helpers and required integration
+boundaries. Multiple complementary tests may cover one criterion. Existing fitting
+tests are recognized; neither duplicate tests nor an LCOV/line-percentage artifact
+is required. Test execution and logical sufficiency remain independent decisions.
+
+Readiness includes existing phase.gates criterion/assertion mappings and current
+referenced test source contents. They are context, never automatic approval of a
+previous sufficient verdict. Source bodies use the existing source-fact paging;
+missing/out-of-project/oversized references remain explicit context limitations,
+not missing-implementation conclusions. Logical-source changes invalidate the
+assessment fingerprint and applicable automated link bindings without changing
+the manual pack or recorded human results. Legacy Markdown and fresh inspection
+mappings remain supported when structured phase records are absent. Direct test
+file references from the current inspected plan also supply source bodies, without
+requiring new phase artifacts or applying a language-specific parser.
+
+Refresh Readiness inspects, runs configured checks, and assesses; it cannot create
+tests or repair product code. An explicit phase fixer repairs confirmed in-scope
+assertion/implementation/configuration gaps and reruns affected verification.
+No project name, phase number/title, FEAT identity or technology selects this policy.
+
+Numeric coverage is optional advisory telemetry. Final verification profiles need
+configured build/test/lint intents but no numeric coverage command. A declared final
+checkpoint cannot by itself require an LCOV profile, a universal percentage target
+or a Deep-Dive handoff for missing instrumentation. Existing numeric checks remain
+supported and their measurements never replace logical acceptance assessment.
+
+
+### Shared sources and recoverable inspection failures (WJ-2026-135)
+
+Plan admission keeps source containment, nonempty selections, unique check IDs,
+exact duplicate cwd/command detection and phase mapping checks. It cannot infer
+runtime scenario selection from overlapping files. Independent filtered groups
+retain the same suiteKey and complete testPaths without a correction detour.
+The inspector still eliminates proven redundant executions by inspecting runner
+configuration; a shared filename or test name is not proof of redundancy.
+
+Targeted correction may update either check named in a duplicate-execution
+conflict or a legacy saved overlap diagnostic. Unrelated checks and phase
+mappings remain protected, and the complete patched candidate is revalidated.
+A correction runtime failure preserves the actual plan diagnostic and the
+runtime cause, states that automated tests have not run, and points to Refresh
+Completion Readiness after resolving the issue. This is a readiness operation
+failure, not a new phase gate. Human review and manual results are unchanged;
+no worker is started around a timeout/budget denial, and cancellation still wins.
+
+
+### Host-owned execution receipt contract (WJ-2026-136)
+
+Before fresh execution, HEPHA resolves its reserved output-directory placeholder
+using literal shell quoting and uses the same bound plan for execution, identity
+context, evidence binding and later assessment. This does not evaluate arbitrary
+environment variables or shell substitutions. Documentation stays portable and
+baselines rebind the owned run directory on later invocations.
+
+Execution receives the common `verification.execution.receipt` JSON schema and a
+host-generated template, with fixed feature/check identities and null outcome
+placeholders. The importer validates the same schema before native evidence;
+legacy receipts remain readable. Runtime failures, wrong reports, changed test
+selection or invented counts cannot be hidden by valid JSON. Optional metadata
+may be enriched without altering the worker's original result or granting human
+acceptance. See `execution-receipt-template.feature` for schema, tampering,
+literal path binding and legacy report reuse regressions.
+
+## Accepted feature completion scope (WJ-2026-137)
+
+`WF-VERIFICATION-VALIDATION-RESUME` handles explicit Refresh after a run stops
+during report validation. HEPHA revalidates the selected plan, all configured
+source owners and snapshots, and every checksum-bound native outcome. If all
+remain valid, it resumes the same run into assessment without inspection or test
+redispatch, preserving timestamps and human results. Changed source, missing or
+failed evidence, and earlier inspection interruptions take the fresh path.
+
+```mermaid
+flowchart TD
+  R[Explicit Refresh after interrupted validation] --> V{Source, plan and reports valid?}
+  V -->|Yes| S[WF-VERIFICATION-VALIDATION-RESUME]
+  S --> A[Assess accepted feature criteria]
+  V -->|No| F[Fresh inspection and execution]
+```
+
+Native stdout may be both report and audit log; it counts once. Duplicate native
+reports still cannot inflate counts. Multi-repository qualified revisions accept
+the same hash-first and working-tree-first spellings as single-repository claims,
+with execution owner first and every hash checked against configured owners.
+Receipt repair searches stay within selected configuration and run artifacts.
+
+`WF-READINESS-ACCEPTED-SCOPE` binds completion to the admitted feature plan.
+Authorized Start captures `manual-test-verification/accepted-feature-scope.json`;
+explicit Refresh imports compatible in-progress planning artifacts when absent.
+A changed criterion requires the authorized planning/start boundary, which archives
+its predecessor. Refresh cannot accept an amendment or change applicability.
+
+Inspection → configured prerequisite order → fresh execution/report validation →
+`feature.acceptance.assessment` → host-validated accepted criterion decisions → Ready
+or an actionable accepted-scope failure. The shared schema produces and validates
+the model exchange. Unknown/duplicate/omitted criteria, unsupported obligation
+quotes and invalid evidence return concrete correction diagnostics. Missing
+references get bounded read-only retrieval within admitted roots. An unresolved
+context/protocol problem has a feature-level readiness retry; it is not proof of
+missing implementation. A validated unmet obligation goes to its owning phase.
+The phase fixer receives the baseline, preserves passing proof, repairs within
+scope, and requests reassessment of unresolved obligations after settlement.
+
+Complementary tests can collectively establish the accepted verification approach.
+An additional model-generated coverage-link confirmation is not required. Native
+reports, current-source binding, required phase tests/review, manual execution,
+user review and the explicit final completion action retain independent checks.
+Build/lint warnings remain advisory. Unrelated parent criteria and historical
+manual authoring notes do not add gates.
+
+Improvement observations persist in the recovery record and deduplicated feature
+LessonsLearned proposals with `proposed-for-future-planning` status. They neither
+become active rules nor invalidate fresh execution/manual results. Existing human
+approvals remain readable; old assessment decisions are re-evaluated under the new
+policy while applicable reports and human results are preserved.
+
+```mermaid
+flowchart TD
+  A[Admitted feature baseline and applicable evidence] --> B[WF-READINESS-ACCEPTED-SCOPE]
+  B --> C{Validated accepted criterion decisions}
+  C -->|Satisfied and independent gates complete| D[Ready for explicit Complete Feature]
+  C -->|Unmet accepted obligation| E[Owning phase fixer]
+  C -->|Evidence pending| F[Read-only retrieval or verification retry]
+  E --> B
+  F --> B
+  B -. Extra improvements .-> G[LessonsLearned proposals for future planning]
+```
+
+
+### Automated acceptance and independent manual acknowledgement (WJ-2026-139)
+
+Readiness assesses accepted criteria using automated tests, inspected assertions
+and independently validated passing execution only. The v2 feature acceptance
+payload permits only `kind: automated`. Manual case IDs, steps, reviews and PASS
+records cannot supply acceptance contributions. Explicit manual-only obligations
+remain in the admitted plan and manual documents but are excluded from automated
+assessment; this exclusion does not create replacement automation requirements.
+
+The automated assessment record and cache bind to accepted scope, source documents
+and automated execution evidence, independently of manual pack identity, authoring
+issues or outcomes. Pack status describes executable manual cases and authoring
+issues only; completion projection derives automated gaps from validated assessment
+links, never from the manual package's coverage classification.
+
+User code review and acknowledgement of manual execution remain separate required
+completion steps. Already recorded current reviewed passes can project the missing
+acknowledgement timestamp withheld by older coverage-coupled versions; this creates
+no new result or approval. Acknowledgement cannot prove an automated criterion.
+Actual unresolved findings and declared test/review gates remain blocking.
+
+```mermaid
+flowchart LR
+  AutoEvidence[Accepted criteria and automated assertions] -->|WF-READINESS-AUTOMATED-EVIDENCE| AutoDecision[Validated automated coverage]
+  AutoDecision --> Readiness[Completion readiness]
+  HumanAcknowledgement[User code review and manual acknowledgement] --> Readiness
+```
+
+### Preserve evidence during acceptance retrieval (WJ-2026-140)
+
+`WF-READINESS-CONTEXT-RECOVERY` keeps all retrieved assertion bodies across
+read-only recovery calls. Each call assesses only the still-pending criteria;
+validated decisions from the same source/evidence snapshot remain intact.
+New references can advance beyond two delegation hops. Stop when references
+repeat, no additional content is available, or the existing context/spending
+limit is reached. None of those stops establishes a pass or missing code.
+
+Resolve source line ranges and Markdown section anchors inside admitted source
+roots and the selected feature folder. These are location hints, not filenames.
+Realpath and root checks still reject escapes. Preserve the accepted test report's
+allocation across browser, integration and component layers. Follow shared
+handlers before requiring duplicate assertions for equivalent entry points;
+missing source excerpts never authorize new test requirements.
+
+```mermaid
+flowchart TD
+  A[Pending accepted criterion] --> B[WF-READINESS-CONTEXT-RECOVERY]
+  B --> C[Read new references within admitted roots]
+  C --> D{Additional context fits the budget?}
+  D -->|Yes| E[Accumulate sources and assess pending criteria]
+  E -->|New pending reference| B
+  E -->|Satisfied or concrete unmet obligation| F[Merge validated decisions]
+  D -->|No or no new source| G[Preserve evidence pending and retry action]
+```
+
+### Verification source recovery
+
+An explicit completion-readiness Refresh owns source-drift recovery on the server.
+Before execution HEPHA captures repository fingerprints plus a local manifest of
+filenames and hashes. If execution changes a repository, it saves a changed-file
+diagnosis and preserves that attempt's reports. It sends the diagnosis and prior
+plan to inspection, establishes a new source baseline, and reruns every selected
+check in a new invocation/output directory. Recovery cannot remove checks, demote
+their kinds/gates, or remove phase assignments. Current configured command/setup
+corrections use the existing validated inventory publication path. Production/test
+code, accepted requirements and human acknowledgements are outside this recovery.
+
+No generated filename is exempted and no LLM verdict can waive freshness. Only a
+stable subsequent execution with valid native reports proceeds to logical
+acceptance assessment. Two automatic retries are allowed; a third drifting
+execution stops with changed filenames, preserved attempt reports and **Retry
+verification** in the browser. Changed requirements require plan review.
+The stopped-verification panel accepts optional guidance for the next explicit
+retry. New guidance forces inspection instead of reusing a cached plan or report
+assessment. It grants no acceptance or implementation authority and is kept out
+of background assessment and confirmation requests.
+Cancellation/ownership loss prevents further dispatch and acceptance. Ordinary
+test failures remain unresolved under the existing evidence/phase repair rules.
+
+Unknown historical build/lint prose cannot overwrite an explicit successful
+repair decision that links evidence. Observed execution failures remain visible.
+
+### Selected phase repair postcondition
+
+A returned phase worker enters post-repair reassessment. If the selected gate or
+phase completion gap remains unresolved, the next attempt receives the worker's
+report and the host's current evidence/diagnosis. The selected scope, gate rules
+and original user guidance remain fixed. Health warnings do not block feature
+completion, but an explicitly requested health repair must resolve its warning
+before that repair is reported successful. Three unsuccessful repair/verification
+rounds end with a plain-English per-round account: work reported by the fixer,
+independent verification, remaining issue, why automatic attempts stopped and
+how to add guidance in the phase textbox before retrying. A new explicit repair
+request starts a new bounded loop. The dashboard preserves the full per-round
+report even when it mentions a code-review report; summary compaction must not
+hide the verified failure reason or next action. Assessment/runtime failures retain their
+specific cause rather than pretending a gate passed; cancellation and fresh
+verification handoff retain ownership. No later phase or feature completion is
+dispatched by this loop.
+
+```mermaid
+flowchart TD
+  FreshExecution[Fresh execution changed source] -->|WF-READINESS-SOURCE-RECOVERY| SourceRecovery[Diagnose, reinspect and rerun; maximum three executions]
+  RepairReturned[Selected phase repair returned] -->|WF-PHASE-REPAIR-POSTCONDITION| RepairCheck[Verify requested outcome; retry unresolved findings up to three rounds]
+```
+
+An explicit phase repair can proceed from execution investigation to an actual
+implementation repair when host reassessment identifies an unmet accepted
+obligation in that same phase. The next prompt removes execution-only guidance
+and includes the current finding and phase repair contract. A read-only Refresh
+handoff cannot expand into implementation repair.

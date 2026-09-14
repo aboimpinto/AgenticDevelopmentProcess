@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createReadinessPromptRunners } from "./runtime/pi/readiness-prompt-session.js";
 import {
   closeSync,
   existsSync,
@@ -39,8 +40,9 @@ import { handleWorkItemSubmissionRoutes } from "./transport/http/routes/work-ite
 import { handleFeatureEpicLinkRoute } from "./transport/http/routes/feature-epic-link-route.js";
 import { handleEpicRefinementRoute } from "./transport/http/routes/epic-refinement-route.js";
 import { handleFeatureWorkflowActionRoutes } from "./transport/http/routes/feature-workflow-action-routes.js";
-import { handleFeatureReviewRoutes } from "./transport/http/routes/feature-review-routes.js";
+import { handleFeatureReviewRoutes, createFeatureReviewRoutesContext } from "./transport/http/routes/feature-review-routes.js";
 import { handleManualTestVerificationRoutes } from "./transport/http/routes/manual-test-verification-routes.js";
+import { handleCompletionReadinessRoute } from "./transport/http/routes/completion-readiness-route.js";
 import { handleWorkflowConsoleRoutes } from "./transport/http/routes/workflow-console-routes.js";
 import { FeatureWorkflowRunCoordinator } from "./application/features/feature-workflow-run-coordinator.js";
 import { ProjectLessonsLearnedContextReader } from "./application/context/project-lessons-learned-context-reader.js";
@@ -323,6 +325,7 @@ const routingInstallationDefault = discoveredPiInstallationDefault
 
 const {
   epicStateSynchronizationApplication,
+  completionReadinessRefreshApplication,
   featureEpicLinkApplication,
   featureWorkflowTargets,
   manualTestArtifactResponseSender,
@@ -331,6 +334,7 @@ const {
   stateFolderLabels,
   workItemQueries,
 } = createProjectWorkItemApplications({
+  ...createReadinessPromptRunners(() => routeResolver, modelCatalogStore, (...args) => runOneShotPiPrompt(...args), id => runtimeProviderForConnection(id)),
   completeFeature: (project, feature) => completeFeatureExecutionApplication.start(project, feature),
   defaultProjectStorePath,
   featureWorkflowSummary: featureWorkflowSummaryProjector,
@@ -492,7 +496,7 @@ const humanReviewFindingsPhaseApplication = createHumanReviewPhaseApplication({
 });
 
 const {
-  agentTaskRuntime,
+  agentTaskRuntime, runtimeProviderForConnection,
   createDetachedCompletionWorkerApplication,
   directHostRuntimeEvidenceStore,
   implementationWorkerApplication,
@@ -611,9 +615,10 @@ const {
 });
 const {
   featureFindingApplication,
+  phaseQualityResolutionApplication, completionReadinessVerificationApplication,
   featurePreparationApplication,
   refinedFeatureReadinessApplication,
-} = createFeaturePreparationApplications({
+} = createFeaturePreparationApplications({ completionReadinessRefreshApplication,
   completeFeature: (project, feature) => completeFeatureExecutionApplication.start(project, feature),
   contextCollector: featureWorkflowContextCollector,
   designArtifactPolicy,
@@ -888,14 +893,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     evaluateUiRequirement: (input) => featurePreparationApplication.evaluateUi(input),
   })) return;
 
-  if (await handleFeatureReviewRoutes(request, response, url, {
-    acceptFindingsPhase: (input) => featureFindingApplication.acceptPhase(input),
-    addFindingDetail: (input) => featureFindingApplication.addDetail(input),
-    recordHumanReview: (input) => featureHumanReviewApplication.record(input),
-    resolveFinding: (input) => featureFindingApplication.resolve(input),
-    submitFinding: (input) => featureFindingApplication.submit(input),
-  })) return;
-
+  if (await handleFeatureReviewRoutes(request, response, url, createFeatureReviewRoutesContext(
+    featureFindingApplication, featureHumanReviewApplication, phaseQualityResolutionApplication,
+  ))) return;
+  if (await handleCompletionReadinessRoute(request, response, url, completionReadinessVerificationApplication)) return;
   if (await handleManualTestVerificationRoutes(request, response, url, {
     generate: (input) => manualTestVerificationApplication.generate(input),
     recordResult: (input, result) => manualTestVerificationApplication.recordResult(input, result),
@@ -903,7 +904,6 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     sendArtifact: (response, input) => manualTestArtifactResponseSender.send(response, input),
     status: (input) => manualTestVerificationApplication.status(input),
   })) return;
-
   if (await handleDeliveryRoutes(request, response, url, deliveryApplications)) return;
 
   if (await handleWorkflowConsoleRoutes(request, response, url, {

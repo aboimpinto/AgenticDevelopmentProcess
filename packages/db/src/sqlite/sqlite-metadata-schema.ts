@@ -382,6 +382,7 @@ export class SqliteMetadataSchema {
       `,
     );
 
+    this.ensureColumns("hepha_deep_dive_sessions", [["focus", "text"]]);
     this.ensureColumns("hepha_card_metadata", [
       ["last_hepha_deep_dive_semantic_source", "text"],
       ["ui_requirement_decision", "text check (ui_requirement_decision in ('requires_ui', 'no_ui'))"],
@@ -606,6 +607,7 @@ export class SqliteMetadataSchema {
       `,
     );
 
+    this.ensureColumns("hepha_manual_test_reviews", [["reviewed_test_ids_json", "text"]]);
     this.ready = true;
   }
 
@@ -792,4 +794,3 @@ export class SqliteMetadataSchema {
     return this.database.prepare(sql).all() as T[];
   }
 }
-

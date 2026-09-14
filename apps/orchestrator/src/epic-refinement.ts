@@ -1,3 +1,4 @@
+import { ACCEPTANCE_RESPONSIBILITY_POLICY } from "./acceptance-responsibility-policy.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { EpicRefinementSummary } from "@hepha/shared";
@@ -22,6 +23,7 @@ export function buildEpicRefinementPrompt({
   title: string;
 }) {
   return [
+    ACCEPTANCE_RESPONSIBILITY_POLICY,
     "You are the Hepha EPIC Refinement Agent.",
     "Update one MemoryBank EpicDescription.md from a user refinement request.",
     "",

@@ -29,7 +29,7 @@ vi.mock("@playwright/test", () => ({
 
 const { generatePack } = await import("../src/manual-test-verification/pack-generation.js");
 const { queryPackStatus } = await import("../src/manual-test-verification/pack-status-query.js");
-const { recordAllManualTestPasses } = await import("../src/manual-test-verification/test-result-recording.js");
+const { recordAllManualTestPasses, recordTestResult } = await import("../src/manual-test-verification/test-result-recording.js");
 const { recordPackReview } = await import("../src/manual-test-verification/review-recording.js");
 
 const featurePath = fileURLToPath(new URL("./manual-test-pack-review-binding.feature", import.meta.url));
@@ -63,7 +63,7 @@ function createHarness() {
   persistManualTestObligation(featureRoot, "FEATURE-TEST", {
     schemaVersion: "hepha-manual-test-deferral/v1",
     id: "MT-001",
-    title: "Completed behavior in the review client",
+    title: "AC-01 Completed behavior in the review client",
     reason: MANUAL_TEST_SKIP_REASON,
     phaseNumber: 7,
     taskId: "phase-7-review-client",
@@ -149,13 +149,214 @@ function writePackMarkdown(projectRoot: string, relativePath: string) {
   writeFileSync(join(dirname(path), "manifest.json"), JSON.stringify({
     schemaVersion: "hepha-test-delivery/v2",
     applicability: "applicable",
-    manualTests: [{ id: "MT-001" }],
+    classifications: [{ sourceId: "AC-01", coverageStatus: "manual", manualTestId: "MT-001" }],
+    manualTests: [{ id: "MT-001", title: "Verify behavior", purpose: "Verify Save", sourceIds: ["AC-01"], role: "Operator",
+      application: "Example console", setupData: "No account or data is required", preconditions: ["Example console is installed"],
+      steps: ["Open the Example console", "Select Save"], expectedResult: "A save confirmation is visible." }],
     invalidManualTests: [],
   }));
 }
 
 describe("manual test review binding Gherkin integration", () => {
   const feature = readFileSync(featurePath, "utf8");
+
+  it("keeps the published pack on timeout and resumes saved authoring batches before replacement", async () => {
+    const harness = createHarness();
+    writeFileSync(harness.descriptionPath, "# Example\n\n## Acceptance Criteria\n" + Array.from({ length: 7 }, (_, index) => `- AC-${index}: Example operation ${index} is observable.\n`).join(""));
+    const options = { context: harness.context, sourceOptions: { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] } };
+    const original = await generatePack(options);
+    const firstRun = vi.fn().mockResolvedValueOnce(JSON.stringify({ tests: [], unresolved: [] })).mockRejectedValueOnce(new Error("Provider timed out"));
+    const interrupted = await generatePack({ ...options, replacePackId: original.packId!, runPrompt: firstRun });
+    expect(interrupted.success).toBe(false);
+    expect(interrupted.message).toContain("saved");
+    expect((await harness.context.store.getCurrentManualTestPack(harness.context.projectId, harness.context.cardKey))?.id).toBe(original.packId);
+    const status = await queryPackStatus({ context: harness.context, currentSourceOptions: options.sourceOptions });
+    expect(status.authoringProgress).toMatchObject({ state: "paused", completedBatches: 1, totalBatches: 3 });
+    const resumed = vi.fn().mockResolvedValue(JSON.stringify({ tests: [], unresolved: [] }));
+    const replacement = await generatePack({ ...options, replacePackId: original.packId!, runPrompt: resumed });
+    expect(resumed).toHaveBeenCalledTimes(2);
+    expect(replacement.success).toBe(true);
+    expect(replacement.packId).not.toBe(original.packId);
+    expect(harness.results).toEqual([]);
+    expect(harness.reviews.size).toBe(0);
+  });
+
+  it("reviews all valid current cases and records their passes independently of missing coverage", async () => {
+    const harness = createHarness();
+    writeFileSync(harness.descriptionPath, readFileSync(harness.descriptionPath, "utf8") + "- AC-EXTRA: Recover a cancelled change.\n");
+    const options = { context: harness.context, sourceOptions: { featDescriptionPath: harness.descriptionPath,
+      epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] } };
+    const pack = await generatePack(options);
+    expect(pack.applicability).toBe("incomplete");
+    const review = await recordPackReview({ context: harness.context, packId: pack.packId! });
+    expect(review.success, review.message).toBe(true);
+    const result = await recordAllManualTestPasses({ context: harness.context, packId: pack.packId!, reviewId: review.reviewId! });
+    expect(result.success, result.message).toBe(true);
+    expect(harness.results.map(r => [r.testId, r.result])).toEqual([["MT-001", "pass"]]);
+    const status = await queryPackStatus({ context: harness.context, currentSourceOptions: options.sourceOptions });
+    expect(status.isReady).toBe(true);
+    expect(status.coverageIssues).toEqual([]);
+    expect(status.isReviewed).toBe(true);
+  });
+
+  it("reviews and records a valid case in an incomplete pack without accepting the whole pack", async () => {
+    const harness = createHarness();
+    const obligationsPath = join(harness.context.featFolderPath, "ManualTestObligations.json");
+    const obligations = JSON.parse(readFileSync(obligationsPath, "utf8"));
+    obligations.obligations.push({ ...obligations.obligations[0], id: "MT-002", taskId: "second-case", title: "Second observable behavior in the review client" });
+    writeFileSync(obligationsPath, JSON.stringify(obligations));
+    writeFileSync(harness.descriptionPath, readFileSync(harness.descriptionPath, "utf8") + "- AC-EXTRA: The operator can recover a cancelled change.\n");
+    const options = { context: harness.context, sourceOptions: { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] } };
+    const pack = await generatePack(options);
+    expect(pack.applicability).toBe("incomplete");
+    const review = await recordPackReview({ context: harness.context, packId: pack.packId!, testId: "MT-001" });
+    expect(review.success, review.message).toBe(true);
+    const result = await recordTestResult({ context: harness.context, packId: pack.packId!, reviewId: review.reviewId!, testId: "MT-001", result: "pass", actualResult: "Observed completed behavior", notes: null });
+    expect(result.success).toBe(true);
+    const unrelated = await recordTestResult({ context: harness.context, packId: pack.packId!, reviewId: review.reviewId!, testId: "MT-002", result: "pass", actualResult: null, notes: null });
+    expect(unrelated.success).toBe(false);
+    expect(unrelated.message).toContain("Review this case");
+    expect(harness.results).toHaveLength(1);
+    expect((await recordAllManualTestPasses({ context: harness.context, packId: pack.packId!, reviewId: review.reviewId! })).success).toBe(false);
+    const status = await queryPackStatus({ context: harness.context, currentSourceOptions: options.sourceOptions });
+    expect(status.isReady).toBe(true);
+    expect(status.isReviewed).toBe(false);
+    expect(status.manualCases).toEqual(expect.arrayContaining([expect.objectContaining({ id: "MT-001", isReviewed: true, result: "pass" })]));
+  });
+
+  it("records namespaced test identifiers from the same manifest used for readiness", async () => {
+    const harness = createHarness();
+    writeFileSync(harness.descriptionPath, "# Example\n\n## Acceptance Criteria\n- MT-001: Completed behavior\n");
+    const obligationsPath = join(harness.context.featFolderPath, "ManualTestObligations.json");
+    const obligations = readFileSync(obligationsPath, "utf8").replaceAll("MT-001", "MT-BROWSER-KEYBOARD-001");
+    writeFileSync(obligationsPath, obligations);
+    writeFileSync(harness.descriptionPath, "# Example\n\n## Acceptance Criteria\n");
+    const generated = await generatePack({ context: harness.context, sourceOptions: {
+      featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [],
+    } });
+    const review = await recordPackReview({ context: harness.context, packId: generated.packId! });
+    expect(review.success).toBe(true);
+    const result = await recordAllManualTestPasses({ context: harness.context, packId: generated.packId!, reviewId: review.reviewId! });
+    expect(result.success).toBe(true);
+    expect(harness.results.map((entry) => entry.testId)).toEqual(["MT-BROWSER-KEYBOARD-001"]);
+  });
+
+  it("explicit regeneration archives a current pack and requires a new review", async () => {
+    const harness = createHarness();
+    writeFileSync(harness.descriptionPath, "# Example\n\n## Acceptance Criteria\n");
+    const sourceOptions = { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] };
+    const first = await generatePack({ context: harness.context, sourceOptions });
+    const review = await recordPackReview({ context: harness.context, packId: first.packId! });
+    const next = await generatePack({ context: harness.context, sourceOptions, replacePackId: first.packId!,
+      runPrompt: async () => JSON.stringify({ tests: [], unresolved: [] }) });
+    expect(next.packId).not.toBe(first.packId);
+    expect(harness.packs.get(first.packId!)?.supersededAt).not.toBeNull();
+    expect(harness.reviews.get(review.reviewId!)?.state).toBe("invalidated");
+    expect(harness.results).toEqual([]);
+  });
+
+  it.each([undefined, "", "   ", "Include keyboard access"])("regeneration assesses coverage with guidance %j without recording acceptance", async (guidance) => {
+    const harness = createHarness();
+    writeFileSync(harness.descriptionPath, "# Example console\n\n## Acceptance Criteria\n- AC-UI-KEYBOARD: Save supports keyboard focus.\n");
+    const sourceOptions = { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] };
+    const first = await generatePack({ context: harness.context, sourceOptions });
+    expect(first.isReady).toBe(false);
+    const runPrompt = vi.fn(async (_prompt: string) => JSON.stringify({ tests: [{
+      id: "BROWSER-KEYBOARD-A", title: "Keyboard focus", purpose: "Check Save", sourceIds: ["AC-UI-KEYBOARD"],
+      role: "Operator", application: "Example console", setupData: "No account or special test data is required.",
+      preconditions: ["Example console is running"], steps: ["Open the Example console", "Press Tab to focus Save"],
+      expectedResult: "Save has a visible focus indicator.",
+    }], unresolved: [] }));
+    const next = await generatePack({ context: harness.context, sourceOptions, replacePackId: first.packId!, guidance, runPrompt });
+    expect(next.isReady).toBe(true);
+    expect(next.manualTestCount).toBe(2);
+    expect(runPrompt).toHaveBeenCalledOnce();
+    const status = await queryPackStatus({ context: harness.context, currentSourceOptions: sourceOptions });
+    expect(status.isReady).toBe(true);
+    expect(status.isReviewed).toBe(false);
+    expect(harness.results).toEqual([]);
+    const review = await recordPackReview({ context: harness.context, packId: next.packId! });
+    const unknown = await recordTestResult({ context: harness.context, packId: next.packId!, reviewId: review.reviewId!, testId: "NOT-IN-PACK", result: "pass", actualResult: null, notes: null });
+    expect(unknown.success).toBe(false);
+    expect(harness.results).toEqual([]);
+    const passed = await recordAllManualTestPasses({ context: harness.context, packId: next.packId!, reviewId: review.reviewId! });
+    expect(passed.success).toBe(true);
+    expect(harness.results.map((entry) => entry.testId)).toEqual(["MT-001", "BROWSER-KEYBOARD-A"]);
+    runPrompt.mockResolvedValueOnce(JSON.stringify({ tests: [], unresolved: [] }));
+    const blankRebuild = await generatePack({ context: harness.context, sourceOptions, replacePackId: next.packId!, runPrompt });
+    expect(blankRebuild.packId).not.toBe(next.packId);
+    expect(blankRebuild.manualTestCount).toBe(2);
+    expect(runPrompt).toHaveBeenCalledTimes(2);
+    expect(harness.results.every((entry) => entry.packId === next.packId)).toBe(true);
+  });
+
+  it("preserves the current pack when authoring fails or its sources change", async () => {
+    const harness = createHarness();
+    const sourceOptions = { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] };
+    const first = await generatePack({ context: harness.context, sourceOptions });
+    const failed = await generatePack({ context: harness.context, sourceOptions, replacePackId: first.packId!, guidance: "Keyboard", runPrompt: async () => "not JSON" });
+    expect(failed.success).toBe(false);
+    expect(harness.packs).toHaveLength(1);
+    const changed = await generatePack({ context: harness.context, sourceOptions, replacePackId: first.packId!, guidance: "Keyboard", runPrompt: async () => {
+      writeFileSync(harness.descriptionPath, "# Changed description");
+      return JSON.stringify({ tests: [], unresolved: ["Need application details"] });
+    } });
+    expect(changed.success).toBe(false);
+    expect(changed.message).toContain("changed");
+    expect(harness.packs.get(first.packId!)?.supersededAt).toBeNull();
+  });
+
+  it("does not silently reformat a reviewed pack when the assessment model is unavailable", async () => {
+    const harness = createHarness();
+    const sourceOptions = { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] };
+    const first = await generatePack({ context: harness.context, sourceOptions });
+    const review = await recordPackReview({ context: harness.context, packId: first.packId! });
+    const result = await generatePack({ context: harness.context, sourceOptions, replacePackId: first.packId! });
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("model is unavailable");
+    expect(harness.packs).toHaveLength(1);
+    expect(harness.reviews.get(review.reviewId!)?.state).toBe("current");
+  });
+
+  it("first user-facing generation assesses uncovered criteria without guidance", async () => {
+    const harness = createHarness();
+    const sourceOptions = { featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [] };
+    const runPrompt = vi.fn(async (_prompt: string) => JSON.stringify({ tests: [], unresolved: [] }));
+    const result = await generatePack({ context: harness.context, sourceOptions, assessCoverage: true, runPrompt });
+    expect(result.success).toBe(true);
+    expect(runPrompt).toHaveBeenCalledOnce();
+    expect(harness.reviews.size).toBe(0);
+    expect(harness.results).toEqual([]);
+  });
+
+  it("automatic assessment keeps an automated-only feature not applicable without fabricating manual cases", async () => {
+    const harness = createHarness();
+    rmSync(join(harness.context.featFolderPath, "ManualTestObligations.json"));
+    writeFileSync(harness.descriptionPath, "# Immutable values\n\n## Acceptance Criteria\n- AC-DOMAIN-001: Immutable values compare ordinally.\n");
+    writeFileSync(join(harness.context.featFolderPath, "acceptance-traceability-ledger.md"), "| AC-DOMAIN-001 | ImmutableValueTests passed |\n");
+    const runPrompt = vi.fn(async (_prompt: string) => JSON.stringify({ tests: [], unresolved: [] }));
+    const result = await generatePack({ context: harness.context, sourceOptions: {
+      featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [],
+    }, assessCoverage: true, runPrompt });
+    expect(runPrompt).toHaveBeenCalledOnce();
+    expect(result.applicability).toBe("not_applicable");
+    expect(result.manualTestCount).toBe(0);
+    expect(result.isReady).toBe(false);
+    expect(harness.results).toEqual([]);
+  });
+
+  it("bounds large feature context and explicitly identifies omitted source content", async () => {
+    const harness = createHarness();
+    writeFileSync(join(harness.context.featFolderPath, "implementation-notes.md"), "# Implementation history\n" + "Repeated implementation evidence.\n".repeat(16000));
+    const runPrompt = vi.fn(async (_prompt: string) => JSON.stringify({ tests: [], unresolved: ["Need a supported browser build."] }));
+    const result = await generatePack({ context: harness.context, sourceOptions: {
+      featDescriptionPath: harness.descriptionPath, epicDescriptionPath: null, epicAcceptanceTestsPath: null, gherkinPaths: [],
+    }, guidance: "Browser interactions", runPrompt });
+    expect(result.success).toBe(true);
+    expect(result.isReady).toBe(false);
+    expect(runPrompt.mock.calls[0]?.[0]).toContain("SOURCE EXCERPT");
+    expect(runPrompt.mock.calls[0]?.[0]?.length).toBeLessThan(120000);
+  });
 
   it("documents generic current-pack binding and regeneration scenarios", () => {
     expect(feature).toContain("Scenario: Repeated generation with unchanged inputs reuses the current pack");

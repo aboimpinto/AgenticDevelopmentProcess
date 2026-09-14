@@ -18,3 +18,10 @@ Feature: Generic phase planning and acceptance handoff
     When the worker prepares acceptance traceability
     Then it links the exact existing test
     And it does not create duplicate coverage
+
+  Scenario: Planning preserves acceptance responsibility across levels
+    Given an EPIC owns complete workflow acceptance
+    When a phase or task plans isolated behavior verification
+    Then the prompt keeps EPIC, FEAT, Phase and Task responsibilities distinct
+    And coverage mappings remain many-to-many
+    And passing isolated tests never replace assigned workflow E2E obligations

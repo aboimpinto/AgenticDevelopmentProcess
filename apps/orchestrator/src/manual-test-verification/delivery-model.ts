@@ -8,17 +8,18 @@ import type {
 } from "../manual-test-verification-types.js";
 import {
   buildCoverageMap,
-  generateManualTests,
   normalizeSourceItems,
-  validateManualTestCase,
   type CoverageMapEntry,
   type ManualTestCase,
 } from "../manual-test-verification-policy.js";
 import { readManualTestObligations } from "../manual-test-obligation.js";
 import type { ManualTestAdapterContext } from "./adapter-context.js";
 import { discoverSources, type SourceDiscoveryOptions } from "./source-discovery.js";
+import { parseManualTestCases } from "./pack-case-contract.js";
+import { stripCompletionRecoverySection } from "../memorybank/completion-recovery-section.js";
 
 export interface ManualTestDeliveryModel {
+  readonly acceptedScope?: import("./accepted-feature-scope.js").AcceptedFeatureScope;
   readonly manifestEntries: readonly ManualTestSourceManifestEntry[];
   readonly coverageMap: readonly CoverageMapEntry[];
   readonly tests: readonly ManualTestCase[];
@@ -33,7 +34,7 @@ export interface ManualTestDeliveryModel {
 export function hashManualTestDeliveryModel(model: ManualTestDeliveryModel): string {
   return createHash("sha256").update(JSON.stringify({
     schemaVersion: "hepha-test-delivery/v2",
-    renderingVersion: 7,
+    renderingVersion: 8,
     manifestEntries: model.manifestEntries,
     coverageMap: model.coverageMap,
     tests: model.tests,
@@ -47,16 +48,26 @@ export function hashManualTestDeliveryModel(model: ManualTestDeliveryModel): str
 export async function buildManualTestDeliveryModel(
   context: ManualTestAdapterContext,
   sourceOptions: SourceDiscoveryOptions,
+  options: { automatedOnly?: boolean } = {},
 ): Promise<ManualTestDeliveryModel> {
   const manifestEntries = normalizeSourceItems(discoverSources(sourceOptions));
   const evidenceDiscovery = discoverDocumentEvidence(context.featFolderPath, context.projectRoot);
   const runtimeEvidence = await discoverRuntimeEvidence(context);
-  const candidates = buildObligationCandidates(context.featFolderPath, manifestEntries);
+  const authoredPath = resolve(context.featFolderPath, "ManualTestCases.json");
+  const authored = !options.automatedOnly && existsSync(authoredPath)
+    ? JSON.parse(readFileSync(authoredPath, "utf8")) as { tests: unknown; unresolved?: string[] }
+    : { tests: [], unresolved: [] };
+  const candidates = options.automatedOnly ? [] : [...buildObligationCandidates(context.featFolderPath, manifestEntries), ...parseManualTestCases(authored.tests)];
   const invalidManualTests = candidates.flatMap((test) => {
-    const errors = validateManualTestCase(test);
+    const errors: string[] = [];
+    try { parseManualTestCases([test]); }
+    catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
+    if (candidates.filter((candidate) => candidate.id === test.id).length > 1) errors.push("Duplicate manual test ID.");
+    if (test.sourceIds.some((id) => !manifestEntries.some((entry) => entry.sourceId === id))) errors.push("Unknown source criterion ID.");
     return errors.length > 0 ? [{ id: test.id, errors }] : [];
   });
-  const tests = generateManualTests(candidates);
+  for (const issue of authored.unresolved ?? []) invalidManualTests.push({ id: "authoring", errors: [issue] });
+  const tests = candidates.filter((test) => !invalidManualTests.some((entry) => entry.id === test.id));
   const manualCoverage = new Map(tests.flatMap((test) =>
     test.sourceIds.map((sourceId) => [sourceId, test.id] as const)));
   const coverageMap = buildCoverageMap(
@@ -67,11 +78,9 @@ export async function buildManualTestDeliveryModel(
   );
   const acceptanceCoverage = coverageMap.filter((entry) =>
     entry.category === "feat-ac" || entry.category === "epic-ac" || entry.category === "phase-ac");
-  const applicability = tests.length > 0 && invalidManualTests.length === 0
-    ? "applicable" as const
-    : invalidManualTests.length > 0 || acceptanceCoverage.some((entry) => entry.coverageStatus === "uncovered")
-      ? "incomplete" as const
-      : "not_applicable" as const;
+  const applicability = invalidManualTests.length > 0 || acceptanceCoverage.some((entry) => entry.coverageStatus === "uncovered")
+    ? "incomplete" as const
+    : tests.length > 0 ? "applicable" as const : "not_applicable" as const;
 
   return {
     manifestEntries,
@@ -155,7 +164,7 @@ function discoverDocumentEvidence(featureFolderPath: string, projectRoot: string
   let corpus = "";
 
   for (const path of files) {
-    const content = readFileSync(path, "utf8");
+    const content = stripCompletionRecoverySection(readFileSync(path, "utf8"));
     const isAcceptanceLedger = /acceptance-traceability-ledger\.md$/i.test(path);
     corpus += `\n${content}`;
     if (/FeatureDescription\.md$/i.test(path)) {

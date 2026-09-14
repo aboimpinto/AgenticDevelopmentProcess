@@ -143,6 +143,7 @@ export function ModelsDestination({ catalogApi = modelCatalogApi, loadConnection
       <header>
         <h1 id="models-heading">Models</h1>
         <p>Installation-wide connections, available catalog, and worker routing.</p>
+        <p>Thinking: High (enforced for every worker)</p>
       </header>
       <ModelsSectionTabs onSelectSection={setSelectedSection} selectedSection={selectedSection} />
       {selectedSection === "provider-connections" ? (
@@ -191,5 +192,4 @@ export function ModelsDestination({ catalogApi = modelCatalogApi, loadConnection
     </section>
   );
 }
-
 

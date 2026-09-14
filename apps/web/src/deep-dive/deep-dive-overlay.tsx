@@ -103,6 +103,7 @@ export function DeepDiveOverlay({
               {itemLabel} Deep-Dive
             </span>
             <h2 id="deep-dive-title">{session.cardTitle}</h2>
+            {session.focus && <p><strong>Interview focus:</strong> {session.focus}</p>}
             <div className="deep-dive-meta">
               <span>{session.cardExternalId}</span>
               <span>{formatSessionStatus(session.status)}</span>

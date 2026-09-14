@@ -3,10 +3,12 @@ import { FeatureFindingApplication } from "../src/application/features/feature-f
 import { FeaturePreparationApplication } from "../src/application/features/feature-preparation-application.js";
 import { RefinedFeatureReadinessApplication } from "../src/application/features/refined-feature-readiness-application.js";
 import { createFeaturePreparationApplications } from "../src/bootstrap/feature-preparation-applications.js";
+import { PhaseQualityResolutionApplication } from "../src/application/features/phase-quality-resolution-application.js";
 
 describe("feature preparation application composition", () => {
   it("returns shared UI/refinement and user-finding boundaries", () => {
     const applications = createFeaturePreparationApplications({
+      completionReadinessRefreshApplication: {} as never,
       completeFeature: vi.fn(),
       contextCollector: { collect: vi.fn() } as never,
       designArtifactPolicy: {} as never,
@@ -29,5 +31,6 @@ describe("feature preparation application composition", () => {
     expect(applications.featurePreparationApplication).toBeInstanceOf(FeaturePreparationApplication);
     expect(applications.featureFindingApplication).toBeInstanceOf(FeatureFindingApplication);
     expect(applications.refinedFeatureReadinessApplication).toBeInstanceOf(RefinedFeatureReadinessApplication);
+    expect(applications.phaseQualityResolutionApplication).toBeInstanceOf(PhaseQualityResolutionApplication);
   });
 });

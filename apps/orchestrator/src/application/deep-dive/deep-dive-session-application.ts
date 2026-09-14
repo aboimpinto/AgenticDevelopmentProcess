@@ -195,6 +195,7 @@ export class DeepDiveSessionApplication {
 
 export function toDeepDiveSession(session: StoredDeepDiveSession): DeepDiveSession {
   return {
+    ...(session.focus ? { focus: session.focus } : {}),
     agentConnectionStatus: session.agentConnectionStatus as DeepDiveAgentConnectionStatus,
     cardExternalId: session.cardExternalId,
     cardId: session.cardId,

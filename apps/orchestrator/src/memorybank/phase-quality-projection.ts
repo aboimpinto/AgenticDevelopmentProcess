@@ -1,4 +1,9 @@
+import { applyPhaseGateDeclarations } from "./phase-gate-declarations.js";
+import { readPhaseGates } from "../exchanges/phase-gates-repository.js";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { getPhaseExecutionContractForDocument, loadPhaseExecutionContract, phaseRequiresCodeReview, phaseRequiresVerification } from "../phase-execution-contract.js";
+import { isUnresolvedQualityGate, isPhaseQualityWarning } from "@hepha/shared";
 import type {
   FeatureCodeReviewSummary,
   FeaturePhaseQualityGateDecision,
@@ -8,6 +13,11 @@ import type {
   PhaseSummary,
 } from "@hepha/shared";
 import { cleanInlineMarkdown, extractMarkdownSection } from "./markdown-parsing.js";
+import { readCompatibilityGateDeclarations, reconcileGateApplicability } from "./phase-gate-applicability.js";
+import { stripCompletionRecoverySection } from "./completion-recovery-section.js";
+import { readPhaseVerification } from "../exchanges/phase-verification-repository.js";
+import { readCheckpointTestEvidence } from "./phase-checkpoint-test-evidence.js";
+import { readCheckpointHealthEvidence } from "./phase-checkpoint-health-evidence.js";
 import {
   extractChangedFileEvidencePaths,
   extractMarkdownPathTokens,
@@ -20,30 +30,88 @@ import {
 export function scanFeaturePhaseQualityGates(
   phases: PhaseSummary[],
   codeReviews: FeatureCodeReviewSummary[],
+  projectRoot?: string,
 ): FeaturePhaseQualitySummary[] {
   return phases
     .map((phase) => {
-      const markdown = safeReadTextFile(phase.documentPath);
+      const markdown = stripCompletionRecoverySection(safeReadTextFile(phase.documentPath));
       const explicitQualitySection = extractMarkdownSection(markdown, (heading) =>
         /^quality gate evidence$/i.test(heading),
       );
       const explicitGates = parseExplicitQualityGateDecisions(explicitQualitySection);
+      for (const decision of readCheckpointHealthEvidence(markdown)) {
+        const recorded = explicitGates.get(decision.gate);
+        // A legacy prose summary with no recognized outcome cannot erase a
+        // later explicit decision linked to execution evidence. Real failures
+        // still take precedence below.
+        if (decision.status === "unknown" && recorded?.status === "satisfied" && recorded.evidencePaths.length) continue;
+        const recordedFailure = /Recorded unresolved gate:|\bfailed\b|\b[1-9]\d* warnings?\b/i.test(recorded?.justification ?? "");
+        if (!recordedFailure || decision.status === "missing") explicitGates.set(decision.gate, decision);
+      }
+      const checkpointTests = readCheckpointTestEvidence(markdown);
+      if (checkpointTests && (!explicitGates.has("tests") || checkpointTests.status !== "satisfied")) {
+        explicitGates.set("tests", checkpointTests);
+      }
+      const phaseReviews = phase.number === null ? [] : codeReviews.filter(review => review.phaseNumber === phase.number);
+      for (const [gate, declaration] of readCompatibilityGateDeclarations(markdown)) {
+        // A required review is an obligation, not a failed review. Let the
+        // indexed report verdict satisfy it (or block it) below.
+        if (gate === "code_review" && phaseReviews.length > 0 && /^required\b/i.test(declaration.justification ?? "")) continue;
+        // Native decisions take precedence, except a recorded failure cannot
+        // be hidden by a green or N/A summary row.
+        if (!explicitGates.has(gate) || declaration.justification?.startsWith("Recorded unresolved gate:")) {
+          explicitGates.set(gate, declaration);
+        }
+      }
+      // MCP refinement publishes applicability separately from execution outcomes.
+      const gateContract = parseExplicitQualityGateDecisions(extractMarkdownSection(markdown, heading => /^phase quality gate contract$/i.test(heading)));
+      for (const [gate, declaration] of gateContract) {
+        const recorded = explicitGates.get(gate);
+        const failed = (gate === "tests" && checkpointTests && checkpointTests.status !== "satisfied")
+          || /Recorded unresolved gate:|\bfailed\b|\bneeds changes\b/i.test(recorded?.justification ?? "");
+        if (failed) continue;
+        if (declaration.status === "not_applicable") explicitGates.set(gate, declaration);
+        else if (!recorded || recorded.status === "not_applicable") explicitGates.set(gate, declaration);
+      }
       const changedFiles = extractPhaseQualityChangedFiles(markdown, explicitQualitySection);
       const testFiles = changedFiles.filter(isTestEvidencePath);
       const documentationFiles = changedFiles.filter(isDocumentationEvidencePath);
       const codeFiles = changedFiles.filter(
         (filePath) => !isTestEvidencePath(filePath) && !isDocumentationEvidencePath(filePath),
       );
-      const phaseReviews =
-        phase.number === null
-          ? []
-          : codeReviews.filter((review) => review.phaseNumber === phase.number);
-      const gates = buildPhaseQualityGateDecisions({
+      reconcileGateApplicability(explicitGates, codeFiles, codeFiles.some(isUiEvidencePath));
+      const folder = resolve(dirname(phase.documentPath), "..");
+      const declared = getPhaseExecutionContractForDocument(loadPhaseExecutionContract(folder).contract, phase.documentPath, folder);
+      if (declared) {
+        for (const [gate, required] of [["tests", phaseRequiresVerification(declared)], ["code_review", phaseRequiresCodeReview(declared, codeFiles.length > 0)]] as const) {
+          const decision = explicitGates.get(gate);
+          const observedFailure = gate === "tests" && checkpointTests && checkpointTests.status !== "satisfied";
+          if (observedFailure || decision?.justification?.startsWith("Recorded unresolved gate:")) continue;
+          if (!required) explicitGates.set(gate, { gate, status: "not_applicable", evidencePaths: [resolve(folder, "PhaseExecutionContract.json")],
+            justification: `The current phase execution contract declares no required ${gate === "tests" ? "verification" : "code-review"} obligation.` });
+          else if (!decision || decision.status === "not_applicable") explicitGates.set(gate, { gate, status: "missing", evidencePaths: [],
+            justification: `The current phase execution contract requires ${gate}; record its execution evidence.` });
+        }
+        // A valid review report can satisfy the declared review obligation below.
+        if (phaseReviews.length && explicitGates.get("code_review")?.status === "missing"
+          && explicitGates.get("code_review")?.justification?.startsWith("The current phase execution contract")) explicitGates.delete("code_review");
+      }
+      applyPhaseGateDeclarations(markdown, phase.documentPath, explicitGates,
+        checkpointTests?.status === "missing" || !!(declared && phaseRequiresVerification(declared)), phaseReviews.length > 0);
+      const structured = readPhaseVerification(phase, codeFiles.length > 0, projectRoot, testFiles.length > 0);
+      if (structured) for (const decision of structured) explicitGates.set(decision.gate, decision);
+      const gates = readPhaseGates(phase, projectRoot) ?? buildPhaseQualityGateDecisions({
         codeFiles,
         explicitGates,
         phaseReviews,
         testFiles,
       });
+      // A canonical compatibility record cannot waive host-observed failures of
+      // independently configured native verification commands.
+      if (structured) for (const decision of structured.filter(gate => isUnresolvedQualityGate(gate) || isPhaseQualityWarning(gate))) {
+        const index = gates.findIndex(gate => gate.gate === decision.gate);
+        if (index < 0) gates.push(decision); else gates[index] = decision;
+      }
       const warnings = buildPhaseQualityWarnings(gates);
 
       return {
@@ -61,7 +129,7 @@ export function scanFeaturePhaseQualityGates(
     .filter(
       (summary) =>
         summary.changedFiles.length > 0 ||
-        summary.gates.some((gate) => gate.status !== "not_applicable" && gate.status !== "unknown") ||
+        summary.gates.some((gate) => gate.status !== "not_applicable" || gate.justification) ||
         summary.warnings.length > 0,
     );
 }
@@ -70,13 +138,9 @@ function extractPhaseQualityChangedFiles(markdown: string, explicitQualitySectio
   const explicitChangedFileLines = explicitQualitySection
     .split(/\r?\n/)
     .filter((line) => /\b(changed files?|source files?|test files?|documentation files?)\b/i.test(line));
-  const explicitPaths = explicitChangedFileLines.flatMap((line) => extractMarkdownPathTokens(line));
+  const explicitPaths = extractChangedFileEvidencePaths(`## Changed Files\n${explicitChangedFileLines.join("\n")}`);
 
-  if (explicitPaths.length > 0) {
-    return [...new Set(explicitPaths)].sort();
-  }
-
-  return [...new Set(extractChangedFileEvidencePaths(markdown))].sort();
+  return [...new Set([...explicitPaths, ...extractChangedFileEvidencePaths(markdown)])].sort();
 }
 
 function parseExplicitQualityGateDecisions(markdown: string) {
@@ -129,16 +193,16 @@ function buildPhaseQualityGateDecisions({
   testFiles: string[];
 }) {
   const hasUiCode = codeFiles.some(isUiEvidencePath);
+  const latestReview = [...phaseReviews].sort((a, b) => (a.updatedAt ?? "").localeCompare(b.updatedAt ?? "")).at(-1);
+  const unresolvedReview = latestReview && !["approved", "approved_with_notes"].includes(latestReview.result);
 
   return [
+    ...["build", "lint"].flatMap(gate => explicitGates.has(gate as FeatureQualityGateKind) ? [explicitGates.get(gate as FeatureQualityGateKind)!] : []),
     mergeQualityGateDecision({
       evidencePaths: testFiles,
       explicitGates,
-      fallbackJustification:
-        testFiles.length > 0
-          ? `${testFiles.length} test file${testFiles.length === 1 ? "" : "s"} recorded in phase evidence.`
-          : null,
-      fallbackStatus: testFiles.length > 0 ? "satisfied" : codeFiles.length > 0 ? "missing" : "not_applicable",
+      fallbackJustification: "Test gate declaration/evidence is unresolved. Reconcile the phase contract; listed files do not prove applicability or passing execution.",
+      fallbackStatus: "unknown",
       gate: "tests",
     }),
     mergeQualityGateDecision({
@@ -148,21 +212,21 @@ function buildPhaseQualityGateDecisions({
         hasUiCode && testFiles.some(isE2eEvidencePath)
           ? "Browser-facing change has E2E evidence recorded in phase evidence."
           : null,
-      fallbackStatus: hasUiCode
-        ? testFiles.some(isE2eEvidencePath)
-          ? "satisfied"
-          : "missing"
-        : "not_applicable",
+      fallbackStatus: "not_applicable",
       gate: "gherkin_e2e",
     }),
-    mergeQualityGateDecision({
+    unresolvedReview ? {
+      gate: "code_review" as const, status: "missing" as const,
+      evidencePaths: [latestReview.reportRelativePath ?? latestReview.reportPath],
+      justification: `Latest recorded review verdict: ${latestReview.result ?? "unknown"}. Resolve review findings or verify the unrecognised verdict before phase acceptance. A report's presence or a green summary row is not approval.`,
+    } : mergeQualityGateDecision({
       evidencePaths: phaseReviews.map((review) => review.reportRelativePath ?? review.reportPath),
       explicitGates,
       fallbackJustification:
         phaseReviews.length > 0
           ? `${phaseReviews.length} persisted code-review report${phaseReviews.length === 1 ? "" : "s"} found.`
-          : null,
-      fallbackStatus: phaseReviews.length > 0 ? "satisfied" : codeFiles.length > 0 ? "missing" : "not_applicable",
+          : "Code-review gate declaration is unresolved. Reconcile the phase contract; changed files do not decide review applicability.",
+      fallbackStatus: phaseReviews.length > 0 ? "satisfied" : "unknown",
       gate: "code_review",
     }),
   ];
@@ -200,20 +264,22 @@ function mergeQualityGateDecision({
 
 function buildPhaseQualityWarnings(gates: FeaturePhaseQualityGateDecision[]) {
   return gates
-    .filter((gate) => gate.status === "missing")
+    .filter(gate => isUnresolvedQualityGate(gate) || isPhaseQualityWarning(gate))
     .map((gate) => {
       switch (gate.gate) {
+        case "build": return "Build warning (non-blocking); inspect its execution result and choose whether to repair it.";
+        case "lint": return "Lint/typecheck warning (non-blocking); inspect its execution result and choose whether to repair it.";
         case "code_review":
-          return "Code review is required or must be explicitly waived with justification.";
+          return "Reconcile the declared code-review gate and its approval evidence.";
         case "gherkin_e2e":
-          return "Gherkin/Playwright E2E is required for UI/browser-facing changes or must be explicitly waived.";
+          return "Reconcile the explicitly assigned workflow E2E obligation and its execution evidence.";
         case "tests":
-          return "Automated tests are required for code changes or must be explicitly waived with justification.";
+          return "Reconcile the declared test/acceptance-coverage gate and its execution evidence.";
       }
     });
 }
 
-function parseQualityGateKind(value: string): FeatureQualityGateKind | null {
+export function parseQualityGateKind(value: string): FeatureQualityGateKind | null {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
   // Coverage is advisory telemetry with its own document row. It must never
@@ -222,6 +288,9 @@ function parseQualityGateKind(value: string): FeatureQualityGateKind | null {
   if (normalized.includes("coverage")) {
     return null;
   }
+
+  if (normalized === "build") return "build";
+  if (normalized === "lint" || normalized === "lint typecheck") return "lint";
 
   if (normalized.includes("code review")) {
     return "code_review";

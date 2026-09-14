@@ -180,14 +180,14 @@ describe("findMissingRequiredIntents", () => {
       makeCheck({ id: "b", intent: "build", required: true }),
       makeCheck({ id: "t", intent: "test", required: true }),
     ];
-    expect(findMissingRequiredIntents(checks)).toEqual(["lint", "coverage"]);
+    expect(findMissingRequiredIntents(checks)).toEqual(["lint"]);
   });
 
   it("returns all three when no checks are required", () => {
     const checks = [
       makeCheck({ id: "b", intent: "build", required: false }),
     ];
-    expect(findMissingRequiredIntents(checks)).toEqual(["build", "test", "lint", "coverage"]);
+    expect(findMissingRequiredIntents(checks)).toEqual(["build", "test", "lint"]);
   });
 
   it("returns empty when intent is covered by multiple required checks", () => {

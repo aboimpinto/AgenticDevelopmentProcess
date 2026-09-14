@@ -395,7 +395,7 @@ describe("generic orchestrator HTTP boundary Gherkin integration", () => {
 
     expect(response.status).toBe(201);
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8");
-    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5176");
     await expect(response.json()).resolves.toEqual({
       project: expect.objectContaining({
         memoryBankPath: resolve(projectRoot, "MemoryBank"),
@@ -615,7 +615,7 @@ describe("generic orchestrator HTTP boundary Gherkin integration", () => {
     const response = await fetch(`${baseUrl}/api/projects`, { method: "OPTIONS" });
 
     expect(response.status).toBe(204);
-    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5176");
     expect(await response.text()).toBe("");
   });
 });

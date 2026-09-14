@@ -18,6 +18,7 @@ export class FeatureCompletionReadinessPolicy {
   }
 
   canStart(feature: WorkItemCard): boolean {
+    if (feature.completionRecovery && !feature.completionRecovery.ready) return false;
     const workflow = feature.featureWorkflow;
     if (!workflow || workflow.activeRun || feature.stateFolder !== "03_IN_PROGRESS") return false;
     if (!areAllImplementationPhasesResolved(feature)) return false;

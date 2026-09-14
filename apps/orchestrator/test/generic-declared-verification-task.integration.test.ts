@@ -14,11 +14,11 @@ describe("generic declared verification task Gherkin integration", () => {
   it("keeps one arbitrary task active through multiple repair cycles and completes it on green", async () => {
     expect(readFileSync(featurePath, "utf8")).not.toMatch(/FEAT-\d+|Phase \d+|Task \d+/i);
     const project = { id: "project" } as StoredProject;
-    const phase = { number: 73, title: "Unpredictable audit" } as PhaseSummary & { number: number };
+    const phase = { documentPath: "/work/phase-any.md", number: 73, title: "Unpredictable audit" } as PhaseSummary & { number: number };
     const feature = { externalId: "WORK", title: "Anything" } as WorkItemCard;
     const activeTask = { id: "stable-task" } as PhaseTaskLedgerItem;
     const completeTask = vi.fn(async () => undefined);
-    const runRepairWorker = vi.fn(async () => "Verification Repair Result: REPAIRED");
+    const runRepairWorker = vi.fn(async () => JSON.stringify({ schemaVersion: "hepha-exchange/v1", kind: "verification.repair", payload: { phaseId: "phase-any.md", taskId: "full-check", outcome: "repaired" } }));
     const runVerification = vi.fn()
       .mockResolvedValueOnce(verification("failed"))
       .mockResolvedValueOnce(verification("failed"))

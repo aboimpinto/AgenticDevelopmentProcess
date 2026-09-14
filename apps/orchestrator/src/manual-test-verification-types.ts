@@ -122,6 +122,7 @@ export interface ManualTestPackRecord {
  * Durable record of an explicit pack review acknowledgement.
  */
 export interface ManualTestReviewRecord {
+  readonly reviewedTestIds?: readonly string[] | null;
   readonly id: string;
   readonly projectId: string;
   readonly cardKey: string;
@@ -163,6 +164,9 @@ export interface ManualTestResultRecord {
  * Read-model used by the dashboard and completion gate.
  */
 export interface ManualTestPackStatus {
+  readonly authoringProgress?: { state: "running" | "paused" | "assessed"; completedBatches: number; totalBatches: number; proposedCases: number; message: string };
+  readonly coverageIssues?: readonly string[];
+  readonly manualCases?: readonly (import("./manual-test-verification-policy.js").ManualTestCase & { isReviewed?: boolean; result?: "pass" | "fail" | null })[];
   readonly state: ManualTestPackState;
   readonly currentPackId: string | null;
   readonly currentVersion: string | null;
@@ -200,6 +204,16 @@ export type AutomatedExecutionStatus =
   | "not-executed";
 
 export interface AutomatedEvidenceSummary {
+  /** Recovery importer-owned provenance. Descriptive prose is never this report's source binding. */
+  readonly verifiedExecution?: {
+    readonly schema: "verified-execution/v1";
+    readonly testedRevision: string;
+    readonly sourceState: string;
+    readonly executedCount: number;
+    readonly reportHashes: readonly string[];
+  };
+  /** Complete verified identity index for recovery. Never truncate; page at the model boundary. */
+  readonly executionIdentities?: readonly string[];
   readonly id: string;
   readonly title: string;
   readonly status: AutomatedExecutionStatus;

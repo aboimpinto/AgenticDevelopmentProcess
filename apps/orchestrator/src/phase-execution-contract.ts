@@ -340,12 +340,22 @@ export function phaseRequiresCodeReview(
   phase: PhaseExecutionContractPhase | null,
   productionCodeChanged: boolean,
 ) {
-  const explicitReview = phase?.tasks.find((task) => task.kind === "code_review");
+  const explicitReview = phase?.tasks.find((task) => task.kind === "code_review" && task.required);
   if (explicitReview) {
     return explicitReview.condition === "always"
       || (explicitReview.condition === "when_production_code_changes" && productionCodeChanged);
   }
+  if (phaseUsesOrderedTaskExecutors(phase)) return false;
   return phase?.codeReview === "when_production_code_changes" && productionCodeChanged;
+}
+
+/** Ordered tasks own obligations; compatibility summaries cannot add hidden gates. */
+export function phaseRequiresVerification(phase: PhaseExecutionContractPhase): boolean {
+  const declared = phase.tasks.some(task => task.required
+    && ["verification", "development_validation", "final_validation"].includes(task.kind)
+    && task.profile !== "none");
+  return phaseUsesOrderedTaskExecutors(phase) ? declared
+    : declared || phase.developmentValidation !== "none" || phase.finalValidation !== "none";
 }
 
 export function phaseHasFinalValidation(phase: PhaseExecutionContractPhase | null) {

@@ -87,7 +87,7 @@ describe("project LessonsLearned context reader", () => {
     const focus = { displayKeywords: [], keywords: ["rust", "review", "verification"] };
 
     expect(scoreProjectActiveLessonDocument("common.md", "a required rule", focus)).toBeGreaterThan(80);
-    expect(scoreProjectActiveLessonDocument("rust-cargo.md", "cargo build verification", focus)).toBeGreaterThan(40);
+    expect(scoreProjectActiveLessonDocument("rust-cargo.md", "cargo build verification", focus)).toBeGreaterThan(0);
     expect(scoreProjectActiveLessonDocument("index.md", "rust review verification", focus)).toBe(0);
     expect(scoreProjectLessonText("Code review findings must prevent recurrence", focus)).toBeGreaterThan(0);
   });
@@ -100,4 +100,12 @@ describe("project LessonsLearned context reader", () => {
     expect(isPathInsideDirectory("/repo/Lessons/history.md", "/repo/Lessons/Active")).toBe(false);
     expect(isPathInsideDirectory("/repo/Lessons/Active", "/repo/Lessons/Active")).toBe(false);
   });
+});
+
+it("scores the same lesson content equally when a project renames its topic file", () => {
+  const focus = { displayKeywords: [], keywords: ["rust", "review", "verification"] };
+  const text = "Cargo verification must preserve evidence and review findings.";
+  for (const file of ["rust-cargo.md", "code-review-recovery.md", "memorybank-docs.md", "custom-rules.md"]) {
+    expect(scoreProjectActiveLessonDocument(file, text, focus)).toBe(scoreProjectActiveLessonDocument("renamed-topic.md", text, focus));
+  }
 });

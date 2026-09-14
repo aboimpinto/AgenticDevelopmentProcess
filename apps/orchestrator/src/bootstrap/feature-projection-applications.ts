@@ -63,16 +63,22 @@ export function createFeatureProjectionApplications(dependencies: FeatureProject
     readSnippet: readDocumentSnippet,
   });
   const devCycleContinuation = dependencies.recipeSourceFor("continueImplementing") === "devcycle-mcp";
+  const validateRefined = dependencies.recipeSourceFor("refineFeature") === "devcycle-mcp"
+    ? validateDevCycleRefineArtifacts
+    : validateRefineArtifacts;
+  const validateStartAdmission = dependencies.recipeSourceFor("startImplementing") === "devcycle-mcp"
+    ? validateDevCycleRefineArtifacts
+    : validateRefineArtifacts;
+  const validateInProgress = devCycleContinuation
+    ? validateDevCycleImplementationArtifacts
+    : validatePhaseExecutionArtifacts;
+  const validateContinuation = devCycleContinuation
+    ? validateDevCycleImplementationArtifacts
+    : validateImplementationContinuationArtifacts;
   const refinementArtifactPolicy = new RefinementArtifactPolicy({
-    validateContinuation: devCycleContinuation
-      ? validateDevCycleImplementationArtifacts
-      : validateImplementationContinuationArtifacts,
-    validateInProgress: devCycleContinuation
-      ? validateDevCycleImplementationArtifacts
-      : validatePhaseExecutionArtifacts,
-    validateRefined: dependencies.recipeSourceFor("refineFeature") === "devcycle-mcp"
-      ? validateDevCycleRefineArtifacts
-      : validateRefineArtifacts,
+    validateContinuation,
+    validateInProgress,
+    validateRefined,
   });
   const startFeatureTimingPolicy = new StartFeatureTimingPolicy({
     exists: existsSync,
@@ -91,8 +97,24 @@ export function createFeatureProjectionApplications(dependencies: FeatureProject
     createRecoveredOutcome: createRecoveredFeatureWorkflowOutcome,
     createUiRequirementSourceHash,
     deriveImplementationCurrentStep: (item) => dependencies.implementationRunSummary.deriveCurrentStep(item),
-    evaluateContinueReadiness: evaluateReadinessContinue,
-    evaluateReadiness: evaluateFeatReadiness,
+    evaluateContinueReadiness: (item, validation, metadataStoreEnabled, hasDesignArtifacts, uiRequirementDecision) =>
+      evaluateReadinessContinue(
+        item,
+        validation,
+        metadataStoreEnabled,
+        hasDesignArtifacts,
+        uiRequirementDecision,
+        validateContinuation,
+      ),
+    evaluateReadiness: (item, validation, metadataStoreEnabled, hasDesignArtifacts, uiRequirementDecision) =>
+      evaluateFeatReadiness(
+        item,
+        validation,
+        metadataStoreEnabled,
+        hasDesignArtifacts,
+        uiRequirementDecision,
+        item.stateFolder === "03_IN_PROGRESS" ? validateInProgress : validateStartAdmission,
+      ),
     formatCommand: formatFeatureWorkflowCommand,
     getDefaultImplementationModel: dependencies.getDefaultImplementationModel,
     getHumanReviewPhase: getHumanReviewFindingsPhase,

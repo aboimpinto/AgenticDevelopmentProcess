@@ -35,7 +35,7 @@ export interface DeepDiveStartDependencies {
   planQuestions(
     project: StoredProject,
     item: WorkItemCard,
-    options: { plan: import("@hepha/shared").HandoffPlanV1; preparationSource: DeepDivePreparationSource; workflowRunId: string },
+    options: { plan: import("@hepha/shared").HandoffPlanV1; preparationSource: DeepDivePreparationSource; workflowRunId: string; focus?: string },
   ): Promise<DeepDiveQuestion[]>;
   readPreparationSource?(item: WorkItemCard): DeepDivePreparationSource;
   requireModel(configuredModel: string | undefined, label: string): import("@hepha/shared").HandoffPlanV1;
@@ -44,6 +44,7 @@ export interface DeepDiveStartDependencies {
 }
 
 export interface DeepDiveQuestionGenerationInput {
+  focus?: string;
   cardKey: string;
   command: DeepDiveWorkflowCommand;
   item: WorkItemCard;
@@ -60,6 +61,10 @@ export class DeepDiveStartApplication {
     input: StartDeepDiveSessionInput,
     recoveryQuestion?: { topic: string; prompt: string },
   ): Promise<DeepDiveSession> {
+    if (input.focus !== undefined && (typeof input.focus !== "string" || input.focus.length > 4000)) {
+      throw new Error("Deep-Dive focus must be text of at most 4000 characters.");
+    }
+    const focus = input.focus?.trim() || undefined;
     assertDeepDiveMetadataStoreEnabled(this.dependencies.store.enabled);
     const project = this.dependencies.findProject(input.projectId);
     if (!project) throw new Error("Project not found.");
@@ -73,7 +78,16 @@ export class DeepDiveStartApplication {
 
     const cardKey = this.dependencies.createCardKey(item.kind, item.externalId);
     const existingSession = await this.dependencies.store.findOpenDeepDiveSession(project.id, cardKey);
-    if (existingSession) return toDeepDiveSession(existingSession);
+    const active = item.featureWorkflow?.activeRun;
+    if (active?.status === "running" && (!existingSession || active.runId !== existingSession.id)) {
+      throw new Error("Finish or cancel the running workflow before starting Deep-Dive.");
+    }
+    if (existingSession) {
+      if (focus && focus !== existingSession.focus) {
+        throw new Error("A Deep-Dive is already open. Resume it without new focus and finish it before starting a differently focused interview.");
+      }
+      return toDeepDiveSession(existingSession);
+    }
 
     const now = this.dependencies.clock();
     const runId = `workflow-${this.dependencies.createId()}`;
@@ -86,6 +100,7 @@ export class DeepDiveStartApplication {
       sourceUpdatedAt: item.documentUpdatedAt,
     };
     const session: StoredDeepDiveSession = {
+      ...(focus ? { focus } : {}),
       agentConnectionStatus: "active",
       cardExternalId: item.externalId,
       cardId: item.id,
@@ -115,7 +130,7 @@ export class DeepDiveStartApplication {
       status: "running",
       summary: `Starting ${formatWorkItemKind(item.kind)} Deep-Dive for ${item.externalId}.`,
     });
-    if (!recoveryQuestion) void this.generateQuestions({ cardKey, command, item, preparationSource, project, runId });
+    if (!recoveryQuestion) void this.generateQuestions({ cardKey, command, item, preparationSource, project, runId, ...(focus ? { focus } : {}) });
     this.dependencies.notifyChanged(project.id, "deep-dive.started", item.externalId);
     return toDeepDiveSession(storedSession);
   }
@@ -145,6 +160,7 @@ export class DeepDiveStartApplication {
           plan: this.dependencies.requireModel(undefined, `${input.command} generate-questions node`),
           preparationSource,
           workflowRunId: input.runId,
+          ...(input.focus ? { focus: input.focus } : {}),
         }),
       );
       const latestSession = await this.dependencies.store.getDeepDiveSession(input.runId);

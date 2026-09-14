@@ -164,9 +164,8 @@ describe("contract-first refinement validation", () => {
     expect(feature).toContain("Scenario: A missing touch plan blocks promotion");
     expect(feature).toContain("Scenario: A malformed touch plan blocks promotion");
     expect(feature).toContain("Scenario: A foreign touch plan blocks promotion");
-    expect(feature).toContain("Scenario: A declared final checkpoint requires measurable test coverage");
-    expect(feature).toContain("Scenario: Refinement provisions an unambiguous project coverage profile");
-    expect(feature).toContain("Scenario: Ambiguous coverage configuration returns to Deep-Dive");
+    expect(feature).toContain("Scenario: A declared final checkpoint uses logical acceptance assessment");
+    expect(feature).toContain("Scenario: Missing numeric instrumentation does not require Deep-Dive");
     expect(feature).toContain("Scenario: Valid project coverage configuration is reused");
     expect(feature).not.toMatch(/FEAT-\d+|Phase 2|governance dashboard/i);
   });
@@ -208,24 +207,20 @@ describe("contract-first refinement validation", () => {
     ]));
   });
 
-  it("rejects a declared final checkpoint without its 80 percent coverage telemetry declaration", () => {
+  it("accepts a declared final checkpoint without numeric coverage telemetry", () => {
     const { root } = createFixture();
     const path = join(root, "Phases", "phase-2-any-final-name.md");
     writeFileSync(path, readFileSync(path, "utf8").replace(/^\| Test coverage .*\n/m, ""));
 
-    expect(validateRefinePromotionArtifacts(root).errors).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "CONTRACT_COVERAGE_GATE_MISMATCH", path: "Phases/phase-2-any-final-name.md" }),
-    ]));
+    expect(validateRefinePromotionArtifacts(root)).toEqual({ valid: true, errors: [] });
   });
 
-  it("rejects a declared final checkpoint whose final task does not request test coverage", () => {
+  it("accepts full verification without a numeric coverage evidence request", () => {
     const { root } = createFixture();
     const path = join(root, "Phases", "phase-2-any-final-name.md");
     writeFileSync(path, readFileSync(path, "utf8").replace(" full-verification test-coverage manual-review-ready", " full-verification manual-review-ready"));
 
-    expect(validateRefinePromotionArtifacts(root).errors).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "CONTRACT_COVERAGE_GATE_MISMATCH", message: expect.stringContaining("test-coverage") }),
-    ]));
+    expect(validateRefinePromotionArtifacts(root)).toEqual({ valid: true, errors: [] });
   });
 
   it("rejects V2 as new refinement output while preserving historical read compatibility", () => {

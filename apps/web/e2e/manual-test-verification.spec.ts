@@ -13,6 +13,100 @@ import { installDashboardFixtures, makeWorkItem } from "./fixtures/dashboard-fix
 
 type RecordedRequest = { body: unknown; path: string };
 
+test("all recorded cases show green passes without disguising unresolved coverage as completion", async ({ page }) => {
+  const { detail, requests } = await installManualTestFixture(page, packStatus({ state: "current", currentPackId: "pack-passed", isReady: false,
+    coverageIssues: ["AC-SAVE: Save coverage is unresolved"], passedCount: 2, manualTestCount: 2,
+    manualCases: ["CASE-SAVE", "CASE-CANCEL"].map((id) => ({ id, title: "Example interaction", preconditions: ["App installed"],
+      steps: ["Open example application"], expectedResult: "Expected result visible", isReviewed: true, result: "pass" as const })),
+  }), { canGenerateManualTestPack: true });
+  const manualResult = detail.getByRole("button", { name: "2/2 manual tests passed", exact: true });
+  await expect(manualResult).toHaveCSS("color", "rgb(145, 239, 156)");
+  await manualResult.click();
+  const dialog = page.getByRole("dialog", { name: "Manual test verification" });
+  await expect(dialog.getByText("All 2 current manual tests have recorded passes.")).toBeVisible();
+  for (const id of ["CASE-SAVE", "CASE-CANCEL"]) {
+    const result = dialog.getByRole("button", { name: `Passed — ${id}`, exact: true });
+    await expect(result).toBeDisabled();
+    await expect(result).toHaveCSS("color", "rgb(135, 235, 160)");
+  }
+  await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeDisabled();
+  await expect(dialog.getByText(/Coverage is unresolved, not a recorded test failure/)).toBeVisible();
+  expect(requests).toEqual([]);
+});
+
+test("long manual packs keep collapsible content and actions accessible while scrolling", async ({ page }) => {
+  const { detail, requests } = await installManualTestFixture(page, packStatus({ state: "current", currentPackId: "pack-long", isReady: false,
+    coverageIssues: Array.from({ length: 14 }, (_, index) => `AC-${index}: An observable acceptance criterion still needs coverage.`),
+    manualCases: [{ id: "MT-LONG", title: "Extended application qualification", preconditions: ["Example application installed"],
+      steps: Array.from({ length: 30 }, (_, index) => `Open example screen ${index} and verify the visible result without changing another screen.`), expectedResult: "Expected confirmation is visible" }],
+  }), { canGenerateManualTestPack: true });
+  const dialog = await openManualTestDialog(page, detail);
+  const coverage = dialog.locator("details").filter({ has: page.locator("summary", { hasText: "Coverage still needs attention" }) });
+  await expect(coverage).not.toHaveAttribute("open", "");
+  const instructions = dialog.locator("details").filter({ has: page.locator("summary", { hasText: "Prerequisites and steps" }) });
+  await expect(instructions).not.toHaveAttribute("open", "");
+  await expect(dialog.getByRole("button", { name: "I reviewed MT-LONG", exact: true })).toBeInViewport();
+  await instructions.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(instructions).toHaveAttribute("open", "");
+  const body = dialog.locator(".manual-test-dialog-body");
+  await body.evaluate((element) => { element.scrollTop = 700; });
+  await expect(dialog.getByRole("button", { name: "I reviewed MT-LONG", exact: true })).toBeInViewport();
+  await expect(dialog.getByRole("button", { name: "Regenerate test pack", exact: true })).toBeInViewport();
+  await expect(dialog.getByRole("button", { name: "Close manual test verification" })).toBeInViewport();
+  await page.screenshot({ path: "/tmp/hepha-manual-pack-collapsible-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog.getByRole("button", { name: "Regenerate test pack", exact: true })).toBeInViewport();
+  await expect(dialog.getByRole("button", { name: "Close manual test verification" })).toBeInViewport();
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: "/tmp/hepha-manual-pack-collapsible-mobile.png" });
+  expect(requests).toEqual([]);
+});
+
+test("records a reviewed individual case while incomplete coverage keeps bulk acceptance unavailable", async ({ page }) => {
+  const status = packStatus({ state: "current", currentPackId: "partial-pack", isReady: false, applicability: "incomplete", manualTestCount: 1,
+    coverageIssues: ["AC-RECOVERY: Recovery remains uncovered"], manualCases: [
+      { id: "MT-SAVE", title: "Save", preconditions: ["Example application is installed"], steps: ["Open Example application", "Select Save"], expectedResult: "Saved confirmation", isReviewed: false, result: null },
+      { id: "MT-CANCEL", title: "Cancel", preconditions: ["Example application is installed"], steps: ["Open Example application", "Select Cancel"], expectedResult: "Cancelled confirmation", isReviewed: false, result: null },
+    ] });
+  const { detail, requests } = await installManualTestFixture(page, status, { canGenerateManualTestPack: true });
+  await page.route("**/api/manual-test-verification/review", async (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({ packId: "partial-pack", testId: "MT-SAVE" });
+    Object.assign(status, { currentReviewId: "case-review", manualCases: status.manualCases!.map((entry) => ({ ...entry, isReviewed: entry.id === "MT-SAVE" })) });
+    await route.fulfill({ json: { success: true, reviewId: "case-review", message: "Case reviewed", errors: [] } });
+  });
+  const dialog = await openManualTestDialog(page, detail);
+  await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "I reviewed MT-SAVE", exact: true }).click();
+  await dialog.getByRole("button", { name: "I ran MT-SAVE — passed" }).click();
+  expect(requests).toEqual([expect.objectContaining({ path: "/api/manual-test-verification/record-pass", body: expect.objectContaining({ packId: "partial-pack", reviewId: "case-review", testId: "MT-SAVE" }) })]);
+  await expect(dialog).toContainText("Recovery remains uncovered");
+  await expect(dialog.getByRole("button", { name: "I reviewed MT-CANCEL", exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "I ran MT-CANCEL — passed" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeDisabled();
+});
+
+test("manual pack actions stay above long cases on desktop and narrow screens", async ({ page }, testInfo) => {
+  const cases = Array.from({length: 12}, (_, i) => ({ id: `CASE-${i}`, title: "Example interaction", preconditions: ["App installed"],
+    steps: ["Open example app"], expectedResult: "Expected state", isReviewed: false }));
+  const { detail } = await installManualTestFixture(page, packStatus({ state: "stale", isStale: true, currentPackId: "old-pack", message: "This verification pack is outdated. Regenerate and review the current cases.", manualCases: cases,
+    authoringProgress: { state: "paused", completedBatches: 0, totalBatches: 6, proposedCases: 0, message: "Incomplete generation" } }), {canGenerateManualTestPack:true});
+  const dialog = await openManualTestDialog(page, detail);
+  for (const width of [1100, 390]) {
+    await page.setViewportSize({width, height: 800});
+    const toolbar = dialog.getByRole("region", {name:"Pack actions"});
+    await expect(toolbar.getByRole("button", {name:"All tests passed"})).toBeVisible();
+    await expect(toolbar.getByRole("button", {name:"All tests passed"})).toBeDisabled();
+    const before = await toolbar.boundingBox();
+    await dialog.locator(".manual-test-dialog-body").evaluate(el => { el.scrollTop = el.scrollHeight; });
+    const after = await toolbar.boundingBox();
+    expect(after?.y).toBe(before?.y);
+    expect(after!.y + after!.height).toBeLessThan(800);
+    expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.screenshot({path:testInfo.outputPath(`manual-actions-${width}.png`)});
+  }
+});
+
 function workflow(overrides: Partial<FeatureWorkflowSummary> = {}): FeatureWorkflowSummary {
   return {
     activeRun: null,
@@ -65,6 +159,9 @@ function packStatus(overrides: Partial<ManualTestPackDashboardStatus> = {}): Man
     message: "No manual test pack generated.",
     passedCount: 0,
     state: "missing",
+    isReady: true,
+    applicability: "applicable",
+    manualTestCount: 1,
     ...overrides,
   };
 }
@@ -141,12 +238,66 @@ async function openManualTestDialog(page: Page, detail: ReturnType<Page["locator
 }
 
 test.describe("Manual Test Verification Pack", () => {
+  test("current incomplete pack can be regenerated without passing or approving tests", async ({ page }) => {
+    const status = packStatus({
+      currentPackId: "pack-current", currentVersion: "v1", state: "current", hasMarkdown: true,
+      isReviewed: true, isReady: false, applicability: "incomplete", manualTestCount: 2,
+      message: "Acceptance coverage is incomplete.",
+    });
+    const { detail, requests } = await installManualTestFixture(page, status, { canGenerateManualTestPack: true });
+    await page.route("**/api/manual-test-verification/generate", async (route) => {
+      requests.push({ path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+      Object.assign(status, { currentPackId: "pack-new", currentVersion: "v2", isReady: true, isReviewed: false,
+        currentReviewId: null, manualTestCount: 3, applicability: "applicable", message: "Three executable tests are ready for review." });
+      await route.fulfill({ json: { success: true, message: "Pack rebuilt; review the new version.", errors: [] } });
+    });
+    const dialog = await openManualTestDialog(page, detail);
+    await expect(dialog).toContainText("Missing manual scenarios are assessed automatically");
+    await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeDisabled();
+    await dialog.getByRole("button", { name: "Regenerate test pack" }).click();
+    expect(requests).toEqual([{ path: "/api/manual-test-verification/generate", body: {
+      projectId: "hepha", cardId: "feat-test", packId: "pack-current",
+    } }]);
+    await expect(dialog.getByRole("button", { name: "I reviewed this pack" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeDisabled();
+    await page.route("**/api/manual-test-verification/review", async (route) => {
+      expect(route.request().postDataJSON().packId).toBe("pack-new");
+      Object.assign(status, { isReviewed: true, currentReviewId: "review-new" });
+      await route.fulfill({ json: { success: true, message: "New pack reviewed", reviewId: "review-new", errors: [] } });
+    });
+    await dialog.getByRole("button", { name: "I reviewed this pack" }).click();
+    await expect(dialog.getByRole("button", { name: "All tests passed" })).toBeEnabled();
+  });
+
+  test("regeneration forwards optional human steering without granting approval", async ({ page }) => {
+    const { detail, requests } = await installManualTestFixture(page, packStatus({ currentPackId: "pack-current", state: "current", isReady: false }),
+      { canGenerateManualTestPack: true });
+    await page.route("**/api/manual-test-verification/generate", async (route) => {
+      requests.push({ path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+      await route.fulfill({ json: { success: true, message: "Draft prepared for review", errors: [] } });
+    });
+    const dialog = await openManualTestDialog(page, detail);
+    await dialog.getByText("Regeneration guidance (optional)", { exact: true }).click();
+    await dialog.getByRole("textbox", { name: "What is missing? (optional)" }).fill("  Include keyboard access and error recovery.  ");
+    await dialog.getByRole("button", { name: "Regenerate test pack" }).click();
+    expect(requests).toEqual([{ path: "/api/manual-test-verification/generate", body: {
+      cardId: "feat-test", projectId: "hepha", packId: "pack-current", guidance: "Include keyboard access and error recovery.",
+    } }]);
+  });
   test("no pack generated — shows generate button", async ({ page }) => {
     const { browserErrors, detail } = await installManualTestFixture(
       page,
       packStatus(),
       { canGenerateManualTestPack: true },
     );
+    const order = await detail.evaluate(element => {
+      const review = element.querySelector('[data-workflow-controls="Human Checkpoint"]')!;
+      const manual = element.querySelector('section[aria-label="Manual test verification"]')!;
+      const readiness = element.querySelector('[data-completion-readiness]')!;
+      return [!!(review.compareDocumentPosition(manual) & Node.DOCUMENT_POSITION_FOLLOWING),
+        !!(manual.compareDocumentPosition(readiness) & Node.DOCUMENT_POSITION_FOLLOWING)];
+    });
+    expect(order).toEqual([true, true]);
     const dialog = await openManualTestDialog(page, detail);
 
     await expect(dialog).toContainText("No manual test pack generated.");

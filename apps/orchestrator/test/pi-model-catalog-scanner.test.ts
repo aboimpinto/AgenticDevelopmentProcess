@@ -13,6 +13,15 @@ class FakePiProcess implements PiCatalogProcess {
 }
 
 describe("PiModelCatalogScanner", () => {
+  it("preserves exact SDK token counts and filters identical model names by provider", async () => {
+    const scanner = new PiModelCatalogScanner(new FakePiProcess({ kind: "success", stdout: JSON.stringify({ models: [
+      { providerId: "subscription", modelId: "synthetic-wide", contextWindowTokens: 1_050_000, maxOutputTokens: 128000 },
+      { providerId: "other", modelId: "synthetic-wide", contextWindowTokens: 272000, maxOutputTokens: 128000 },
+    ] }) }));
+    await expect(scanner.scan({ providerIds: ["subscription"] })).resolves.toEqual({ kind: "success", payload: { models: [
+      { modelId: "synthetic-wide", contextWindowTokens: 1_050_000, maxOutputTokens: 128000 },
+    ] } });
+  });
   it("passes bounded fake Pi output to the shared normalizer boundary", async () => {
     const process = new FakePiProcess({ kind: "success", stdout: JSON.stringify({ models: [{ modelId: "pi-test" }] }) });
     const scanner = new PiModelCatalogScanner(process);

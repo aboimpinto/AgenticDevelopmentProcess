@@ -104,8 +104,8 @@ export function createPhaseBoundaryApplications(dependencies: PhaseBoundaryAppli
   const declaredVerificationTaskApplication = new DeclaredVerificationTaskApplication({
     buildRepairPrompt: buildDeclaredVerificationRepairPrompt,
     completeTask: (input) => phaseTaskExecutionApplication.complete(input),
-    persistProjection: (phase, verification, reviewArtifactHash) =>
-      phaseCheckpointProjectionRepository.persist(phase, verification, reviewArtifactHash),
+    persistProjection: (phase, verification, reviewArtifactHash, role, runId) =>
+      phaseCheckpointProjectionRepository.persist(phase, verification, reviewArtifactHash, role, runId),
     recordProgress: recordImplementationPhaseProgress,
     runRepairWorker: dependencies.runWorker,
     runVerification: (input) => runFeatureFinalVerification(input, dependencies.metadataStore),

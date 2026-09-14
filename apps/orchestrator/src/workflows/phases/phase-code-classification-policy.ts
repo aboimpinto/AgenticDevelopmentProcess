@@ -1,3 +1,4 @@
+import { extractChangedFileEvidencePaths, isDocumentationEvidencePath, isTestEvidencePath } from "../../memorybank/implementation-evidence-paths.js";
 import type { PhaseSummary } from "@hepha/shared";
 import type { PhaseExecutionContractPhase } from "../../phase-execution-contract.js";
 import { normalizeImplementationPhaseStatus } from "./phase-lifecycle-policy.js";
@@ -12,16 +13,11 @@ export class PhaseCodeClassificationPolicy {
 
   hasCode(
     phase: PhaseSummary & { number: number },
-    contract: PhaseExecutionContractPhase | null = null,
+    _contract: PhaseExecutionContractPhase | null = null,
   ): boolean {
     if (normalizeImplementationPhaseStatus(phase.status) === "SKIPPED") return false;
-    if (contract) {
-      return contract.role === "implementation"
-        || contract.role === "integration"
-        || contract.role === "final_checkpoint";
-    }
-    if (/\b(health|planning|analysis|documentation|final|handoff)\b/i.test(phase.title)) return false;
-    return !this.isExplicitlyDocumentationOnly(phase);
+    const markdown = this.dependencies.exists(phase.documentPath) ? this.dependencies.read(phase.documentPath) : "";
+    return extractChangedFileEvidencePaths(markdown).some(path => !isDocumentationEvidencePath(path) && !isTestEvidencePath(path));
   }
 
   isExplicitlyDocumentationOnly(phase: PhaseSummary): boolean {

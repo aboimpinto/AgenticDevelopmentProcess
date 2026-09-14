@@ -4,11 +4,23 @@ import {
   buildAgentPrompt,
   buildPiArgs,
   buildPiPromptArgs,
+  MODEL_REQUEST_GUARD_PATH,
 } from "../src/runtime/pi/pi-argument-builder.js";
 
 const model = { model: "model", provider: "provider" };
 
 describe("Pi argument builder", () => {
+  it("pins High reasoning for every worker profile regardless of inherited defaults", () => {
+    const task = { agent: "Planner", id: "task-1", prompt: "Plan", title: "Plan" } as AgentTask;
+    for (const args of [buildPiArgs(task, model),
+      buildPiPromptArgs("prompt", model, {}, { env: {}, skillPaths: [] }),
+      buildPiPromptArgs("prompt", model, { implementationProfile: true }, { env: { PI_THINKING_LEVEL: "low" }, skillPaths: [] })]) {
+      expect(args.filter(arg => arg === "--thinking")).toHaveLength(1);
+      expect(args[args.indexOf("--thinking") + 1]).toBe("high");
+      expect(args).toContain("--extension");
+      expect(args[args.indexOf("--extension") + 1]).toMatch(/model-request-guard\.(?:ts|js)$/);
+    }
+  });
   it("builds a tool-free task invocation with explicit model routing", () => {
     const task = { agent: "Planner", id: "task-1", prompt: "Plan it", title: "Plan" } as AgentTask;
     const args = buildPiArgs(task, model);
@@ -21,7 +33,7 @@ describe("Pi argument builder", () => {
 
   it("builds the isolated default prompt profile", () => {
     expect(buildPiPromptArgs("prompt", model, {}, { env: {}, skillPaths: [] })).toEqual([
-      "--provider", "provider", "--model", "model", "--mode", "json", "--print",
+      "--provider", "provider", "--model", "model", "--mode", "json", "--thinking", "high", "--extension", MODEL_REQUEST_GUARD_PATH, "--print",
       "--no-tools", "--no-extensions", "--no-skills", "--no-prompt-templates",
       "--no-themes", "--no-context-files", "--no-approve", "--no-session", "prompt",
     ]);
@@ -34,7 +46,7 @@ describe("Pi argument builder", () => {
     );
 
     expect(args).toEqual([
-      "--provider", "provider", "--model", "model", "--mode", "json", "--print",
+      "--provider", "provider", "--model", "model", "--mode", "json", "--thinking", "high", "--extension", MODEL_REQUEST_GUARD_PATH, "--print",
       "--session", "session.json",
       "--skill", "/skills/one", "--skill", "/skills/two",
       "--no-themes", "--approve", "prompt",

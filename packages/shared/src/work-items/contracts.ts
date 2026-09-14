@@ -5,6 +5,7 @@ import type { CardKind, EpicDeliveryState, MemoryBankStateFolder } from "./ident
 import type { PhaseSummary, WorkItemRelation, WorkItemValidationSummary } from "./scan-contracts.js";
 
 export interface WorkItemCard {
+  completionRecovery?: import("../workflow/completion-recovery-contracts.js").CompletionRecoveryAssessment;
   id: string;
   externalId: string;
   kind: CardKind;

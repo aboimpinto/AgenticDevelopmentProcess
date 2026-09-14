@@ -6,6 +6,8 @@ import type { StoredProject } from "../src/projects/stored-project.js";
 import type { PhaseTaskLedgerItem } from "../src/workflows/phases/phase-task-ledger.js";
 import { DeclaredVerificationTaskApplication } from "../src/workflows/phases/declared-verification-task-application.js";
 
+const repair = (outcome: string, reason?: string) => JSON.stringify({ schemaVersion: "hepha-exchange/v1", kind: "verification.repair", payload: { phaseId: "phase.md", taskId: "verify-all", outcome, ...(reason ? { reason } : {}) } });
+
 function result(status: AggregateVerificationStatus, summaryLine = status): AdapterResult {
   return {
     aggregate: { blockedReason: null, checks: [], duration: 1, failedRequiredChecks: status === "passed" ? [] : ["build"], persistenceWarning: null, startedAt: "now", status },
@@ -81,7 +83,7 @@ function fixture() {
     completeTask: vi.fn(async () => undefined),
     persistProjection: vi.fn(),
     recordProgress: vi.fn(async () => undefined),
-    runRepairWorker: vi.fn(async () => "Verification Repair Result: REPAIRED"),
+    runRepairWorker: vi.fn(async () => repair("repaired")),
     runVerification: vi.fn(async () => result("passed", "all green")),
     yieldControl: vi.fn(async () => undefined),
   };
@@ -95,7 +97,7 @@ describe("declared verification task application", () => {
     const target = fixture();
     await expect(target.application.execute(target.input)).resolves.toBe("Phase 12: declared verification task 'verify-all' passed.");
     expect(target.dependencies.yieldControl).toHaveBeenCalledOnce();
-    expect(target.dependencies.persistProjection).toHaveBeenCalledWith(target.input.phase, expect.objectContaining({ status: "passed" }), "hash");
+    expect(target.dependencies.persistProjection).toHaveBeenCalledWith(target.input.phase, expect.objectContaining({ status: "passed" }), "hash", "final_checkpoint", "run");
     expect(target.dependencies.completeTask).toHaveBeenCalledWith(expect.objectContaining({ activeTask: target.input.activeTask, summary: "all green" }));
     expect(target.dependencies.runRepairWorker).not.toHaveBeenCalled();
   });
@@ -119,13 +121,13 @@ describe("declared verification task application", () => {
     target.dependencies.runVerification.mockResolvedValueOnce(result("failed")).mockResolvedValueOnce(result("passed"));
     await target.application.execute(target.input);
     expect(target.dependencies.buildRepairPrompt).toHaveBeenCalledWith(target.input.project, target.input.feature, target.input.phase, "verify-all", expect.objectContaining({ status: "failed" }));
-    expect(target.dependencies.runRepairWorker).toHaveBeenCalledWith(expect.objectContaining({ agentRole: "verification-repair", prompt: "repair evidence", step: "Repair Phase 12 task verify-all" }));
+    expect(target.dependencies.runRepairWorker).toHaveBeenCalledWith(expect.objectContaining({ agentRole: "verification-repair", prompt: expect.stringContaining("repair evidence"), step: "Repair Phase 12 task verify-all" }));
   });
 
   it("stops only when the repair worker explicitly reports a genuine blocker", async () => {
     const target = fixture();
     target.dependencies.runVerification.mockResolvedValue(result("failed"));
-    target.dependencies.runRepairWorker.mockResolvedValue("Verification Repair Result: BLOCKED\nCredentials required.");
+    target.dependencies.runRepairWorker.mockResolvedValue(repair("blocked", "Credentials required."));
     await expect(target.application.execute(target.input)).rejects.toThrow("reported a genuine blocker");
     expect(target.dependencies.completeTask).not.toHaveBeenCalled();
   });
@@ -144,7 +146,7 @@ describe("declared verification task application", () => {
   it("accepts a coverage advisory immediately when no further safe FEAT-scoped repair is available", async () => {
     const target = fixture();
     target.dependencies.runVerification.mockResolvedValue(coverageAdvisory(3));
-    target.dependencies.runRepairWorker.mockResolvedValue("Verification Repair Result: ADVISORY_ACCEPTED\nNo valuable missing behavior tests remain.");
+    target.dependencies.runRepairWorker.mockResolvedValue(repair("advisory_accepted", "No valuable missing behavior tests remain."));
     await expect(target.application.execute(target.input)).resolves.toContain("completed with a non-blocking test-coverage advisory");
     expect(target.dependencies.runVerification).toHaveBeenCalledOnce();
     expect(target.dependencies.completeTask).toHaveBeenCalledOnce();
@@ -168,4 +170,16 @@ describe("declared verification task application", () => {
       summary: "all executable gates green; coverage remark recorded",
     }));
   });
+});
+
+it.each(["build", "lint"] as const)("completes a phase task with a %s warning without launching unsolicited repairs", async intent => {
+  const target = fixture();
+  const observed = result("failed");
+  observed.aggregate.checks = [{ checkId: intent, intent, required: true, command: ["checker"], workingDirectory: ".", outcome: "failed", exitCode: 1, duration: 1, startedAt: "now", outputSummary: "One diagnostic", description: "Health check" }];
+  observed.aggregate.failedRequiredChecks = [intent];
+  target.dependencies.runVerification.mockResolvedValue(observed);
+  await expect(target.application.execute(target.input)).resolves.toContain("non-blocking build/lint warnings");
+  expect(target.dependencies.runRepairWorker).not.toHaveBeenCalled();
+  expect(target.dependencies.completeTask).toHaveBeenCalledOnce();
+  expect(target.dependencies.persistProjection).toHaveBeenCalledWith(target.input.phase, expect.objectContaining({ status: "failed" }), target.input.reviewArtifactHash, target.input.phaseRole, target.input.runId);
 });

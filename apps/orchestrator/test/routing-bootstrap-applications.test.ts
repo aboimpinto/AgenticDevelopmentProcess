@@ -138,6 +138,7 @@ describe("routing bootstrap application composition", () => {
 
     try {
       const applications = createFeaturePreparationApplications({
+        completionReadinessRefreshApplication: {} as never,
         completeFeature: vi.fn(),
         contextCollector: { collect: vi.fn() } as never,
         designArtifactPolicy: {} as never,

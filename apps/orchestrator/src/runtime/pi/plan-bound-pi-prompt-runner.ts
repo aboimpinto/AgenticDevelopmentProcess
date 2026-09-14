@@ -19,6 +19,7 @@ import {
   type RuntimeExecutionResult,
 } from "./runtime-execution-coordinator.js";
 import { presentRuntimeRouteFailure } from "./runtime-route-failure-presentation.js";
+import { presentModelRequestFailure } from "./model-request-failure.js";
 
 export interface PlanBoundPiPromptRunOptions extends PiPromptRunOptions {
   readonly runtimeContext?: Partial<Pick<RuntimeAttemptContextV1,
@@ -111,7 +112,7 @@ export function createPlanBoundPiPromptRunner(
       beforeProcess: (attempt) => { activeAttemptId = attempt.attemptId; },
     });
     if (!result.ok) {
-      if (processFailure.message) throw new Error(`${processFailure.message} Runtime route outcome: ${result.code}.`);
+      if (processFailure.message) throw new Error(`${presentModelRequestFailure(processFailure.message)} Runtime route outcome: ${result.code}.`);
       throw new Error(presentRuntimeRouteFailure(
         result,
         plan,
@@ -161,7 +162,7 @@ export function createPlanBoundDetachedPromptLauncher(
           const terminal = await execution.completion;
           return terminal.exitCode === 0 && terminal.signal === null
             ? { status: "completed", exitCode: 0, failureCode: null, output: "" }
-            : { status: "failed", exitCode: terminal.exitCode, failureCode: "provider_unavailable" };
+            : { status: "failed", exitCode: terminal.exitCode, failureCode: terminal.exitCode === 78 ? "safety_rejected" : "provider_unavailable" };
         },
       },
       providerIdForConnection: dependencies.providerIdForConnection,
@@ -294,6 +295,9 @@ function advanceRuntimeWork(
 
 function classifyProcessFailure(error: unknown): PiAttemptProcessResult {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/hepha_(?:model_context_unknown|high_reasoning_required|context_budget_exceeded|input_usage_budget_exceeded|spending_configuration_invalid|model_request_rejected)/.test(message)) {
+    return { status: "failed", exitCode: 78, failureCode: "safety_rejected" };
+  }
   if (message.includes("timed out") || message.includes("timeout")
     || message.includes("stalled after") || message.includes("maximum runtime")) {
     return { status: "timed_out", exitCode: null, failureCode: "timed_out" };

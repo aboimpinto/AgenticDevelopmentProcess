@@ -1,4 +1,5 @@
 export interface StoredDeepDiveSession {
+  focus?: string | null;
   agentConnectionStatus: string;
   cardExternalId: string;
   cardId: string;

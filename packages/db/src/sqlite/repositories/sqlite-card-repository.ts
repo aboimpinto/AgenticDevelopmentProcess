@@ -31,8 +31,8 @@ export class SqliteCardRepository {
         id, project_id, card_key, card_id, card_external_id, card_kind, card_title,
         status, agent_connection_status, original_document_path,
         original_document_hash, original_document_mtime, original_document,
-        questions, created_at, updated_at, completed_at
-      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        questions, created_at, updated_at, completed_at, focus
+      ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       on conflict (id)
       do update set
         status = excluded.status,
@@ -59,6 +59,7 @@ export class SqliteCardRepository {
         session.createdAt,
         session.updatedAt,
         session.completedAt,
+        session.focus ?? null,
       ],
     );
     return (await this.getDeepDiveSession(session.id)) ?? session;

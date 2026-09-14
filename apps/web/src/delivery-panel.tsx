@@ -40,6 +40,7 @@ export interface DeliveryPanelProps {
   } | null;
   readonly onPreparePr: (cardId: string) => Promise<void>;
   readonly onRefresh: (cardId: string) => Promise<void>;
+  readonly disabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,11 +76,13 @@ export function DeliveryPanel({
   deliveryStatus,
   onPreparePr,
   onRefresh,
+  disabled = false,
 }: DeliveryPanelProps): React.ReactElement | null {
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handlePreparePr = useCallback(async () => {
+    if (disabled || preparing) return;
     setPreparing(true);
     setError(null);
     try {
@@ -89,7 +92,7 @@ export function DeliveryPanel({
     } finally {
       setPreparing(false);
     }
-  }, [cardId, onPreparePr]);
+  }, [cardId, onPreparePr, disabled, preparing]);
 
   // No delivery status yet — show loading placeholder
   if (deliveryStatus === null) {
@@ -193,7 +196,7 @@ export function DeliveryPanel({
         <div className="delivery-actions">
           <button
             className="workflow-action-button"
-            disabled={!deliveryStatus.canPrepare || preparing}
+            disabled={disabled || !deliveryStatus.canPrepare || preparing}
             onClick={handlePreparePr}
             aria-label={deliveryStatus.preparationDisabledReason ?? "Prepare pull request"}
             title={deliveryStatus.preparationDisabledReason ?? "Prepare pull request"}
@@ -225,4 +228,3 @@ export function DeliveryPanel({
     </section>
   );
 }
-

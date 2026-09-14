@@ -23,9 +23,9 @@ export function buildDeclaredVerificationRepairPrompt(
     ...(coverageAdvisoryOnly ? [
       "This is a non-blocking FEAT test-coverage improvement attempt. Only edit production code or tests introduced or changed by this FEAT since the StartFeature baseline; do not repair unrelated legacy project coverage.",
       "Add valuable behavior-focused tests. Do not add assertions solely to inflate a number, exclude valid production files, or weaken the coverage configuration.",
-      "If no further safe and valuable FEAT-scoped improvement is available, return exactly `Verification Repair Result: ADVISORY_ACCEPTED`; the phase and FEAT will still be allowed to complete with the recorded reminder.",
+      "If no further safe and valuable FEAT-scoped improvement is available, return outcome `advisory_accepted` with a reason in the supplied JSON exchange; the phase and FEAT will still be allowed to complete with the recorded reminder.",
     ] : []),
-    "If repair is genuinely impossible without credentials, unsafe action, or a human decision, return exactly `Verification Repair Result: BLOCKED` and explain the blocker. Otherwise return `Verification Repair Result: REPAIRED` with changed files and focused proof.",
+    "If repair is genuinely impossible without credentials, unsafe action, or a human decision, return outcome `blocked` with a concrete reason in the supplied JSON exchange. Otherwise return outcome `repaired`; preserve changed files and focused proof in the phase evidence. The caller supplies the exact versioned schema and assigned identities.",
     "",
     `Project: ${project.name}`,
     `Project root: ${project.rootPath}`,

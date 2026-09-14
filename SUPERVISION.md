@@ -50,19 +50,32 @@ A future Delegated or Autonomous grant should record at least:
 HEPHA must reject authority inferred only from an agent request, a prior run, a
 generic configuration default, or the absence of a human response.
 
-## Mandatory stop conditions
+## Repair work and escalation
+
+The [common phase completion policy](docs/architecture/phase-completion-policy.md)
+distinguishes an unresolved acceptance gate from a stopped workflow. Missing
+tests, insufficient meaningful coverage, failed verification and review findings
+remain same-phase repair work while an authorized path forward exists. They do
+not require another user click merely because a gate is not yet green.
 
 Regardless of profile, HEPHA should pause or fail visibly when:
 
 - Product intent is ambiguous in a way that changes scope or behavior.
 - The next action exceeds the recorded grant.
-- A safety, architecture, security, or quality gate blocks progress.
-- Verification fails or required evidence is missing.
-- No matching automated tests are discovered where coverage was expected.
-- A workflow stops making observable progress.
+- A safety/security boundary or architectural impasse requires authority or a
+  decision the worker does not have.
+- Repeated attempts make no meaningful progress and diagnosis cannot establish
+  an authorized path forward.
 - Repository state makes the intended target uncertain.
 - An operation could cause broad, irreversible, or external impact without
   explicit permission.
+
+Before escalation, distinguish missing implementation, wrong assertions, missing
+execution setup, evidence representation and architectural conflict. Preserve
+completed work, report the attempts and unchanged evidence, and ask for the
+specific help needed. Never disable a gate to escape an unresolved failure.
+User cancellation remains effective. This is the agreed supervision policy;
+legacy runtime stop paths still need conformance work where documented.
 
 ## Evidence and acceptance
 

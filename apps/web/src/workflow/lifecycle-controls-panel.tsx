@@ -17,6 +17,7 @@ export interface LifecycleControlsPanelProps {
   readonly actions: readonly WorkflowActionDescriptor[];
   readonly title?: string;
   readonly onAction: (actionId: WorkflowActionId) => void;
+  readonly disabled?: boolean;
 }
 
 // ─── Icon mapping ───────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ export function LifecycleControlsPanel({
   actions,
   title = "Workflow Actions",
   onAction,
+  disabled = false,
 }: LifecycleControlsPanelProps) {
   const available = actions.filter((a) => a.available);
   if (available.length === 0 && !actions.some((a) => a.busy || a.completed)) {
@@ -49,7 +51,7 @@ export function LifecycleControlsPanel({
   }
 
   return (
-    <section className="validation-panel" aria-labelledby="lc-title">
+    <section className="validation-panel" aria-labelledby="lc-title" data-workflow-controls={title} tabIndex={-1}>
       <div className="validation-heading">
         <strong id="lc-title">{title}</strong>
       </div>
@@ -58,7 +60,7 @@ export function LifecycleControlsPanel({
           <button
             key={action.id}
             className={action.completed ? "mini-button validation-action validation-action-complete" : "mini-button validation-action"}
-            disabled={!action.available || action.busy || action.completed}
+            disabled={disabled || !action.available || action.busy || action.completed}
             onClick={() => onAction(action.id)}
             type="button"
             aria-busy={action.busy}

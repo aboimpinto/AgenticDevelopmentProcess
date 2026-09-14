@@ -2,6 +2,9 @@ import { buildPackStatus, type ManualTestPackStatus } from "../manual-test-verif
 import type { ManualTestAdapterContext } from "./adapter-context.js";
 import type { SourceDiscoveryOptions } from "./source-discovery.js";
 import { buildManualTestDeliveryModel, hashManualTestDeliveryModel } from "./delivery-model.js";
+import { readStoredPackCases } from "./current-pack.js";
+import { resolve } from "node:path";
+import { readAuthoringProgress } from "./authoring-checkpoints.js";
 
 // ---------------------------------------------------------------------------
 // Pack Status Query
@@ -53,14 +56,36 @@ export async function queryPackStatus(
 
   const allPhasesResolved = true; // Checked by caller before allowing actions
 
-  return buildPackStatus({
+  let cases: NonNullable<ManualTestPackStatus["manualCases"]> = [];
+  try { cases = currentPack ? readStoredPackCases(context.projectRoot, currentPack.markdownPath, true) : []; } catch { /* Unreadable cases cannot be acknowledged. */ }
+  const invalid = model?.invalidManualTests.filter(entry => entry.id !== "authoring") ?? [];
+  const manualReady = cases.length > 0 && invalid.length === 0;
+  const status = buildPackStatus({
     currentPack,
     currentReview,
     testResults: allResults,
     isStale,
     allPhasesResolved,
-    applicability: model?.applicability ?? "incomplete",
+    applicability: manualReady ? "applicable" : model?.applicability === "not_applicable" ? "not_applicable" : "incomplete",
     manualTestCount: model?.tests.length ?? 0,
-    invalidManualTestCount: model?.invalidManualTests.length ?? 0,
+    invalidManualTestCount: invalid.length,
   });
+  const validReview = !isStale && currentReview?.packId === currentPack?.id && currentReview?.state === "current" ? currentReview : null;
+  return { ...status,
+    ...(status.isReady && status.isReviewed && status.failedCount === 0 && allResults.length > 0 && cases.some((test) => !allResults.some((result) => result.testId === test.id && result.result === "pass"))
+      ? { message: "Some manual cases have results; execute and record the remaining cases before completion." } : {}),
+    authoringProgress: (() => {
+      const progress = readAuthoringProgress(resolve(context.featFolderPath, "manual-test-verification", "authoring-progress.json"));
+      return progress?.state === "assessed" ? undefined : progress;
+    })(),
+    currentReviewId: validReview?.id ?? null,
+    manualCases: cases.map((test) => ({ ...test,
+      isReviewed: !!validReview && (validReview.reviewedTestIds == null || validReview.reviewedTestIds.includes(test.id)),
+      result: allResults.filter((result) => result.testId === test.id).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0]?.result ?? null,
+    })),
+    coverageIssues: [
+      ...(invalid.flatMap((entry) => entry.errors.map((error) => `${entry.id}: ${error}`)) ?? []),
+
+    ],
+  };
 }

@@ -21,6 +21,7 @@ function response(): ServerResponse {
 function context(body: FeatureWorkflowActionResponse): FeatureReviewRoutesContext {
   const operation = () => vi.fn(async () => body);
   return {
+    resolvePhaseQuality: operation(),
     acceptFindingsPhase: operation(),
     addFindingDetail: operation(),
     recordHumanReview: operation(),
@@ -31,6 +32,7 @@ function context(body: FeatureWorkflowActionResponse): FeatureReviewRoutesContex
 
 describe("feature review HTTP routes", () => {
   it.each([
+    ["/api/phase-quality/resolve", "resolvePhaseQuality", { cardId: "card", projectId: "project", phaseNumber: 8, gate: "tests", action: "repair", note: "Verify", expectedUpdatedAt: "current" }, 200],
     ["/api/feature-human-review", "recordHumanReview", { cardId: "card", check: "manual-tests", projectId: "project" }, 200],
     ["/api/feature-findings", "submitFinding", { cardId: "card", content: "Finding", projectId: "project" }, 201],
     ["/api/feature-findings/detail", "addFindingDetail", { cardId: "card", content: "Detail", findingId: "finding", projectId: "project" }, 200],

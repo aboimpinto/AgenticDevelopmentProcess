@@ -61,7 +61,7 @@ describe("HTTP base headers", () => {
     setBaseHeaders(response);
 
     expect(headers).toEqual(new Map([
-      ["access-control-allow-origin", "http://127.0.0.1:5173"],
+      ["access-control-allow-origin", "http://127.0.0.1:5176"],
       ["access-control-allow-methods", "GET,POST,OPTIONS"],
       ["access-control-allow-headers", "Content-Type"],
     ]));

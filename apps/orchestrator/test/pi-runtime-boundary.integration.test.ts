@@ -99,7 +99,7 @@ describe("generic Pi runtime Gherkin integration", () => {
       workspaceRoot: root,
     });
 
-    const execution = await run("generic prompt", { environment: { ...process.env }, model: { model: "test", provider: "test" } }, { workflowRunId: "workflow-detached" });
+    const execution = await run("generic prompt", { environment: { ...process.env }, model: { model: "gpt-5", provider: "openai" } }, { workflowRunId: "workflow-detached" });
     const launch = execution.launch;
     const deadline = Date.now() + 2000;
     while (registry.activeRunIds().length > 0 && Date.now() < deadline) {
@@ -135,7 +135,7 @@ describe("generic Pi runtime Gherkin integration", () => {
       workspaceRoot: root,
     });
 
-    await expect(run("generic prompt", { environment: { ...process.env }, model: { model: "test", provider: "test" } }, { workflowRunId: "workflow-recovery" }))
+    await expect(run("generic prompt", { environment: { ...process.env }, model: { model: "gpt-5", provider: "openai" } }, { workflowRunId: "workflow-recovery" }))
       .resolves.toBe("success");
     expect(started).toBe(1);
     expect(registry.activeRunIds()).toEqual([]);

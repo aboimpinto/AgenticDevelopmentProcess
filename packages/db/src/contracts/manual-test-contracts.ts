@@ -17,6 +17,8 @@ export interface ManualTestVerificationPackRecord {
 }
 
 export interface ManualTestVerificationReviewRecord {
+  /** Absent/null means an explicit whole-pack review; an array scopes review to those cases only. */
+  reviewedTestIds?: readonly string[] | null;
   id: string;
   projectId: string;
   cardKey: string;

@@ -26,6 +26,7 @@ import {
   buildFeatureTimingAnalytics,
   buildTimingAnalyticsFromEstimates,
   formatEffortEstimateRange,
+  isUnresolvedQualityGate,
 } from "@hepha/shared";
 
 import {
@@ -170,19 +171,8 @@ export interface FindingDisplay {
   readonly lastEventPreview: string | null;
 }
 
-export interface CompletionReadinessDisplay {
-  readonly verdict: CompletionVerdict;
-  readonly reasons: readonly string[];
-  readonly canCompleteNow: boolean;
-  readonly isFinalizing: boolean;
-  readonly missingQualityGateCount: number;
-}
-
-export type CompletionVerdict =
-  | "ready"
-  | "blocked"
-  | "finalizing"
-  | "not_applicable";
+export { buildCompletionReadiness, summarizeResolvedPhaseQualityGates } from "./completion-readiness-presentation.js";
+export type { CompletionReadinessDisplay, CompletionVerdict } from "./completion-readiness-presentation.js";
 
 // ─── Overview display ───────────────────────────────────────────────────────
 
@@ -212,6 +202,7 @@ export function buildOverviewDisplay(
   const activeRun = terminalLifecycle ? null : workflow.activeRun;
   const lastRun = workflow.lastRun;
   const blockingReasons = getBlockingReadinessReasons(workflow);
+  const unresolvedStop = lastRun?.status === "failed" || lastRun?.status === "blocked";
 
   return {
     title: "Workflow",
@@ -223,6 +214,8 @@ export function buildOverviewDisplay(
         ? "Cancelled"
         : activeRun
           ? "Running"
+          : unresolvedStop
+            ? "Blocked"
           : workflow.canContinueImplementing
             ? "Ready to continue"
             : workflow.implementationCompleted
@@ -232,7 +225,7 @@ export function buildOverviewDisplay(
                 : blockingReasons.length > 0
                   ? "Blocked"
                   : "Not ready",
-    readinessIcon: terminalLifecycle === "completed" || activeRun || workflow.canContinueImplementing ||
+    readinessIcon: !terminalLifecycle && !activeRun && unresolvedStop ? "blocked" : terminalLifecycle === "completed" || activeRun || workflow.canContinueImplementing ||
       workflow.implementationCompleted || workflow.readiness?.ready
       ? "success"
       : blockingReasons.length > 0
@@ -251,7 +244,7 @@ export function buildOverviewDisplay(
 }
 
 function compactWorkflowFailureDisplay(value: string | null): string | null {
-  if (!value || value.length <= 900) {
+  if (!value || value.length <= 900 || /(?:^|\n)Round \d+:\nWork reported by the fixer:/.test(value)) {
     return value;
   }
 
@@ -288,6 +281,7 @@ export function buildPhaseRows(
   implementationAgentRuns: readonly ImplementationAgentRunSummary[] = [],
   defaultImplementationModel: string | null = null,
   refineCompletedAt: string | null = null,
+  activeRun: FeatureWorkflowSummary["activeRun"] = null,
 ): readonly PhaseRowDisplay[] {
   // Planning reports are supporting artifacts, not lifecycle phases. Keep the
   // operator's one phase list strictly numbered and lifecycle-authoritative.
@@ -304,6 +298,8 @@ export function buildPhaseRows(
     const implRun = selectLatestPhaseRun(implementationPhases, phase.number);
     const telemetry = phaseTelemetry.get(phase.number)!;
     const latestAgentRun = telemetry.latestAgentRun;
+    const activeAgentRun = [...telemetry.agentRuns].reverse().find(run => run.status === "running"
+      && run.completedAt === null && activeRun?.status === "running" && run.workflowRunId === activeRun.runId);
     const evidence = qualityEvidence.find((candidate) => candidate.phaseNumber === phase.number) ?? null;
     const isRecovery = implRun?.status === "checkpoint" && implRun.agent === "Workflow Recovery Agent";
     const hasActiveRuntime = implRun?.status === "implementing" || implRun?.status === "code_review" || isRecovery;
@@ -311,11 +307,13 @@ export function buildPhaseRows(
     // Lifecycle and runtime activity are independent evidence. A compatibility
     // worker can durably activate the next phase before a new phase-bound
     // runtime record exists, so either source must make the row visibly active.
-    const isActive = hasActiveRuntime || hasInProgressLifecycle;
+    const isActive = Boolean(activeAgentRun) || hasActiveRuntime || hasInProgressLifecycle;
     // Runtime phase state is newer than the Markdown rescan while a worker is
     // active. This prevents an active phase being labelled Pending until the
     // worker has had a chance to update its durable phase document.
-    const displayStatus = isRecovery ? "recovering" : hasActiveRuntime ? implRun!.status : phase.status;
+    const displayStatus = activeAgentRun ? "running" : isRecovery ? "recovering" : hasActiveRuntime ? implRun!.status : phase.status;
+    const verificationBlocked = !isActive && ["completed", "skipped"].includes(phase.status.toLowerCase()) &&
+      Boolean(evidence?.gates.some(isUnresolvedQualityGate));
     const actualDurationMs = telemetry.actualDurationMs;
     const modelProjection = projectPhaseCommandModel(phase, implRun, latestAgentRun, defaultImplementationModel);
     const timingAnalytics = buildTimingAnalyticsFromEstimates(
@@ -329,12 +327,12 @@ export function buildPhaseRows(
       number: phase.number,
       title: phase.title,
       status: displayStatus,
-      statusLabel: formatStatusLabel(displayStatus),
+      statusLabel: activeAgentRun ? "Running" : verificationBlocked ? "Verification blocked" : formatStatusLabel(displayStatus),
       isCurrent: currentPhase?.number === phase.number,
-      isCompleted: phase.status === "completed" || phase.status === "COMPLETED",
-      isBlocked: phase.status === "blocked" || phase.status === "BLOCKED",
+      isCompleted: !isActive && !verificationBlocked && (phase.status === "completed" || phase.status === "COMPLETED"),
+      isBlocked: verificationBlocked || phase.status === "blocked" || phase.status === "BLOCKED",
       isActive,
-      activityLabel: isActive ? implRun?.currentStep ?? null : null,
+      activityLabel: isActive ? activeAgentRun?.currentStep ?? implRun?.currentStep ?? null : null,
       hasError: implRun?.error !== null && implRun?.error !== undefined,
       errorMessage: implRun?.error ?? null,
       agent: implRun?.agent ?? latestAgentRun?.agentName ?? (modelProjection.model ? "Orchestrator" : null),
@@ -636,104 +634,4 @@ function formatFindingStatus(status: string): string {
     closed: "Resolved",
   };
   return labels[status] ?? status;
-}
-
-// ─── Completion readiness ───────────────────────────────────────────────────
-
-export function summarizeResolvedPhaseQualityGates(
-  phases: FeatureImplementationEvidenceSummary["phaseQualityGates"],
-): { readonly missing: number; readonly total: number } {
-  return phases.reduce(
-    (summary, phase) => {
-      const status = phase.phaseStatus.trim().toUpperCase();
-      if (status !== "COMPLETED" && status !== "SKIPPED") return summary;
-      return {
-        missing: summary.missing + phase.gates.filter((gate) => gate.status === "missing").length,
-        total: summary.total + phase.gates.length,
-      };
-    },
-    { missing: 0, total: 0 },
-  );
-}
-
-export function buildCompletionReadiness(
-  workflow: FeatureWorkflowSummary | null,
-  qualityGateCount: number,
-  gateSummary: { missing: number; total: number },
-  terminalLifecycle: TerminalWorkItemLifecycle | null = null,
-): CompletionReadinessDisplay {
-  if (!workflow || terminalLifecycle) {
-    return {
-      verdict: "not_applicable",
-      reasons: ["No workflow data available."],
-      canCompleteNow: false,
-      isFinalizing: false,
-      missingQualityGateCount: 0,
-    };
-  }
-
-  const reasons: string[] = [];
-  let canCompleteNow = true;
-
-  // Priority 1: Active run means finalizing is in progress
-  let verdict: CompletionVerdict = workflow.activeRun ? "finalizing" : "ready";
-
-  if (workflow.activeRun) {
-    reasons.push("A workflow run is in progress.");
-    canCompleteNow = false;
-  }
-
-  // Check implementation completed
-  if (!workflow.implementationCompleted) {
-    reasons.push("Implementation is not yet completed.");
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  // Check human review
-  if (!workflow.userCodeReviewCompletedAt) {
-    reasons.push("User code review is pending.");
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  if (!workflow.manualTestsCompletedAt) {
-    reasons.push("Manual tests are pending.");
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  // Check open findings
-  const openFindings = workflow.findings.filter((f) => f.status !== "closed");
-  if (openFindings.length > 0) {
-    reasons.push(`${openFindings.length} open finding(s) remain.`);
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  // Check quality gates
-  if (gateSummary.missing > 0) {
-    reasons.push(`${gateSummary.missing} phase quality gate(s) are missing.`);
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  // Check human review findings acceptance
-  if (workflow.canAcceptHumanReviewFindings) {
-    reasons.push("Accept human review findings before completing.");
-    if (verdict === "ready") verdict = "blocked";
-    canCompleteNow = false;
-  }
-
-  if (verdict === "ready") {
-    reasons.push("All completion conditions satisfied.");
-  }
-
-  return {
-    verdict,
-    reasons,
-    canCompleteNow,
-    isFinalizing: verdict === "finalizing",
-    missingQualityGateCount: gateSummary.missing,
-  };
 }

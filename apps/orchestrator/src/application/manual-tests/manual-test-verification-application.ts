@@ -23,6 +23,8 @@ import {
 } from "../../manual-test-verification-adapter.js";
 
 export interface ManualTestVerificationDependencies {
+  readonly isRecoveryRunning?: (projectId: string, cardId: string) => boolean;
+  readonly runAuthoringPrompt?: (prompt: string) => Promise<string>;
   readonly allPhasesResolved: (feature: WorkItemCard) => boolean;
   readonly createCardKey: (kind: WorkItemCard["kind"], externalId: string) => string;
   readonly findProject: (projectId: string) => StoredProject | null | undefined;
@@ -51,8 +53,10 @@ const missingStatus = (message: string): ManualTestVerificationStatusResponse =>
 });
 
 export class ManualTestVerificationApplication {
+  readonly #generating = new Set<string>();
   readonly #dependencies: ManualTestVerificationDependencies;
   readonly #operations: NonNullable<ManualTestVerificationDependencies["operations"]>;
+  isGenerating(projectId: string, cardId: string) { return this.#generating.has(JSON.stringify([projectId, cardId])); }
 
   constructor(dependencies: ManualTestVerificationDependencies) {
     this.#dependencies = dependencies;
@@ -66,10 +70,15 @@ export class ManualTestVerificationApplication {
   }
 
   async generate(input: ManualTestVerificationActionInput): Promise<ManualTestVerificationGenerateResponse> {
+    const key = JSON.stringify([input.projectId, input.cardId]);
+    if (this.#generating.has(key) || this.#dependencies.isRecoveryRunning?.(input.projectId, input.cardId)) return { success: false, message: "Manual-test generation or readiness recovery is already running for this feature.", errors: ["Generation or recovery already running."] };
+    this.#generating.add(key);
     try {
+      if (input.guidance !== undefined && (typeof input.guidance !== "string" || input.guidance.length > 10_000)) throw new Error("Guidance must be text of at most 10000 characters.");
       const target = await this.#findTarget(input);
       if ("error" in target) return { success: false, message: target.error, errors: [target.error] };
       const { feature, items, project } = target;
+      if (feature.featureWorkflow?.activeRun) throw new Error("Wait for the active feature workflow before regenerating manual tests.");
       if (!this.#dependencies.allPhasesResolved(feature)) {
         return {
           success: false,
@@ -80,6 +89,10 @@ export class ManualTestVerificationApplication {
       const result = await this.#operations.generatePack({
         context: this.#context(project, feature),
         sourceOptions: this.#sourceOptions(feature, items),
+        replacePackId: input.packId,
+        guidance: input.guidance,
+        runPrompt: this.#dependencies.runAuthoringPrompt,
+        assessCoverage: true,
       });
       if (result.success && result.applicability === "not_applicable") {
         await this.#dependencies.metadataStore.recordFeatureHumanReview({
@@ -99,6 +112,8 @@ export class ManualTestVerificationApplication {
       };
     } catch (error) {
       return this.#failure("Pack generation failed", error);
+    } finally {
+      this.#generating.delete(key);
     }
   }
 
@@ -107,9 +122,11 @@ export class ManualTestVerificationApplication {
       if (!input.packId) return { success: false, message: "packId is required.", errors: ["packId is required."] };
       const target = await this.#findTarget(input);
       if ("error" in target) return { success: false, message: target.error, errors: [target.error] };
+      await this.#assertReady(target.project, target.feature, target.items, input.packId, input.testId);
       const result = await this.#operations.recordPackReview({
         context: this.#context(target.project, target.feature),
         packId: input.packId,
+        ...(input.testId ? { testId: input.testId } : {}),
       });
       this.#dependencies.notifyChanged(target.project.id, "manual-test-pack.reviewed", target.feature.externalId);
       return {
@@ -139,13 +156,20 @@ export class ManualTestVerificationApplication {
       const target = await this.#findTarget(input);
       if ("error" in target) return { success: false, message: target.error, errors: [target.error] };
       const context = this.#context(target.project, target.feature);
-      const testResult = result === "pass"
+      await this.#assertReady(target.project, target.feature, target.items, input.packId, input.testId);
+      const testResult = result === "pass" && !input.testId
         ? await this.#operations.recordAllPasses({ context, packId: input.packId, reviewId: input.reviewId })
         : await this.#operations.recordTestResult({
             context, packId: input.packId, reviewId: input.reviewId, testId: input.testId!, result,
             actualResult: input.actualResult ?? null, notes: input.notes ?? null,
           });
-      if (testResult.success && result === "pass") {
+      const afterStatus = testResult.success && result === "pass"
+        ? await this.#operations.queryPackStatus({ context, currentSourceOptions: this.#sourceOptions(target.feature, target.items) }) : null;
+      const manualVerificationComplete = testResult.success && result === "pass" && !!(
+        afterStatus?.isReady && !afterStatus.isStale && afterStatus.currentPackId === input.packId && afterStatus.isReviewed && afterStatus.failedCount === 0 &&
+        (!input.testId || (afterStatus.manualCases?.length && afterStatus.manualCases.every((test) => test.isReviewed && test.result === "pass")))
+      );
+      if (manualVerificationComplete) {
         await this.#dependencies.metadataStore.recordFeatureHumanReview({
           cardKey: this.#dependencies.createCardKey(target.feature.kind, target.feature.externalId),
           check: "manual-tests",
@@ -153,7 +177,7 @@ export class ManualTestVerificationApplication {
         });
       }
       this.#dependencies.notifyChanged(target.project.id, "manual-test.recorded", target.feature.externalId);
-      const shouldStartCompletion = testResult.success && result === "pass" &&
+      const shouldStartCompletion = manualVerificationComplete &&
         target.feature.stateFolder === "03_IN_PROGRESS";
       const currentFeature = shouldStartCompletion
         ? (await this.#dependencies.scanProject(target.project)).find(
@@ -193,6 +217,10 @@ export class ManualTestVerificationApplication {
           passedCount: packStatus.passedCount, hasResults: packStatus.hasResults, message: packStatus.message,
           applicability: packStatus.applicability, manualTestCount: packStatus.manualTestCount,
           invalidManualTestCount: packStatus.invalidManualTestCount, isReady: packStatus.isReady,
+          coverageIssues: packStatus.coverageIssues, manualCases: packStatus.manualCases,
+          authoringProgress: packStatus.authoringProgress?.state === "running" && !this.#generating.has(JSON.stringify([input.projectId, input.cardId]))
+            ? { ...packStatus.authoringProgress, state: "paused", message: "Authoring was interrupted. Retry with the same guidance to resume saved batches." }
+            : packStatus.authoringProgress,
         },
         summary: packStatus.message,
       };
@@ -210,6 +238,16 @@ export class ManualTestVerificationApplication {
     const items = await this.#dependencies.scanProject(project);
     const feature = items.find((candidate) => candidate.id === input.cardId && candidate.kind === "feature");
     return feature ? { feature, items, project } : { error: "FEAT not found." };
+  }
+
+  async #assertReady(project: StoredProject, feature: WorkItemCard, items: WorkItemCard[], packId: string, testId?: string) {
+    if (this.#dependencies.isRecoveryRunning?.(project.id, feature.id)) throw new Error("Wait for readiness recovery to finish before changing manual verification.");
+    if (this.#generating.has(JSON.stringify([project.id, feature.id])) || feature.featureWorkflow?.activeRun) throw new Error("Wait for the active workflow or pack generation to finish.");
+    if (!this.#dependencies.allPhasesResolved(feature)) throw new Error("Implementation phases must be resolved before manual verification.");
+    const status = await this.#operations.queryPackStatus({ context: this.#context(project, feature), currentSourceOptions: this.#sourceOptions(feature, items) });
+    if ((testId ? !status.manualCases?.some((test) => test.id === testId) : !status.isReady && !status.manualCases?.length) || status.isStale || status.currentPackId !== packId || status.state !== "current") {
+      throw new Error("The current manual test pack is incomplete or stale. Revise and regenerate it before review or result recording.");
+    }
   }
 
   #context(project: StoredProject, feature: WorkItemCard): ManualTestAdapterContext {

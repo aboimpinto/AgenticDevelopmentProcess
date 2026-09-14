@@ -8,6 +8,7 @@ import { FeatureWorkflowSummaryProjector } from "../src/application/features/fea
 import { RefinementArtifactPolicy } from "../src/application/features/refinement-artifact-policy.js";
 import { StartFeatureTimingPolicy } from "../src/application/features/start-feature-timing-policy.js";
 import { createFeatureProjectionApplications } from "../src/bootstrap/feature-projection-applications.js";
+import { createUiRequirementSourceHash } from "../src/workflows/prompts/feature-entry-prompts.js";
 
 describe("feature projection application composition", () => {
   it("returns artifact policies and workflow presentation boundaries", () => {
@@ -61,6 +62,52 @@ describe("feature projection application composition", () => {
         folderPath: root,
         stateFolder: "02_READY_TO_DEVELOP",
       })).toBe(true);
+
+      const item = {
+        externalId: "WORK",
+        folderPath: root,
+        implementationEvidence: null,
+        kind: "feature",
+        phases: [],
+        stateFolder: "02_READY_TO_DEVELOP",
+        stateLabel: "Ready To Develop",
+      } as never;
+      const input = {
+        documentHash: "document",
+        featureFindings: [],
+        implementationAgentRuns: [],
+        implementationPhaseRuns: [],
+        item,
+        metadata: {
+          uiRequirementDecision: "no_ui",
+          uiRequirementSourceHash: createUiRequirementSourceHash("document"),
+        },
+        validation: {
+          changedSinceHephaDeepDive: false,
+          deepDiveStatus: "current",
+          needsValidationCount: 0,
+        },
+      } as never;
+      expect(applications.featureWorkflowSummaryProjector.build(input)).toMatchObject({
+        canStartImplementing: true,
+        hasRefinementArtifacts: true,
+        readiness: { ready: true, reasons: [] },
+      });
+
+      const nativeStartApplications = createFeatureProjectionApplications({
+        getDefaultImplementationModel: () => null,
+        implementationRunSummary: {
+          deriveCurrentStep: vi.fn(), mapAgent: vi.fn(), mapFinding: vi.fn(), mapPhase: vi.fn(),
+        } as never,
+        metadataStoreEnabled: true,
+        recipeSourceFor: (operation) => operation === "refineFeature" ? "devcycle-mcp" : "native-hepha",
+        workspaceRoot: process.cwd(),
+      });
+      expect(nativeStartApplications.featureWorkflowSummaryProjector.build(input)).toMatchObject({
+        canStartImplementing: false,
+        hasRefinementArtifacts: true,
+        readiness: { ready: false },
+      });
     } finally {
       rmSync(root, { force: true, recursive: true });
     }

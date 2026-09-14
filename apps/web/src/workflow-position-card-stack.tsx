@@ -8,6 +8,7 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import type { WorkItemCard } from "@hepha/shared";
+import { isCompletionReadinessRunning, completionReadinessActivityLabel } from "./workflow/completion-recovery-activity.js";
 import {
   buildCardStatusStack,
   formatCommandLabel,
@@ -21,6 +22,15 @@ export function WorkflowPositionCardStack({
   // Only display for FEAT cards
   if (item.kind !== "feature") {
     return null;
+  }
+
+  if (isCompletionReadinessRunning(item)) {
+    return <div className="card-workflow-position" role="status" aria-label="Completion readiness refresh running">
+      <span className="wp-execution-state state-running">
+        <Loader2 className="spin-icon" size={12} aria-hidden="true" />
+        {completionReadinessActivityLabel(item.completionRecovery)}
+      </span>
+    </div>;
   }
 
   const workflowPosition = item.featureWorkflow?.workflowPosition;

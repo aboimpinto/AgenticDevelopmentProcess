@@ -26,7 +26,7 @@ export const DEFAULT_PROFILE_RELATIVE_PATH = ".hepha/safety/final-verification-p
 /** Minimum allowed timeout in milliseconds (10 seconds). */
 const MIN_TIMEOUT_MS = 10_000;
 
-const VALID_INTENTS: readonly string[] = REQUIRED_VERIFICATION_INTENTS;
+const VALID_INTENTS: readonly string[] = [...REQUIRED_VERIFICATION_INTENTS, "coverage"];
 
 // ---------------------------------------------------------------------------
 // Public API

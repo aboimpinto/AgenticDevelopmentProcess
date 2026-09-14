@@ -1,4 +1,5 @@
 import type { PhaseSummary, WorkItemCard } from "@hepha/shared";
+import { verificationContract } from "./verification-contract.js";
 import type { AuthoritativeReviewRerunLineageContext } from "../../authoritative-review-integration.js";
 import type { StoredProject } from "../../projects/stored-project.js";
 import { renderPhaseCodeReviewAdjudicationRules } from "./phase-code-review-adjudication-prompt.js";
@@ -46,6 +47,7 @@ export function buildPhaseCodeReviewPrompt(
     ...renderReviewerRemediationPlanRules(options.reviewerRemediationPlan ?? false),
     "",
     "Review requirements:",
+    verificationContract(),
     ...renderPhaseCodeReviewScopeRules(),
     policies.sharedCodeQualityAssumptionsRule,
     policies.serializedBuildCommandsSkillRule,

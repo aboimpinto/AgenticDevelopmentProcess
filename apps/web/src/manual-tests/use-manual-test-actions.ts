@@ -33,13 +33,13 @@ export function useManualTestActions(options: ManualTestActionOptions) {
   }
 
   return {
-    generate: (item: WorkItemCard) => execute(
+    generate: (item: WorkItemCard, packId?: string, guidance?: string) => execute(
       `manual-test-generate-${item.id}`,
-      (projectId) => manualTestApi.generate(projectId, item.id),
+      (projectId) => manualTestApi.generate(projectId, item.id, packId, guidance),
     ),
-    review: (item: WorkItemCard, packId: string) => execute(
+    review: (item: WorkItemCard, packId: string, testId?: string) => execute(
       `manual-test-review-${item.id}`,
-      (projectId) => manualTestApi.review(projectId, item.id, packId),
+      (projectId) => manualTestApi.review(projectId, item.id, packId, testId),
     ),
     record: (
       item: WorkItemCard,

@@ -16,8 +16,12 @@ import type { StoredProject } from "../projects/stored-project.js";
 import { createManualTestArtifactResponseSender } from "../transport/http/manual-test-artifact-response-sender.js";
 import { createValidationSummary } from "../work-item-validation.js";
 import { areAllImplementationPhasesResolved } from "../workflows/phases/phase-lifecycle-policy.js";
+import { CompletionReadinessRefreshApplication } from "../application/features/completion-readiness-refresh-application.js";
+import { projectCompletionRecovery } from "../application/features/completion-recovery-projection.js";
 
 export interface ProjectWorkItemApplicationsDependencies {
+  createReadinessPromptSession?: ConstructorParameters<typeof CompletionReadinessRefreshApplication>[0]["createPromptSession"];
+  runManualTestAuthoringPrompt?: (prompt: string) => Promise<string>;
   completeFeature(project: StoredProject, feature: WorkItemCard): Promise<boolean>;
   defaultProjectStorePath: string;
   featureWorkflowSummary: Pick<FeatureWorkflowSummaryProjector, "build">;
@@ -37,6 +41,15 @@ export function createProjectWorkItemApplications(dependencies: ProjectWorkItemA
   };
   const stateFolders = Object.keys(stateFolderLabels) as MemoryBankStateFolder[];
   const workItemQueries = new WorkItemQueryApplication({
+    enrich: (project, items) => Promise.all(items.map(async item => {
+      const projected = await projectCompletionRecovery(project, item, items, dependencies.metadataStore);
+      if (!completionReadinessRefreshApplication.isRunning(project.id, item.id)) return projected;
+      return { ...projected, completionRecovery: { assessedAt: new Date().toISOString(), ready: false,
+        verificationStage: "assessing" as const,
+        contextCompaction: completionReadinessRefreshApplication.compactionActivity(project.id, item.id),
+        blockers: [{ id: "recovery-running", action: "external" as const, actionLabel: "Wait for recovery",
+          message: "Completion readiness recovery is running.", prerequisite: "Wait for the current assessment to finish, then refresh. No completion or manual verification changes are allowed during recovery." }] } };
+    })),
     decorate: ({ agentRuns, findingRecords, metadata, metadataStoreAvailable, phaseRuns, scannedItem }) => {
       const validation = createValidationSummary(
         scannedItem.card.kind,
@@ -80,7 +93,9 @@ export function createProjectWorkItemApplications(dependencies: ProjectWorkItemA
     findProject: (projectId) => projectRegistry.get(projectId),
     scanProject: (project) => workItemQueries.scan(project),
   });
-  const manualTestVerificationApplication = new ManualTestVerificationApplication({
+  const manualTestVerificationApplication: ManualTestVerificationApplication = new ManualTestVerificationApplication({
+    isRecoveryRunning: (projectId, cardId) => completionReadinessRefreshApplication.isRunning(projectId, cardId),
+    runAuthoringPrompt: dependencies.runManualTestAuthoringPrompt,
     allPhasesResolved: areAllImplementationPhasesResolved,
     createCardKey: createWorkItemCardKey,
     findProject: (projectId) => projectRegistry.get(projectId),
@@ -88,6 +103,15 @@ export function createProjectWorkItemApplications(dependencies: ProjectWorkItemA
     metadataStore: dependencies.metadataStore,
     notifyChanged: dependencies.notifyChanged,
     scanProject: (project) => workItemQueries.scan(project),
+  });
+  const completionReadinessRefreshApplication: CompletionReadinessRefreshApplication = new CompletionReadinessRefreshApplication({
+    findProject: projectId => projectRegistry.get(projectId),
+    scanProject: project => workItemQueries.scan(project),
+    store: dependencies.metadataStore,
+    runPrompt: dependencies.runManualTestAuthoringPrompt,
+    createPromptSession: dependencies.createReadinessPromptSession,
+    isManualGenerationRunning: (projectId, cardId) => manualTestVerificationApplication.isGenerating(projectId, cardId),
+    notifyActivity: (projectId, externalId) => dependencies.notifyChanged(projectId, "completion-readiness-activity", externalId),
   });
   const manualTestArtifactResolver = new ManualTestArtifactResolver({
     createCardKey: createWorkItemCardKey,
@@ -97,6 +121,7 @@ export function createProjectWorkItemApplications(dependencies: ProjectWorkItemA
   });
 
   return {
+    completionReadinessRefreshApplication,
     epicStateSynchronizationApplication,
     featureEpicLinkApplication,
     featureWorkflowTargets,

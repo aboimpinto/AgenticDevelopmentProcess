@@ -33,7 +33,7 @@ const dbSource = [
 
 describe("UI requirement classifier version", () => {
   it("has a deterministic version string", () => {
-    expect(orchestratorSource).toContain("ui-requirement-v2-command-refactor-no-ui");
+    expect(orchestratorSource).toContain("ui-requirement-v3-explicit-decision");
   });
 
   it("creates a source hash from document hash", () => {

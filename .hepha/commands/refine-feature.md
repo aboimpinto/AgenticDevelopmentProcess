@@ -11,6 +11,7 @@ inputs:
   - design_artifacts
   - active_lessons
 outputs:
+  - FeatureDescription.md
   - FeatureTasks.md
   - PhaseExecutionContract.json
   - ArchitectureDebtTouchPlan.json
@@ -52,7 +53,7 @@ folder.
 {
   "outcome": "COMPLETED",
   "summary": "Refinement completed and the FEAT is ready to develop.",
-  "files": ["FeatureTasks.md", "planning-analysis-report.md", "PhaseExecutionContract.json", "ArchitectureDebtTouchPlan.json", "Phases/phase-0-example.md"]
+  "files": ["FeatureDescription.md", "FeatureTasks.md", "planning-analysis-report.md", "PhaseExecutionContract.json", "ArchitectureDebtTouchPlan.json", "Phases/phase-0-example.md"]
 }
 ```
 
@@ -252,6 +253,8 @@ state before implementation evidence exists. The agent/model/time fields are
 placeholders for implementation telemetry; refinement must seed them and must
 not invent runtime values.
 
+The phase declarations are authoritative: needCodeReview and needTestCoverage are independent booleans; all four combinations are valid. Ordered native tasks and explicit configured checks retain their own obligations. Phase identifiers, positions, titles and file types never select gates. Developers can revise declarations with before/after values, implemented scope, reason and evidence, without hiding failures. Reuse valid evidence for unchanged inputs. Ordinary missing tests or rejected reviews remain same-phase repair work; escalate only a concrete impasse or repeated lack of a meaningful repair path.
+
 ## Phase Quality Gate Template
 
 Every contract-declared phase document created by refinement must include this section:
@@ -262,10 +265,12 @@ Every contract-declared phase document created by refinement must include this s
 | Gate | Decision | Evidence / Justification |
 | --- | --- | --- |
 | Changed files | missing | Implementation worker must replace this with exact production, test, and documentation paths changed in this phase, or `not applicable` with a phase-specific reason when no files change. |
-| Tests | missing | Implementation worker must record exact automated test files and commands, or change this to `waived`/`not applicable` with a phase-specific reason. |
-| Gherkin/Playwright E2E | missing | Required for browser/UI behavior changes; otherwise implementation worker must change this to `waived`/`not applicable` and explain why unit, contract, or integration coverage is enough. |
+| Tests | <test-decision> | Use `missing` for declared verification/acceptance-coverage obligations; otherwise `not applicable` with the scope reason. Record exact test commands and evidence during execution. |
+| Gherkin/Playwright E2E | <e2e-decision> | Use `missing` only for explicitly assigned workflow execution; otherwise `not applicable` with its scope reason and the actual execution owner. UI changes may require TwinTests and updates to EPIC E2E scenarios; preserve those obligations in the manifest without inferring a browser run from file presence. |
 | Code review | <code-review-decision> | Replace this placeholder before writing the file: use `missing` only when the ordered task list contains a `code_review` task; otherwise use `not applicable` and state that no review task was declared for this phase. |
 ```
+
+Replace every `<test-decision>`, `<e2e-decision>` and `<code-review-decision>` placeholder with the applicable declared decision before writing a phase file.
 
 Refinement plans these gates; it does not satisfy implementation gates. Do not
 mark gate rows `satisfied` during refinement.
@@ -297,11 +302,20 @@ as `missing`; no declared review task starts as `not applicable` with a
 phase-specific reason. The other gate defaults must also reflect the declared
 phase scope. No phase is allowed to start with a gate marked `satisfied`.
 
-Production code changes require automated tests or a precise waiver. Browser/UI
-behavior changes require Gherkin/Playwright E2E evidence or a precise waiver.
-Code-relevant phases require a persisted code-review report or a precise waiver.
-Comment-only production changes may waive code review only when the evidence
-names the files and states that no executable behavior changed.
+Tests, integration tests and code review are independent phase applicability
+choices. Declare only obligations justified by the phase deliverables. Source
+files alone do not require tests or review: data-declaration-only work may have
+no executable behavior to test; documentation and health checkpoints need no
+code review when they have no review scope. Health checkpoints execute their
+declared checks without requiring code edits. Frontend/backend TwinTests prove
+scoped phase acceptance; EPIC Gherkin/Playwright E2E tests prove the complete
+frontend-to-backend workflow. Assign E2E updates to affected phases, including
+UI-only phases, and preserve full-suite execution at its declared checkpoint in
+the feature manifest. Phase TwinTests do not waive that workflow obligation. Explain every non-applicable gate.
+During development, the developer may revise applicability with a phase scope
+reason; update the ordered tasks, matching ledger, compatibility summaries and
+gate rows together. Preserve unrelated tasks and existing evidence. A failed
+check or unresolved review finding is not a reason to declare its gate irrelevant.
 
 ## Quality Bar
 
@@ -447,3 +461,25 @@ FEAT: {{featureExternalId}} - {{featureTitle}}
 Canonical feature id: {{canonicalFeatureId}}
 
 {{context}}
+
+## Acceptance ownership at every planning level
+
+Apply `docs/architecture/acceptance-responsibility-policy.md`: EPIC workflow E2E,
+FEAT/Phase isolated frontend/backend evidence, and bounded Task contributions.
+Persist stable parent criterion IDs, many-to-many test mappings and execution
+ownership in the feature manifest and phase/task acceptance sections. Do not
+create one E2E test for each TwinTest or lower-level criterion. A passing TwinTest
+does not replace the EPIC full-workflow E2E obligation.
+
+
+## TestPlan command handoff
+
+Follow project-test-plan-authoring/v1: write or maintain the canonical `## TestPlan`
+in `FeatureDescription.md` and `## Verification References` in each Phase.
+Refinement discovers commands statically and records UNVERIFIED; developers validate
+and update them from actual execution. Include per-repository cwd, configuration
+evidence, selections, preparation/dependencies, source inputs, generated outputs,
+and report locations. Project type informs discovery, never a default command.
+
+
+Readiness observations marked `proposed-for-future-planning` are proposals, not active rules. Consider them during Deep-Dive and refinement; incorporate them only through the authorized plan. Do not promote them automatically or add them to the current implementation scope.

@@ -15,11 +15,15 @@
   "dependencies": {
     "@hepha/db": "workspace:*",
     "@hepha/shared": "workspace:*",
+    "@huggingface/tokenizers": "0.2.0",
+    "ajv": "^8.20.0",
+    "gpt-tokenizer": "4.0.0",
+    "saxes": "6.0.0",
+    "typescript": "^5.9.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "tsx": "^4.23.13"
   }
 }

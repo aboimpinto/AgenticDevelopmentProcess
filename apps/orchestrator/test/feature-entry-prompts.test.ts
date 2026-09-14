@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { verificationContract } from "../src/workflows/prompts/verification-contract.js";
 import {
   buildContinueImplementingPrompt,
   buildDesignFeaturePrompt,
@@ -45,15 +46,13 @@ describe("feature entry prompts", () => {
     expect(prompt).toContain(feature.specMarkdown);
   });
 
-  it("normalizes fenced UI decisions and supplies safe defaults", () => {
+  it("normalizes explicit UI decisions and rejects unknown decisions", () => {
     expect(parseUiRequirementDecision('```json\n{"decision":"REQUIRES_UI"}\n```')).toEqual({
       decision: "requires_ui",
       reason: "The FEAT appears to involve user-facing UI or interaction changes.",
     });
-    expect(parseUiRequirementDecision('{"decision":"unexpected"}')).toEqual({
-      decision: "no_ui",
-      reason: "The FEAT appears to be backend, internal, or non-visual work.",
-    });
+    expect(() => parseUiRequirementDecision('{"decision":"unexpected"}')).toThrow("explicitly return");
+    expect(() => parseUiRequirementDecision('{}')).toThrow("explicitly return");
   });
 
   it("rejects responses without an object contract", () => {
@@ -63,7 +62,7 @@ describe("feature entry prompts", () => {
 
   it("versions the source hash so routing-policy changes invalidate old decisions", () => {
     expect(createUiRequirementSourceHash("document-hash")).toBe(
-      "ui-requirement-v2-command-refactor-no-ui:document-hash",
+      "ui-requirement-v3-explicit-decision:document-hash",
     );
   });
 
@@ -73,8 +72,9 @@ describe("feature entry prompts", () => {
     expect(buildDesignFeaturePrompt(project, feature)).toBe(`design-feature ${target}`);
     expect(buildRefineFeaturePrompt(project, feature)).toBe(
       `refine-feature ${target}. Project id: project-id. Canonical feature id: item-41. ` +
+      `${verificationContract(true)} ` +
       "Author PhaseExecutionContract.json only as hepha-phase-execution/v3; every phase must declare gitCheckpoint commit_and_push outside its ordered task ledger. V1/V2 are historical read compatibility and are invalid new refinement output. " +
-      "When the declared topology contains a final_checkpoint role, its last ordered task must be a required full verification that requests full-verification, test-coverage, and manual-review-ready evidence. Add a final Test coverage quality row that records FEAT changed-line coverage against an advisory 80% reference and a 95-100% target, plus overall project coverage as context. Percentage thresholds never fail a phase or FEAT. A coverage command, timeout, baseline, report, or instrumentation error also never fails the phase: record the exact reason as a non-blocking coverage-unavailable remark and continue using the independent build, lint/typecheck, and test gates. Only a successfully measured below-reference FEAT result enters the bounded FEAT-scoped improvement loop. Configure those improvement attempts to change only production code/tests owned by the current FEAT; remaining low coverage becomes a reminder. Reuse a valid project-owned .hepha/safety/final-verification-profile.yaml across every FEAT without asking again. Create or update it only when existing project configuration already makes the LCOV command, report paths, source includes/excludes, improvement-attempt policy, and multi-stack ownership unambiguous. If project-level coverage is not configured, do not guess or install tooling: return NEEDS_DEEP_DIVE once for those exact project decisions, then persist the answer in the project profile. Preserve existing checks. Do not invent a final checkpoint or mutate coverage configuration when the accepted workflow declares none. " +
+      "When the accepted topology declares a final checkpoint, its final task runs the project-owned verification commands and logically assesses existing tests against FEAT and EPIC acceptance criteria. Reuse assertion mappings from earlier phases and inspect their shared fixtures and current implementation. Numeric coverage reports, percentages, LCOV instrumentation and coverage profiles are optional advisory telemetry; their absence does not block refinement or require Deep-Dive. Do not install instrumentation or introduce a measurement obligation. Preserve explicitly configured project checks and independent human acceptance. Do not invent a final checkpoint or change the accepted gate declarations. " +
       "Classify every acceptance criterion as MANUAL, AUTOMATED, DEFERRED, or UNCOVERED. Use MANUAL_TEST_REQUIRED only when a real human-operable surface exists and successful execution inherently needs a user-provided physical device, qualified GUI/session, hardware capability, external ceremony, or manual interaction that the autonomous executor cannot supply. Never create manual tests for internal models, architecture dependencies, static catalogue contents, schema/digest validation, immutable data structures, startup validation, unit tests, or source-code properties; map those to automated evidence. Do not create a blocking executable implementation gate for manual work. Record the phase task as SKIPPED with reason 'This test cannot be automated and the user needs to test it manually.' and create ManualTestObligations.json using schema hepha-manual-test-obligations/v1. Every obligation must name the concrete application/interface in its first action, exact preconditions, required account/test data or an explicit none-required statement, specific executable actions, observable expected results, and evidence requirements. Generic instructions such as 'navigate to the feature area' or 'perform the expected workflow' are forbidden. Missing manual evidence blocks release readiness, not implementation completion. Refinement remains documentation-only: determine automation feasibility from feature requirements, repository manifests/workflows, configured environments, and existing harness documentation without executing any build, test, package-manager, compiler, device, or environment probe. " +
       "Return exactly one Refine Feature Result V1 JSON object: COMPLETED with feature-folder-relative artifact paths, or NEEDS_DEEP_DIVE with the reason and interactive decision questions. COMPLETED.files entries must be exactly FeatureTasks.md, planning-analysis-report.md, PhaseExecutionContract.json, ArchitectureDebtTouchPlan.json, ManualTestObligations.json when created, or contract-declared Phases/phase-<number> Markdown paths; never prefix them with the project root, MemoryBank/Features, lifecycle folder, or FEAT folder. " +
       "An unresolved user decision is a blocked Deep-Dive handoff, never a failed refinement. Do not limit the number of Deep-Dive/refinement rounds.",
