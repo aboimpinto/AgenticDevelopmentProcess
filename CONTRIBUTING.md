@@ -53,6 +53,11 @@ environment is available.
 
 ## Dependency updates
 
+Keep `@types/node` on the Node 24 line used by the minimum supported runtime and
+CI. Newer major declarations can make unavailable runtime APIs typecheck.
+Dependabot excludes Node type versions 25 and above until the runtime baseline
+is deliberately raised; update that ceiling with the engines and CI version.
+
 Update tightly coupled packages together: React and React DOM with their type
 packages, Vitest with its coverage provider, and Prisma client with its adapter.
 Dependabot groups these families so one PR can validate the complete combination.
