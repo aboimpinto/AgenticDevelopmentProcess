@@ -20,7 +20,7 @@
     "gpt-tokenizer": "4.0.0",
     "saxes": "6.0.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
