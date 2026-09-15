@@ -12,11 +12,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.23.1",
     "@typescript/native": "npm:typescript@^7.0.2"
   },
   "dependencies": {
     "@hepha/shared": "workspace:*",
-    "pg": "^8.21.0"
+    "pg": "^8.23.0"
   }
 }
