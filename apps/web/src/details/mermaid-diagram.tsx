@@ -29,6 +29,9 @@ export function MermaidDiagram({ source }: { source: string }) {
         const mermaid = (await import("mermaid")).default;
 
         mermaid.initialize({
+          // Adopt Mermaid 12's rendering model with HEPHA's dark palette.
+          layout: "elk",
+          look: "neo",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
           securityLevel: "strict",
           startOnLoad: false,

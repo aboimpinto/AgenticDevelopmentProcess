@@ -70,4 +70,14 @@ describe("production bundle boundaries", () => {
       expect(withDynamic.has(chunk.fileName), chunk.fileName).toBe(true);
     }
   });
+
+  it("keeps the bundled ELK engine out of the initial dashboard graph", () => {
+    const elk = chunks.filter((chunk) => containsPackage(chunk, "elkjs"));
+    expect(elk.length).toBeGreaterThan(0);
+    const withDynamic = reachable(chunks, [...initial], true);
+    for (const chunk of elk) {
+      expect(initial.has(chunk.fileName), chunk.fileName).toBe(false);
+      expect(withDynamic.has(chunk.fileName), chunk.fileName).toBe(true);
+    }
+  });
 });

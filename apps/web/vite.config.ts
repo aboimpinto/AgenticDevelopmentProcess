@@ -3,11 +3,9 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   build: {
-    // Mermaid is already loaded through a dynamic import. Its Cynefin parser
-    // is distributed as one precompiled module (~691 kB minified/~155 kB
-    // gzip), so the bundler has no safe internal module boundary to split. Keep a
-    // narrow ceiling above that known lazy vendor chunk so future growth still
-    // restores the warning.
+    // Retain the existing ceiling. Mermaid 12's lazy ELK engine exceeds it;
+    // keep that warning visible. Bundle tests ensure Mermaid and ELK stay
+    // outside the initial dashboard graph (see CONTRIBUTING.md).
     chunkSizeWarningLimit: 700,
     rolldownOptions: {
       output: {
