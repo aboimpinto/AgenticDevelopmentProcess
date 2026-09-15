@@ -4,6 +4,10 @@ This is the maintainer's standing workflow for HEPHA, including dependency and
 documentation PRs. Keep one focused PR per problem; when an appropriate PR
 already exists, fix and follow that PR rather than opening a duplicate.
 
+The [product PR delivery lifecycle](../workflow/pr-delivery-lifecycle.md) respects
+this repository policy when the target is HEPHA itself. Other managed projects
+retain their own configured review requirements.
+
 ## Review loop
 
 1. Inspect the diff, approved scope, compatibility impact and meaningful test
