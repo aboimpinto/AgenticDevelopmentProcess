@@ -7,7 +7,7 @@ implement or deploy.
 
 ## 1. Install HEPHA
 
-Use Node.js 24 or newer and pnpm 11 or newer.
+Use Node.js 24.15.0 or later on the Node 24 LTS line and pnpm 11 or newer.
 
 ```bash
 git clone https://github.com/aboimpinto/AgenticDevelopmentProcess.git

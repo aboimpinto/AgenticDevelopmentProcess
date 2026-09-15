@@ -16,7 +16,8 @@ discussion, reproducible bug reports, and real workflow case studies.
 
 ## Local setup
 
-Use Linux or WSL with Node.js 24, pnpm 11, and Git.
+Use Linux or WSL with Node.js 24.15.0 or later on the Node 24 LTS line, pnpm 11,
+and Git. jsdom 30 requires this patch-level minimum; Node 25 is unsupported.
 
 ```bash
 git clone https://github.com/aboimpinto/AgenticDevelopmentProcess.git
@@ -55,6 +56,8 @@ environment is available.
 
 Keep `@types/node` on the Node 24 line used by the minimum supported runtime and
 CI. Newer major declarations can make unavailable runtime APIs typecheck.
+The web coverage job tests Node 24.15.0 to keep the jsdom runtime floor verified;
+the other CI jobs follow the latest Node 24 release.
 Dependabot excludes Node type versions 25 and above until the runtime baseline
 is deliberately raised; update that ceiling with the engines and CI version.
 

@@ -327,7 +327,7 @@ risking a real codebase.
 ### Prerequisites
 
 - Linux or WSL
-- Node.js 24
+- Node.js 24.15.0 or later on the Node 24 LTS line
 - pnpm 11
 - Git
 - A working [Pi coding agent](https://pi.dev/) installation for agent-backed
