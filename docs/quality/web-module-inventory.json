@@ -226,7 +226,7 @@
     {
       "path": "details/mermaid-diagram.tsx",
       "concern": "Mermaid diagram renderer",
-      "lines": 96,
+      "lines": 99,
       "size_status": "normal",
       "coverage_status": "none",
       "has_tests": false,

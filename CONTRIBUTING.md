@@ -74,6 +74,22 @@ Run typecheck, core tests, build, web coverage/quality checks and the affected
 browser journeys for dependency upgrades. A React runtime upgrade requires the
 full dashboard browser suite. Keep frozen-lockfile installation working in CI.
 
+## Mermaid diagrams
+
+HEPHA uses Mermaid 12's ELK layout and neo look with the dashboard's dark theme.
+Diagram geometry can change from version 11; use the normal Mermaid syntax and
+review the rendered result instead of relying on fixed positions or old SVG
+structure. Modern browser support follows Mermaid 12: ES2024 and Safari 17.4+.
+The Chromium journeys exercise real flowchart, sequence, state and class diagrams,
+as well as malformed-source recovery.
+
+Mermaid 12 includes a lazy ELK engine chunk of about 1.46 MB minified. It exceeds
+the existing 700 kB build warning threshold, so the build reports that warning.
+Keep the warning visible and the threshold unchanged. Production-bundle tests
+verify that neither Mermaid nor ELK enters the initial dashboard module graph;
+the engine is downloaded when a diagram needs it. See the
+[Mermaid 12 release notes](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.0.0).
+
 ## Pull requests
 
 Follow the [Greptile PR review procedure](docs/contributing/pr-review.md) after
