@@ -21,6 +21,14 @@ Commands and observed results:
 command -> observed result
 ```
 
+## Review follow-up
+
+- [ ] Greptile completed review of the current head; review link and commit are recorded.
+- [ ] Findings have verified fixes or reasoned dispositions; follow-ups are linked.
+- [ ] Required checks pass on the current head. Pending or unavailable review is reported explicitly.
+
+Follow [the review procedure](https://github.com/aboimpinto/AgenticDevelopmentProcess/blob/master/docs/contributing/pr-review.md).
+
 ## Safety and publication
 
 - [ ] No credentials, private project material, personal paths, runtime databases, or raw agent sessions are included.

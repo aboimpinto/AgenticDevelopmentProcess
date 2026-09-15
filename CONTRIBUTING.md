@@ -71,6 +71,10 @@ full dashboard browser suite. Keep frozen-lockfile installation working in CI.
 
 ## Pull requests
 
+Follow the [Greptile PR review procedure](docs/contributing/pr-review.md) after
+opening or updating a PR. Wait for review of the current head, address findings
+with evidence, and recheck after fixes before merging.
+
 A useful pull request explains:
 
 - The problem and user impact.
