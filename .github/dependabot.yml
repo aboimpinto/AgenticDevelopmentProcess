@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Node type declarations must match the minimum supported runtime (Node 24).
+    # Revisit this ceiling together with package.json engines and the CI runtime.
+    ignore:
+      - dependency-name: "@types/node"
+        versions: [">=25"]
     groups:
       react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
