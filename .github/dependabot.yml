@@ -8,6 +8,8 @@ updates:
     groups:
       react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      vite:
+        patterns: ["vite", "@vitejs/plugin-react"]
       vitest:
         patterns: ["vitest", "@vitest/*"]
       prisma:
