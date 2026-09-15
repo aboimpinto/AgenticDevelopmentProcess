@@ -143,3 +143,25 @@ justification and synchronized artifacts. Gate failures stay in the repair loop;
 detect architectural impasses and repeated lack of progress rather than stopping
 on ordinary findings or looping indefinitely. This policy's documentation does
 not imply that all existing runtime boundaries already conform.
+
+## Pull request follow-up and Greptile
+
+Greptile is the maintainer's configured GitHub code reviewer for HEPHA. Opening
+or pushing a PR is not the end of the task: follow
+[the PR review procedure](docs/contributing/pr-review.md) until review findings
+and required checks are handled, or report the concrete external blocker.
+
+- Wait for Greptile's completed review of the current head before merging. Read
+  its summary, inline threads, submitted reviews, and checks; green CI alone
+  does not establish that Greptile reviewed the change.
+- Fix substantiated defects within scope, run relevant verification, reply with
+  evidence, and request review again after changes. Record why a finding is a
+  false positive or a separate follow-up; do not silently discard it.
+- New requirements and optional improvements belong in lessons learned and
+  future EPIC -> FEAT -> PHASE -> TASK -> CODE planning. They do not silently
+  expand approved acceptance criteria. Actual regressions and violations of
+  existing contracts remain defects to address.
+- Missing, pending, skipped, failed, or stale review is not approval. Investigate
+  the integration and report a blocker if review cannot run; do not merge just
+  because a timeout elapsed. Greptile is advisory and does not replace human
+  acceptance, required CI, or the maintainer's merge authority.

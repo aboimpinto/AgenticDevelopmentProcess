@@ -4,6 +4,19 @@ Some FEATs should complete through a pull request instead of direct merge to
 `master`. This lifecycle makes that choice explicit on the FEAT and keeps
 GitHub review and CI state visible before final completion.
 
+## Scope and repository review policy
+
+This document describes HEPHA's product delivery lifecycle for managed projects.
+It does not replace a target repository's contributor instructions or review
+policy. For changes to the HEPHA repository itself, also follow the mandatory
+[Greptile review procedure](../contributing/pr-review.md): review must cover the
+current head, findings need verified fixes or reasoned dispositions, and missing
+or stale review blocks a new merge even when CI is green.
+
+This repository-specific contributor policy does not automatically impose
+Greptile on other projects managed by HEPHA, and this documentation change does
+not claim that the runtime currently enforces an external-review provider gate.
+
 ## Delivery Policy
 
 Each implementation FEAT should carry a durable delivery section in
@@ -127,7 +140,14 @@ these is true:
 
 - the PR is already merged; or
 - the PR is approved, no unresolved blocking review threads remain, required
-  checks are green, and Hepha is allowed to merge it.
+  checks are green, applicable repository review requirements are satisfied,
+  and Hepha is allowed to merge it.
+
+For the HEPHA repository, those review requirements include completed Greptile
+review of the current head under the linked contributor procedure. An approved
+PR with missing, pending, skipped or stale Greptile review must not be merged.
+The already-merged branch records delivery already performed; it is not permission
+to bypass the review requirements before a merge.
 
 Completion then:
 
