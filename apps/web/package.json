@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@hepha/shared": "workspace:*",
-    "lucide-react": "^1.45.0",
+    "lucide-react": "^1.46.0",
     "mermaid": "^12.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
