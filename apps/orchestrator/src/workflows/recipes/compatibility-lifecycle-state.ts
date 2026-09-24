@@ -61,3 +61,12 @@ export function hasCompatibilityProgress(before: CompatibilityProgress, after: C
     [...after.resolved].some(n => !before.resolved.has(n)) ||
     [...after.completedTasks].some(id => !before.completedTasks.has(id));
 }
+
+/** Snapshot task identity/status, excluding prose and timestamps, before Pi mutates files. */
+export function readCompatibilityTaskStates(feature: Pick<WorkItemCard, "phases">): ReadonlyMap<number, string> {
+  return new Map(getNumberedPhases(feature).map(phase => [phase.number,
+    phase.documentPath && existsSync(phase.documentPath)
+      ? JSON.stringify(extractPhaseTaskLedger(readFileSync(phase.documentPath, "utf8"), phase.number).map(task => [task.id, task.status]))
+      : "[]",
+  ]));
+}

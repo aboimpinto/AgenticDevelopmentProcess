@@ -4217,6 +4217,35 @@
         "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
         "apps/orchestrator/test/fixtures/mcp-phase-gate-response.json"
       ]
+    },
+    {
+      "id": "WJ-2026-153",
+      "date": "2026-09-24",
+      "summary": "Delegate each MCP action and context lifecycle to one Pi session; observe durable artifacts",
+      "transitionIds": [
+        "WF-MCP-PHASE-QUALITY-ADMISSION",
+        "WF-MCP-LIFECYCLE-RECOVERY",
+        "WF-MCP-SESSION-CONTINUE",
+        "WF-RECIPE-SOURCE-MCP",
+        "WF-MODEL-REQUEST-POLICY"
+      ],
+      "whyHappened": "The host guarded every MCP conversation request using a conservative output reservation and local tokenizer. It also forced autonomous commands into repeated single-phase and repair sessions.",
+      "causalChain": "Tool inspection grows the fresh Pi conversation -> host estimate reaches its smaller limit before Pi compaction -> process killed. Host phase loops obscured the requested autonomous execution boundary.",
+      "testGap": "Thin prompt tests did not execute the launch guard against a large Responses tool result or assert one worker across autonomous phases. The initial cap tests supplied only launch-environment values; review identified the need to test the original host environment through real worker isolation.",
+      "missingDecision": "One autonomous action has one Pi session; a supervised action has one phase session. Pi alone manages context. Host progress follows files; terminal acceptance follows independently validated approved scope and evidence.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-lifecycle-state.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-implementation-recovery.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ]
     }
   ]
 }

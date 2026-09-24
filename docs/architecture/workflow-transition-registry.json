@@ -183,12 +183,12 @@
     {
       "id": "WF-MODEL-REQUEST-POLICY",
       "scope": "runtime",
-      "from": "prepared Pi provider request",
+      "from": "prepared native HEPHA Pi provider request",
       "trigger": "before each provider request including continued tool turns",
       "to": "High-reasoning bounded request or terminal policy refusal without fallback",
       "ownerPath": "apps/orchestrator/src/runtime/pi/model-request-guard.ts",
       "ownerSymbol": "modelRequestGuard",
-      "rationale": "Apply locally tokenized context and independent token-spending admission to every Pi invocation. Bind the readiness output allowance only on supported transports; Codex subscription requests omit unsupported output fields and reserve catalogue maximum output consistently in planning and the wire guard. Resolve transport through the actual connection provider, never a feature/model name or display label. Use this reservation for 50/80 percent thresholds. Bytes are diagnostics, never tokens. Compact only losslessly at the provider boundary, never omit evidence or downgrade reasoning to fit. Resolve verified tokenizer capability before worker spawn; provider-qualified aliases select separately pinned tokenizer revisions. Readiness and request preparation share the resolver. Unknown selections report their identity before executing work; invalid assets never use estimated token counts.",
+      "rationale": "Apply locally tokenized context and independent token-spending admission to native HEPHA Pi invocations. MCP compatibility actions delegate context and compaction to Pi and omit this extension; explicit incompatible host caps reject at launch rather than being ignored. Bind the readiness output allowance only on supported transports; Codex subscription requests omit unsupported output fields and reserve catalogue maximum output consistently in planning and the wire guard. Resolve transport through the actual connection provider, never a feature/model name or display label. Use this reservation for 50/80 percent thresholds. Bytes are diagnostics, never tokens. Compact only losslessly at the provider boundary, never omit evidence or downgrade reasoning to fit. Resolve verified tokenizer capability before worker spawn; provider-qualified aliases select separately pinned tokenizer revisions. Readiness and request preparation share the resolver. Unknown selections report their identity before executing work; invalid assets never use estimated token counts.",
       "unitTestPaths": [
         "apps/orchestrator/test/model-request-policy.test.ts",
         "apps/orchestrator/test/model-request-policy.integration.test.ts",
@@ -574,12 +574,12 @@
     {
       "id": "WF-MCP-PHASE-QUALITY-ADMISSION",
       "scope": "implementation",
-      "from": "a phase marked completed or skipped, before continuation or after worker return",
+      "from": "requested Pi action returned with persisted phase evidence",
       "trigger": "persisted phase quality projection reports missing, unknown or unjustifiably waived evidence",
-      "to": "same-phase evidence/code/test/review repair, followed by rescan and admission; escalate on repeated lack of meaningful progress",
+      "to": "independent gate validation; complete or block without a host repair session",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
-      "ownerSymbol": "DevCycleMcpCompatibilityApplication.repairPhaseGates",
-      "rationale": "Every phase uses its declared independent review and meaningful-coverage flags plus configured checks. Canonical JSON overrides legacy result prose; native execution failures remain binding. Reconcile old evidence without inventing results, repair actual gaps, retain the original applicability baseline, prevent advancement outside the assigned phase and reassess repeated failures. Missing optional audit fields do not affect admission. Reject a disabled acceptance-coverage flag paired with an active assessment; reconcile scope without using numeric-threshold absence or reason-word matching as gate authority. Undeclared legacy gates require reconciliation independently of changed-file types. Coverage references may include passing supporting health checks when at least one behavioral test proves the criterion. Producers must not override declarations by project identity, phase position or work class.",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.executeImplementation",
+      "rationale": "MCP owns repair inside the requested Pi session. Retain baseline applicability, mandatory evidence and scope checks at return. Missing evidence never becomes a pass.",
       "unitTestPaths": [
         "apps/orchestrator/test/phase-checkpoint-test-evidence.test.ts",
         "apps/orchestrator/test/feature-workflow-recovery-policy.test.ts",
@@ -602,12 +602,12 @@
     {
       "id": "WF-MCP-LIFECYCLE-RECOVERY",
       "scope": "implementation",
-      "from": "admitted continuation or returned start worker with an isolated partial lifecycle transition",
+      "from": "isolated stale lifecycle header in a uniquely located In Progress feature",
       "trigger": "a closed read-only policy recognizes a stale Ready header or an unfinished authorized start move",
-      "to": "same workflow resumes after verified repair, or blocks with a precise recovery rejection",
+      "to": "one deterministic header repair with unchanged evidence, or a precise rejection",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/compatibility-implementation-recovery.ts",
       "ownerSymbol": "CompatibilityImplementationRecovery.recover",
-      "rationale": "One repair allowance per run: host repairs a known stale header; a missing start move gets one time-bounded agent attempt. Rescan must find one actual In Progress destination with valid artifacts and unchanged feature evidence. No repair may waive decisions, gates or phase authority. Read explicit status from header metadata or a relocated feature-identified metadata block, regardless of introductory headings. Reject competing declarations and do not borrow task, fenced example, quoted or commented statuses. Read-only validation never rewrites lifecycle metadata.",
+      "rationale": "Repair only the recognized header mismatch and verify it. No model repair or extra session is dispatched when a requested folder move is absent.",
       "unitTestPaths": [
         "apps/orchestrator/test/compatibility-lifecycle-recovery.test.ts",
         "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
@@ -623,12 +623,12 @@
     {
       "id": "WF-MCP-SESSION-CONTINUE",
       "scope": "implementation",
-      "from": "a bounded provider worker returns inside a durable user workflow",
+      "from": "authorized MCP implementation action",
       "trigger": "rescanned validated artifacts show progress and remaining work within recorded authority",
-      "to": "a fresh phase session, finalization, supervised boundary, or an explicit blocked/failed outcome",
+      "to": "one Pi session in requested mode, followed by artifact acceptance or an incomplete/failed result",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.executeImplementation",
-      "rationale": "HEPHA owns continuation across single-phase provider sessions. Explicit autonomy permits later phases and finalization; omitted or false autonomy stops at the selected phase boundary. Process exit zero is never workflow completion. Rescan and validate after each session, preserve cancellation and replacement, stop on real failure, block after two no-progress returns, and require completed artifacts before feature success.",
+      "rationale": "Autonomous mode delegates the whole action. Supervised mode delegates one phase. Pi owns context and compaction; HEPHA observes MemoryBank progress and never redispatches on a partial return.",
       "unitTestPaths": [
         "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts"
       ],
@@ -655,12 +655,12 @@
     {
       "id": "WF-RECIPE-SOURCE-MCP",
       "scope": "dispatch",
-      "from": "supported feature workflow action request",
+      "from": "supported action with MCP recipe source",
       "trigger": "validated recipe-source policy selects devcycle-mcp for the exact action identity",
-      "to": "bounded plan-bound MCP compatibility sessions using mapped recipes under one durable workflow",
+      "to": "one plan-bound Pi action with the MCP adapter and requested mode",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
-      "rationale": "Select the MCP recipe by action identity and preserve its exact server/tool/arguments across model routes. MCP responses are the sole procedural instruction authority: launch prompts carry transport, current validation diagnostics, session boundaries and host evidence/record locations, not duplicate verification, acceptance, test-plan, manual-test or gate-schema instructions. Provider-selected artifact validation, manual receipt persistence and deterministic gate admission remain host responsibilities; worker exit alone never proves acceptance. Native prompt policy and host-directed gate repair remain separate. The outer workflow preserves the authorized phase/feature boundary and resumes from rescanned evidence.",
+      "rationale": "MCP owns procedure; Pi owns context. HEPHA retains deterministic admission, observation, cancellation and artifact-result validation without duplicating procedures.",
       "unitTestPaths": [
         "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
         "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",

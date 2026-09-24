@@ -10,13 +10,11 @@ gate failures keep repair in the same phase, while an architectural/authority
 impasse or repeated lack of meaningful progress requires explicit escalation.
 All declared work and gates must pass before advancing.
 
-The compatibility transitions below still describe the implemented runtime:
-`WF-MCP-PHASE-QUALITY-ADMISSION` repairs unresolved evidence in the same phase
-before escalating repeated lack of progress.
-That behavior is a conformance gap, not a phase-specific exception authorized by
-the policy. Migrating requests, results and document projections to one validated
-JSON contract and routing repair before advancement remains implementation work.
-This documentation update does not change transition code or certify that work.
+For MCP actions, the MCP procedure owns phase repair inside one Pi session.
+HEPHA validates the returned artifacts and declared evidence; it does not start
+additional repair conversations. Pi alone owns that session's context and
+compaction. A returned unresolved gate remains blocked; it is never a pass.
+See WJ-2026-153 and the execution boundary below.
 
 ## Collective verification and diagnosis recovery
 
@@ -1026,7 +1024,7 @@ flowchart LR
   Policy["Validated recipe-source policy"]
   Admission["Provider-selected implementation admission"]
   Native["Existing native Hepha application"]
-  McpWorker["Bounded plan-bound Pi session + MCP adapter"]
+  McpWorker["One plan-bound Pi action + MCP adapter"]
   Invariants["Hepha lifecycle invariants<br/>Deep-Dive closure; no deferred human gates"]
   Recipe["DevCycle MCP recipe and autonomous handoffs"]
   ProviderArtifacts["Provider-specific artifact validator"]
@@ -1047,12 +1045,12 @@ flowchart LR
   ProviderArtifacts -->|"WF-MCP-REFINE-POSTCONDITION-BLOCK<br/>outside Ready or target decisions unresolved"| DeepDiveRecovery
   McpWorker -.->|"asset, transport, or contract failure"| Failure
   ProviderArtifacts -.->|"WF-MCP-ARTIFACT-VALIDATION-FAIL<br/>invalid or deferred human gate"| Failure
-  ProviderArtifacts -->|"WF-MCP-SESSION-CONTINUE<br/>authorized remaining work + progress"| Admission
-  ProviderArtifacts -->|"WF-MCP-PHASE-QUALITY-ADMISSION<br/>resolved phase with unresolved verification"| QualityBlocked["Same-phase repair; reassess repeated lack of progress"]
-  Admission -->|"WF-MCP-PHASE-QUALITY-ADMISSION<br/>existing resolved-phase quality gap"| QualityBlocked
+  ProviderArtifacts -->|"WF-MCP-SESSION-CONTINUE<br/>requested scope incomplete"| Incomplete["Blocked; next explicit user action required"]
+  ProviderArtifacts -->|"WF-MCP-PHASE-QUALITY-ADMISSION<br/>resolved phase with unresolved verification"| QualityBlocked["Unresolved evidence; no host repair session"]
+  Admission -->|"existing gate diagnostic data; MCP owns repair"| McpWorker
   Admission -->|"WF-MCP-STATE-PROJECTION<br/>validate and canonicalize admitted state"| McpWorker
   Admission -->|"WF-MCP-LIFECYCLE-RECOVERY<br/>isolated stale Ready header"| LifecycleRepair["One bounded lifecycle repair"]
-  ProviderArtifacts -->|"WF-MCP-LIFECYCLE-RECOVERY<br/>partial authorized start transition"| LifecycleRepair
+  ProviderArtifacts -->|"WF-MCP-LIFECYCLE-RECOVERY<br/>isolated stale header after a verified move"| LifecycleRepair
   LifecycleRepair -->|"unique In Progress location + valid unchanged evidence"| Admission
   LifecycleRepair -->|"unverified, unsafe or exhausted"| Failure
 ```
@@ -1088,13 +1086,13 @@ the current phase's obligations. Remaining genuine gaps still block admission.
 Native JSON verification remains authoritative; malformed native results never
 fall back to Markdown. See WJ-2026-112 and WJ-2026-113.
 
-`WF-MCP-PHASE-QUALITY-ADMISSION` checks the persisted phase-quality projection
-before a continuation/finalization dispatch and after each implementation worker
-returns. A resolved phase with missing or unknown evidence, or a waiver without
-justification, enters same-phase repair rather than advancing. The worker's completion checkbox
-does not override that decision. These checks consume the current scanner
-projection; they do not upgrade file presence or prose claims into execution
-receipts or invent missing evidence.
+`WF-MCP-PHASE-QUALITY-ADMISSION` validates persisted phase-quality evidence
+when the requested Pi action returns. Existing unresolved gates are supplied as
+diagnostic data at launch; the MCP procedure owns their repair inside Pi. A
+resolved phase with missing or unknown evidence, or an unjustified waiver,
+blocks acceptance. HEPHA does not dispatch another repair worker. New gate
+records and revisions must satisfy the existing versioned contract; phase
+checkboxes and model assertions cannot replace execution evidence.
 An indexed review with a latest needs-changes, blocked or unknown verdict remains
 unresolved even if a phase summary row claims approval. Unknown gate projections
 must remain visible; the scanner cannot discard them as empty evidence.
@@ -1185,23 +1183,31 @@ and manual outcomes remain separate obligations; this does not change release
 readiness policy or authorize any waiver.
 
 `DevCycleMcpCompatibilityApplication.executeImplementation` owns
-`WF-MCP-SESSION-CONTINUE`. A zero-exit session is transport success, never proof
-that the selected workflow scope is complete. After every session HEPHA rescans
-the feature, validates the matching lifecycle artifact profile, applies the
-canonical feature-status projection, and compares saved phase/task evidence.
-Fresh sessions retain the original durable run and use current folder paths.
-Resolved phases may not regress. Mere edits to timestamps or summary prose do
-not count as progress. Two consecutive returns without new completion evidence
-block with `IMPLEMENTATION_NO_PROGRESS`; an actual worker failure or persisted
-blocked phase stops immediately. Cancellation or replacement of the original
-run prevents subsequent dispatch and late terminal updates.
+`WF-MCP-SESSION-CONTINUE`. It launches the requested MCP command once with its
+actual `autonomous` or `single_phase` mode. One autonomous Pi session owns the
+whole action, including MCP-directed repair and finalization. A supervised
+command owns only its selected phase. HEPHA does not force autonomous requests
+into single-phase calls or dispatch follow-up phase, repair or finalization
+workers after a return. An incomplete result blocks until another user action.
 
-An explicitly autonomous workflow resumes remaining work in fresh single-phase
-sessions, then dispatches the registered complete-feature action. A supervised
-workflow may resume partial tasks within its original phase but stops when that
-phase is resolved. A worker crossing that boundary produces a scope violation.
-Feature completion requires both a completed lifecycle folder and validated
-completed artifacts with no unfinished phases.
+Pi owns session context and compaction. MCP launches omit HEPHA's
+`model-request-guard` extension and host tokenizer admission. HEPHA supplies one
+launch prompt, closes stdin and observes output/events. Native HEPHA workers
+retain their request policies. An explicit host request-token/output cap is
+rejected before an MCP launch rather than ignored; use Pi-owned controls or
+process deadlines. Cancellation, idle/deadline enforcement, tool safety and
+provider-reported usage audit remain active. No host context estimate rewrites
+or kills an MCP conversation.
+
+Progress uses the existing MemoryBank filesystem SSE watcher (or polling
+fallback), dashboard rescan and phase-status projection. Current phase files
+and the feature phase inventory are authoritative, including while Pi is still
+running. No progress request is sent into the Pi conversation. A model's launch
+phase is telemetry, not the current phase forever. After Pi returns, HEPHA
+rescans the unique feature location, validates lifecycle artifacts, checks phase
+inventory/supervised scope and regressions, and independently verifies declared
+gates. Feature completion requires a completed folder and no unfinished phases.
+Cancellation or replacement of the run wins over a late result.
 
 `WF-MCP-STATE-PROJECTION` admits only declared folder aliases such as
 `03_IN_PROGRESS` for canonical document status `IN_PROGRESS`. Readiness is
@@ -1216,22 +1222,11 @@ exception.
 to validation. Continue may admit an isolated stale `READY_TO_DEVELOP` header
 in an existing In Progress feature when all other implementation artifacts are
 valid. Scans remain read-only and `hasContinuationArtifacts` remains false until
-repair validates. The host changes only that header. An authorized Start whose
-worker has not moved the folder gets one lifecycle-only model repair session
-(120-second deadline, 60-second stall timeout) under the same run and routing
-authority. The repair prompt prohibits implementation, evidence changes, commits
-and pushes; these instructions are not a general filesystem sandbox.
-
-HEPHA independently rescans, rejects missing or duplicate feature identities,
-requires the expected In Progress destination and absent old location, validates
-the complete artifact profile, and compares every feature file except the single
-task-header status. Any extra edit, missing evidence, rejected repair, timeout,
-or recurring mismatch blocks for inspection without accepting a phase. Existing
-policy gates, unknown status values and phase projection disagreements are not
-auto-repaired. One recovery allowance applies per workflow; cancellation prevents
-late settlement or redispatch. The dashboard displays recovery as a separate
-current step. In-progress features expose Continue, not Design or Refine;
-voluntary Deep-Dive remains independent.
+repair validates. The host changes only that header, once per action, and verifies the artifact
+profile and unchanged evidence. It never launches a lifecycle repair session.
+An authorized Start that returns without its required folder move fails with
+an artifact diagnostic. Duplicate locations, inconsistent phase projections
+and repeated mismatches remain rejected. Cancellation prevents late settlement.
 
 ## Action-scoped readiness projection
 
@@ -1318,8 +1313,10 @@ authentication, provider projection, secret, or context preparation is
 unavailable records only a safe preparation failure and never spawns or claims
 an actual route.
 
-Every Pi launch pins `--thinking high` and explicitly loads HEPHA's
-`model-request-guard`, even in no-tools/no-auto-extensions mode. Immediately
+Every Pi launch pins `--thinking high`. Native HEPHA launches explicitly load
+HEPHA's `model-request-guard`, even in no-tools/no-auto-extensions mode.
+MCP compatibility actions omit this extension and delegate context to Pi, as
+defined in the MCP execution boundary above. Immediately
 before each provider request (including subsequent tool/session turns), the
 guard checks the effective High level and the runtime model's context/output
 limits. Unknown limits or unsupported reasoning reject instead of guessing.
@@ -1338,8 +1335,8 @@ reserves the catalogue maximum consistently with planning, including fallbacks.
 Catalogue discovery reads exact configured token capacities from the installed Pi
 SDK without model-network access; the rounded CLI table is not a capacity source.
 Provider identity is filtered before models enter the connection catalogue.
-Native Pi compaction runs after an agent run; HEPHA's request guard still runs
-before every provider call. Readiness assessment has no five-minute absolute
+On native HEPHA routes, HEPHA's request guard still runs before every provider
+call. MCP compatibility sessions use Pi's own compaction lifecycle exclusively. Readiness assessment has no five-minute absolute
 deadline: a resettable 120-second observable-activity watchdog remains, alongside
 token spending and checkpoint/assessment bounds. This is not a coverage waiver
 or an automatic restart after a timeout. Manual-test authoring retains its existing deadline.
@@ -1358,7 +1355,7 @@ flowchart LR
   Guard --> Prepare["Exact connection + isolated context"]
   Prepare --> Spawn["Pinned provider/model process"]
   Spawn --> Receipt["Normalized terminal receipt + cleanup"]
-  Spawn -->|"WF-MODEL-REQUEST-POLICY before each provider request"| Budget["High reasoning + bounded context; refusal is terminal"]
+  Spawn -->|"WF-MODEL-REQUEST-POLICY native HEPHA requests"| Budget["High reasoning + bounded context; refusal is terminal"]
   Guard -.->|"WF-RUNTIME-LAUNCH-REJECT"| Reject["Sanitized rejection; no substitute spawn"]
   Prepare -.->|"WF-RUNTIME-LAUNCH-REJECT"| Failed["Safe preparation failure; no actual route"]
 ```

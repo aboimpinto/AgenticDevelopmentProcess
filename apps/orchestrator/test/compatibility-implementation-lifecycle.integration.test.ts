@@ -1,4 +1,5 @@
 // Execution fixtures assert TAP evidence; pin the reporter across Node versions.
+import { persistManualTestObligation, MANUAL_TEST_DEFERRAL_SCHEMA, MANUAL_TEST_SKIP_REASON } from "../src/manual-test-obligation.js";
 import { phaseGatesProtocol, type PhaseGateRecord } from "../src/exchanges/phase-gates.js";
 import { createCardMetadataStore } from "@hepha/db";
 import type { HandoffPlanV1, MemoryBankStateFolder, WorkItemCard } from "@hepha/shared";
@@ -9,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFeatureRecipeSourceApplications } from "../src/bootstrap/feature-recipe-source-applications.js";
+import { ImplementationRunSummaryProjector } from "../src/application/features/implementation-run-summary-projector.js";
 import { createFeatureProjectionApplications } from "../src/bootstrap/feature-projection-applications.js";
 import { createFeatureRecipeSourcePolicy } from "../src/workflows/recipes/feature-recipe-source-policy.js";
 import { scanMemoryBankFolders } from "../src/memorybank-scanner.js";
@@ -51,16 +53,30 @@ async function fixture(initialCompleted = 2, initialState: MemoryBankStateFolder
   const scan = () => scanMemoryBankFolders(project, states, Object.fromEntries(states.map(s => [s, s])) as Record<MemoryBankStateFolder, string>);
   const metadata = () => store.getCardMetadata(project.id, cardKey);
   await store.reconcileScannedCards(scan().map(x => x.metadata));
-  let behavior = async (input: ImplementationWorkerInput) => {
-    if (input.step === "Repairing phase quality gates") return "No repair found; investigate infrastructure.";
-    if (input.agentAction === "refine-feature") { save(); return "Refined"; }
-    if (input.agentAction === "complete-feature") { move("04_COMPLETED"); save(); return "Finalized"; }
-    if (state === "02_READY_TO_DEVELOP") move("03_IN_PROGRESS");
-    completed++; save();
-    const path = resolve(folder, "Phases", `phase-${completed - 1}-work.md.gates.json`);
-    writeFileSync(path, phaseGatesProtocol.encode({ phaseId: `phase-${completed - 1}-work.md`, flags: { needCodeReview: false, needTestCoverage: false }, criteria: [], checks: [],
+  function acceptPhase(n: number) {
+    const path = resolve(folder, "Phases", `phase-${n}-work.md`);
+    writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: PENDING", "**Status**: COMPLETED").replace("- [ ]", "- [x]"));
+    const tasks = resolve(folder, "FeatureTasks.md");
+    writeFileSync(tasks, readFileSync(tasks, "utf8").replace(`| ${n} | Work ${n} | PENDING |`, `| ${n} | Work ${n} | COMPLETED |`));
+    writeFileSync(`${path}.gates.json`, phaseGatesProtocol.encode({ phaseId: `phase-${n}-work.md`, flags: { needCodeReview: false, needTestCoverage: false }, criteria: [], checks: [],
       coverage: { outcome: "not_applicable", criteria: [], reason: "Synthetic document-only task" }, review: { outcome: "not_applicable", reason: "Synthetic document-only task" } }));
-    return "Session returned normally; more work may remain.";
+    completed = Math.max(completed, n + 1);
+  }
+  function finish() {
+    move("04_COMPLETED");
+    const tasks = resolve(folder, "FeatureTasks.md");
+    writeFileSync(tasks, readFileSync(tasks, "utf8").replace("**Status**: IN_PROGRESS", "**Status**: COMPLETED"));
+  }
+  let behavior = async (input: ImplementationWorkerInput) => {
+    if (input.agentAction === "refine-feature") { save(); return "Refined"; }
+    if (input.phaseNumber !== null && input.phaseNumber < completed) return "Existing gate needs repair; no evidence changed.";
+    if (state === "02_READY_TO_DEVELOP") { move("03_IN_PROGRESS"); save(); }
+    const autonomous = input.prompt.includes('"workflow_mode":"autonomous"');
+    if (autonomous) {
+      while (completed < 9) acceptPhase(completed);
+      finish();
+    } else if (completed < 9) acceptPhase(completed);
+    return "Requested action returned.";
   };
   const policy = createFeatureRecipeSourcePolicy({ HEPHA_FEATURE_RECIPE_SOURCE: "devcycle-mcp" });
   const routes = createFeatureRecipeSourceApplications({
@@ -77,20 +93,58 @@ async function fixture(initialCompleted = 2, initialState: MemoryBankStateFolder
     await vi.waitFor(async () => expect((await metadata())?.workflowStatus).not.toBe("running"));
     return metadata();
   }
-  function projection() {
+  function projection(activeMetadata: Awaited<ReturnType<typeof metadata>> = null) {
     const scanned = scan()[0]!;
     return createFeatureProjectionApplications({ metadataStoreEnabled: true, recipeSourceFor: policy.sourceFor, getDefaultImplementationModel: () => null,
-      implementationRunSummary: { deriveCurrentStep: () => null, mapAgent: vi.fn(), mapPhase: vi.fn(), mapFinding: vi.fn() } as never, workspaceRoot: process.cwd(),
+      implementationRunSummary: new ImplementationRunSummaryProjector({ findLatestReviewReport: () => null, summarizeOutput: (s) => s }), workspaceRoot: process.cwd(),
     }).featureWorkflowSummaryProjector.build({ item: scanned.card, documentHash: "source", metadata: {
-      uiRequirementDecision: "no_ui", uiRequirementSourceHash: createUiRequirementSourceHash("source"),
+      ...activeMetadata, uiRequirementDecision: "no_ui", uiRequirementSourceHash: createUiRequirementSourceHash("source"),
     } as never, validation: { needsValidationCount: 0, changedSinceHephaDeepDive: false, deepDiveStatus: "current" } as never,
     featureFindings: [], implementationAgentRuns: [], implementationPhaseRuns: [] });
   }
-  return { run, calls, events, metadata, projection, save, move, store, project, cardKey,
+  return { run, calls, events, metadata, projection, save, move, finish, acceptPhase, store, project, cardKey,
     folder: () => folder, completed: () => completed, behavior: (fn: typeof behavior) => { behavior = fn; } };
 }
 
 describe("compatibility implementation lifecycle across scanner, validator, SQLite and dashboard", () => {
+  it("updates progress from saved phase files while the same autonomous worker stays running", async () => {
+    const f = await fixture();
+    let release!: () => void;
+    const waiting = new Promise<void>(resolve => { release = resolve; });
+    f.behavior(async () => {
+      await waiting;
+      f.acceptPhase(3);
+      for (let n = 4; n < 9; n++) f.acceptPhase(n);
+      f.finish();
+      return "Finished";
+    });
+    const run = f.run(true);
+    try {
+      await vi.waitFor(() => expect(f.calls).toHaveLength(1));
+      // These writes represent MCP/Pi's artifacts, not HEPHA conversation turns.
+      f.acceptPhase(2);
+      const path = resolve(f.folder(), "Phases/phase-3-work.md");
+      writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: PENDING", "**Status**: IN_PROGRESS"));
+      const tasks = resolve(f.folder(), "FeatureTasks.md");
+      writeFileSync(tasks, readFileSync(tasks, "utf8").replace("| 3 | Work 3 | PENDING |", "| 3 | Work 3 | IN_PROGRESS |"));
+      expect(f.projection(await f.metadata())?.activeRun).toMatchObject({ status: "running", currentStep: expect.stringContaining("Phase 3") });
+      expect(f.calls).toHaveLength(1);
+      // Return the in-progress fixture to a completable state before release.
+      writeFileSync(path, readFileSync(path, "utf8").replace("**Status**: IN_PROGRESS", "**Status**: PENDING"));
+      writeFileSync(tasks, readFileSync(tasks, "utf8").replace("| 3 | Work 3 | IN_PROGRESS |", "| 3 | Work 3 | PENDING |"));
+    } finally { release(); }
+    expect((await run)?.workflowStatus).toBe("completed");
+    expect(f.calls).toHaveLength(1);
+  });
+
+  it("does not dispatch another session after a partial autonomous return", async () => {
+    const f = await fixture();
+    f.behavior(async () => { f.acceptPhase(2); return "Phase saved; work remains"; });
+    expect(await f.run(true)).toMatchObject({ workflowStatus: "blocked", workflowSummary: expect.stringContaining("ACTION_INCOMPLETE") });
+    expect(f.calls).toHaveLength(1);
+    expect(f.completed()).toBe(3);
+  });
+
   it.each(["valid", "wrong_version", "missing_flag"])("consumes the returned MCP gate contract and validates the published record (%s)", async variant => {
     const scenario = "Returned MCP gate schema interoperates with host phase admission";
     expect(readFileSync(new URL("./compatibility-implementation-lifecycle.feature", import.meta.url), "utf8")).toContain(`Scenario: ${scenario}`);
@@ -161,7 +215,7 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     ].join("\n"));
     const result = await f.run(true);
     expect(result?.workflowStatus).toBe("completed");
-    expect(f.calls.map(call => call.agentAction)).toEqual(["complete-feature"]);
+    expect(f.calls.map(call => call.agentAction)).toEqual(["continue-implementing"]);
     // Reconciliation never rewrites evidence or dispatches another verification
     // solely to repair the presentation of an existing execution result.
     expect(f.folder()).toContain("04_COMPLETED");
@@ -190,7 +244,7 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     ].join("\n"));
     const result = await f.run(false);
     expect(result?.workflowStatus).toBe(failed ? "blocked" : "completed");
-    expect(f.calls.map(call => call.phaseNumber)).toEqual(failed ? [6,6,6] : [7]);
+    expect(f.calls.map(call => call.phaseNumber)).toEqual(failed ? [6] : [7]);
     if (failed) expect(result?.workflowSummary).toContain("QUALITY_GATES_BLOCKED");
     expect(f.folder()).toContain("03_IN_PROGRESS");
   });
@@ -207,8 +261,8 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     const result = await f.run(true);
     expect(result?.workflowStatus).toBe("blocked");
     expect(result?.workflowSummary).toContain("IMPLEMENTATION_QUALITY_GATES_BLOCKED");
-    expect(result?.workflowSummary).toContain("no verifiable progress");
-    expect(f.calls).toHaveLength(4);
+    expect(result?.workflowSummary).toContain("unresolved declared evidence");
+    expect(f.calls).toHaveLength(1);
     expect(f.calls.every(c => c.phaseNumber === 2)).toBe(true);
     expect(f.events).not.toContain("workflow.completed");
   });
@@ -218,20 +272,22 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     const path = resolve(f.folder(), "Phases", "phase-7-work.md");
     writeFileSync(path, readFileSync(path, "utf8") + `\n## Quality Gate Evidence\n| Gate | Status | Evidence |\n| Tests | ${status} | |\n`);
     expect(await f.run(true)).toMatchObject({ workflowStatus: "blocked", workflowSummary: expect.stringContaining("QUALITY_GATES_BLOCKED") });
-    expect(f.calls).toHaveLength(3);
+    expect(f.calls).toHaveLength(1);
     expect(f.calls.every(c => c.phaseNumber === 7)).toBe(true);
     expect(f.folder()).toContain("03_IN_PROGRESS");
   });
-  it.each([0, 4, 7])("continues fresh workers after partial success from %s completed phases, then finalizes", async count => {
+  it.each([0, 4, 7])("delegates the entire autonomous action from %s completed phases to one worker", async count => {
     const f = await fixture(count, count === 0 ? "02_READY_TO_DEVELOP" : "03_IN_PROGRESS");
     if (count === 0) await f.run(false, "refineFeature");
     const result = await f.run(true, count === 0 ? "startImplementing" : "continueImplementing");
     expect(result?.workflowStatus).toBe("completed");
     expect(f.completed()).toBe(9);
-    expect(f.calls.at(-1)?.agentAction).toBe("complete-feature");
-    expect(f.calls.filter(x => x.phaseNumber !== null).map(x => x.phaseNumber)).toEqual(Array.from({ length: 9 - count }, (_, i) => count + i));
+    const implementationCalls = f.calls.filter(x => x.agentAction !== "refine-feature");
+    expect(implementationCalls).toHaveLength(1);
+    expect(implementationCalls[0]!.phaseNumber).toBe(count);
     expect(f.folder()).toContain("04_COMPLETED");
-    expect(f.calls.filter(x => x.agentAction !== "refine-feature").every(x => x.prompt.includes('"workflow_mode":"single_phase"'))).toBe(true);
+    expect(implementationCalls[0]!.prompt).toContain('"workflow_mode":"autonomous"');
+
   });
 
   it.each([false, undefined])("respects supervised mode including omitted autonomy (%s)", async autonomous => {
@@ -246,7 +302,7 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(prompt).toContain("phase-2-work.md.gates.json");
     expect(prompt).toContain(".hepha/phase-evidence/");
     expect(prompt).toContain("MCP response");
-    expect(prompt).toContain("Execute only this single phase");
+    expect(prompt).not.toContain("HEPHA owns the outer workflow");
     expect(prompt).not.toContain('"$schema"');
     expect(prompt).not.toContain("Logical acceptance coverage:");
     expect(prompt).not.toContain("project-test-plan-authoring/v1");
@@ -266,8 +322,8 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     const f = await fixture(); f.behavior(async () => "Everything is green; resume later");
     const result = await f.run(true);
     expect(result?.workflowStatus).toBe("blocked");
-    expect(result?.workflowSummary).toContain("NO_PROGRESS");
-    expect(f.calls.length).toBeLessThanOrEqual(2);
+    expect(result?.workflowSummary).toContain("ACTION_INCOMPLETE");
+    expect(f.calls).toHaveLength(1);
     expect(f.events).not.toContain("workflow.completed");
   });
 
@@ -302,7 +358,7 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(summary.workflowMessage).toContain("INVALID_FEATURE_STATUS");
   });
 
-  it("continues partial task progress within the same supervised phase and then stops at its boundary", async () => {
+  it("requires another user action after a partial supervised return, using a fresh workflow", async () => {
     const f = await fixture();
     f.behavior(async () => {
       const phasePath = resolve(f.folder(), "Phases", "phase-2-work.md");
@@ -316,8 +372,11 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
       if (readFileSync(phasePath, "utf8").includes("**Status**: COMPLETED")) writeFileSync(`${phasePath}.gates.json`, phaseGatesProtocol.encode({ phaseId: "phase-2-work.md", flags: { needCodeReview: false, needTestCoverage: false }, criteria: [], checks: [], review: { outcome: "not_applicable", reason: "Document deliverable." }, coverage: { outcome: "not_applicable", reason: "Document deliverable.", criteria: [] } }));
       return "Checkpoint saved; fresh session needed";
     });
+    expect((await f.run(false))?.workflowStatus).toBe("blocked");
+    expect(f.calls).toHaveLength(1);
     expect((await f.run(false))?.workflowStatus).toBe("completed");
     expect(f.calls.map(call => call.phaseNumber)).toEqual([2, 2]);
+    expect(f.calls[0]!.runId).not.toBe(f.calls[1]!.runId);
   });
 
   it("stops immediately at a persisted blocked phase instead of retrying or declaring success", async () => {
@@ -385,47 +444,13 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.events).toContain("workflow.recovered");
   });
 
-  it("requests one bounded folder repair and verifies the move before continuing implementation", async () => {
-    const f = await fixture(0, "02_READY_TO_DEVELOP");
-    f.behavior(async input => {
-      if (input.agentName.includes("Recovery")) {
-        expect((await f.metadata())?.workflowCurrentStep).toContain("Recovering");
-        expect(input.prompt).toContain("Do not implement");
-        expect(input.maxRuntimeMs).toBe(120000);
-        f.move("03_IN_PROGRESS"); f.save(); return "Moved";
-      }
-      return "I moved it successfully";
-    });
-    const result = await f.run(false, "startImplementing");
-    expect(f.calls.filter(c => c.agentName.includes("Recovery"))).toHaveLength(1);
-    expect(f.folder()).toContain("03_IN_PROGRESS");
-    expect(result?.workflowStatus).toBe("blocked"); // no invented phase progress
-    expect(result?.workflowSummary).toContain("NO_PROGRESS");
-    expect(new Set(f.calls.map(c => c.runId)).size).toBe(1);
-  });
-
-  it("blocks an unverified folder repair claim after one attempt", async () => {
+  it("rejects an unverified folder move without launching a hidden repair worker", async () => {
     const f = await fixture(0, "02_READY_TO_DEVELOP");
     f.behavior(async () => "Folder moved; all good");
-    const result = await f.run(false, "startImplementing");
-    expect(result?.workflowStatus).toBe("blocked");
-    expect(result?.workflowSummary).toContain("RECOVERY_REJECTED");
-    expect(f.calls).toHaveLength(2);
+    expect(await f.run(false, "startImplementing")).toMatchObject({ workflowStatus: "failed", workflowError: expect.stringContaining("COMPATIBILITY_STATE_CONFLICT") });
+    expect(f.calls).toHaveLength(1);
+    expect(f.folder()).toContain("02_READY_TO_DEVELOP");
     expect(f.events).not.toContain("workflow.completed");
-  });
-
-  it("rejects recovery that changes phase evidence", async () => {
-    const f = await fixture(0, "02_READY_TO_DEVELOP");
-    f.behavior(async input => {
-      if (input.agentName.includes("Recovery")) {
-        f.move("03_IN_PROGRESS"); f.save();
-        const path = resolve(f.folder(), "Phases", "phase-0-work.md");
-        writeFileSync(path, readFileSync(path, "utf8") + "\nInvented evidence\n");
-      }
-      return "Done";
-    });
-    expect(await f.run(false, "startImplementing")).toMatchObject({ workflowStatus: "blocked", workflowSummary: expect.stringContaining("RECOVERY_SCOPE_EXCEEDED") });
-    expect(f.calls).toHaveLength(2);
   });
 
   it("does not select a duplicate feature location for recovery", async () => {
@@ -436,19 +461,16 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.calls).toHaveLength(0);
   });
 
-  it("preserves cancellation during a recovery worker and launches no implementation worker", async () => {
+  it("preserves cancellation during start and never launches a recovery worker", async () => {
     const f = await fixture(0, "02_READY_TO_DEVELOP");
-    f.behavior(async input => {
-      if (input.agentName.includes("Recovery")) {
-        const run = (await f.metadata())!;
-        await f.store.recordFeatureWorkflowRun({ projectId: f.project.id, cardKey: f.cardKey, command: "start-implementing", runId: run.workflowRunId!, status: "cancelled", summary: "Cancelled during repair" });
-        f.move("03_IN_PROGRESS"); f.save();
-      }
+    f.behavior(async () => {
+      const run = (await f.metadata())!;
+      await f.store.recordFeatureWorkflowRun({ projectId: f.project.id, cardKey: f.cardKey, command: "start-implementing", runId: run.workflowRunId!, status: "cancelled", summary: "Cancelled during start" });
+      f.move("03_IN_PROGRESS"); f.save();
       return "Done";
     });
     expect((await f.run(false, "startImplementing"))?.workflowStatus).toBe("cancelled");
-    expect(f.calls).toHaveLength(2);
-    expect(f.events).not.toContain("workflow.recovered");
+    expect(f.calls).toHaveLength(1);
     expect(f.events).not.toContain("workflow.completed");
   });
 
@@ -468,6 +490,51 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.calls).toHaveLength(0);
   });
 
+  it("does not mistake pre-launch manual-task seeding for supervised worker scope expansion", async () => {
+    const f = await fixture(0, "02_READY_TO_DEVELOP");
+    persistManualTestObligation(f.folder(), "FEAT-803", {
+      schemaVersion: MANUAL_TEST_DEFERRAL_SCHEMA, id: "physical", title: "Physical target check",
+      reason: MANUAL_TEST_SKIP_REASON, phaseNumber: 4, taskId: "work-4",
+      preconditions: ["Physical target available"], steps: ["Inspect the target"],
+      expectedResult: "Target behaves as specified", evidenceRequirements: ["Record the outcome"],
+    });
+    f.behavior(async () => {
+      const future = resolve(f.folder(), "Phases/phase-4-work.md");
+      expect(readFileSync(future, "utf8")).toContain("- [x]");
+      f.move("03_IN_PROGRESS");
+      const tasks = resolve(f.folder(), "FeatureTasks.md");
+      writeFileSync(tasks, readFileSync(tasks, "utf8").replace("READY_TO_DEVELOP", "IN_PROGRESS"));
+      f.acceptPhase(0);
+      return "Selected phase completed; manual obligation still pending";
+    });
+    expect(await f.run(false, "startImplementing")).toMatchObject({ workflowStatus: "completed" });
+    expect(f.calls).toHaveLength(1);
+    expect(readFileSync(resolve(f.folder(), "ManualTestObligations.json"), "utf8")).toContain('"PENDING"');
+  });
+
+  it("rejects supervised task progress in another phase even before its phase status changes", async () => {
+    const f = await fixture();
+    f.behavior(async () => {
+      const path = resolve(f.folder(), "Phases/phase-3-work.md");
+      writeFileSync(path, readFileSync(path, "utf8").replace("- [ ]", "- [-]"));
+      return "Started a later task";
+    });
+    expect(await f.run(false)).toMatchObject({ workflowStatus: "failed", workflowError: expect.stringContaining("SCOPE_EXCEEDED") });
+    expect(f.calls).toHaveLength(1);
+  });
+
+  it("rejects regression of completed tasks inside an unfinished phase", async () => {
+    const f = await fixture();
+    const path = resolve(f.folder(), "Phases/phase-2-work.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("- [ ]", "- [x]"));
+    f.behavior(async () => {
+      writeFileSync(path, readFileSync(path, "utf8").replace("- [x]", "- [ ]"));
+      return "Reset the task";
+    });
+    expect(await f.run(true)).toMatchObject({ workflowStatus: "failed", workflowError: expect.stringContaining("STATE_REGRESSION") });
+    expect(f.calls).toHaveLength(1);
+  });
+
   it("rejects a worker that crosses the supervised phase boundary", async () => {
     const f = await fixture(); f.behavior(async () => {
       for (const n of [2, 3]) {
@@ -482,10 +549,10 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.calls).toHaveLength(1);
   });
 
-  it("dispatches only finalization when explicit autonomy resumes an already resolved phase inventory", async () => {
+  it("delegates finalization to the same autonomous continuation command for a resolved phase inventory", async () => {
     const f = await fixture(9);
     expect((await f.run(true))?.workflowStatus).toBe("completed");
-    expect(f.calls.map(call => call.agentAction)).toEqual(["complete-feature"]);
+    expect(f.calls.map(call => call.agentAction)).toEqual(["continue-implementing"]);
     expect(f.folder()).toContain("04_COMPLETED");
   });
 
@@ -505,8 +572,7 @@ describe("structured gates recover within the original user workflow", () => {
     writeFileSync(testPath, "const {test}=require('node:test');const assert=require('node:assert/strict');test('preserves ordering',()=>assert.deepEqual([1,2].map(x=>x*2),[2,4]));");
     let executions = 0;
     f.behavior(async input => {
-      if (input.agentAction === "complete-feature") { f.move("04_COMPLETED"); f.save(); return "Finalized after verified gates."; }
-      expect(input.step).toBe("Repairing phase quality gates");
+      expect(input.prompt).toContain('"workflow_mode":"autonomous"');
       expect(input.phaseNumber).toBe(7);
       const command = `${process.execPath} --test --test-reporter=tap ${testPath}`;
       const observationPath = resolve(f.project.rootPath, ".hepha/phase-evidence", `${input.runId}.jsonl`);
@@ -525,10 +591,11 @@ describe("structured gates recover within the original user workflow", () => {
       }
       if (review) writeFileSync(resolve(f.folder(), "review.md"), "# Review\n**Status**: APPROVED\nOrdering assertions cover the declared acceptance scope.\n");
       writeFileSync(`${document}.gates.json`, phaseGatesProtocol.encode(payload));
+      f.finish();
       return "Reconciled existing obligations and verified acceptance.";
     });
     expect(await f.run(true)).toMatchObject({ workflowStatus: "completed" });
-    expect(f.calls.map(c => c.agentName)).toEqual(["Phase Gate Repair", "DevCycle MCP Compatibility Agent"]);
+    expect(f.calls.map(c => c.agentName)).toEqual(["DevCycle MCP Compatibility Agent"]);
     expect(executions).toBe(coverage ? 1 : 0);
     expect(f.events).not.toContain("workflow.blocked");
   });

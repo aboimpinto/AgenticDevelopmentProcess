@@ -1,5 +1,5 @@
-Feature: Orchestrator-owned compatibility implementation lifecycle
-  Provider sessions are bounded attempts inside the user's durable workflow.
+Feature: Pi-owned MCP execution with artifact-based progress
+  One requested autonomous action uses one Pi session; Pi owns context and compaction.
   File and database evidence govern continuation independently of a successful model exit.
 
   Scenario: Equivalent execution records permit finalization with optional health warnings
@@ -7,7 +7,7 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
     And recorded results use partition counts empty supporting targets and separate health tables
     And executed test counts can be described as passing fixtures
     When HEPHA reconciles evidence before autonomous finalization
-    Then equivalent passing records permit the feature completion worker
+    Then equivalent passing records permit acceptance of the autonomous result
     And failed health checks remain visible warnings without automatic repair
     And reconciliation does not rerun tests or rewrite evidence merely to change its wording
 
@@ -37,7 +37,8 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
   Scenario: All phases completed does not bypass verification
     Given every phase is marked completed but a phase quality gate is missing
     When autonomous continuation is requested
-    Then the workflow blocks before launching finalization
+    Then the requested Pi action must reconcile the evidence before finalizing
+    And HEPHA rejects any returned result whose evidence remains unresolved
 
   Scenario: Continue recovers an isolated stale Ready status
     Given a uniquely located in-progress feature with valid phase evidence and a stale Ready task header
@@ -48,21 +49,22 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
   Scenario: A claimed start move is missing on disk
     Given an authorized start worker returns without moving the feature folder
     When HEPHA verifies the start postconditions
-    Then one time-bounded agent repair runs inside the same workflow
-    And implementation resumes only after a unique in-progress folder is verified
-    And phase evidence must be unchanged by the repair
+    Then the result fails with an artifact diagnostic
+    And no hidden folder repair worker is launched
 
-  Scenario: Recovery is not successful just because the agent says so
-    Given the repair worker claims success without fixing the folder
-    When HEPHA rescans and validates the saved artifacts
-    Then implementation is blocked with the recovery rejection reason
-    And no further repair worker is dispatched
-
-  Scenario: Autonomous partial success continues through fresh sessions
+  Scenario: One autonomous session owns all remaining phases
     Given valid artifacts and explicitly authorized autonomous implementation
-    When a worker returns normally after completing only its assigned phase
-    Then HEPHA validates the resulting artifacts and dispatches the next phase in a fresh session
-    And finalizes only after all phases resolve and completed artifacts validate
+    When HEPHA starts the requested MCP action
+    Then the invocation preserves autonomous mode in one Pi session
+    And Pi follows the MCP procedure through the authorized feature work
+    And HEPHA accepts completion only from valid completed artifacts
+
+  Scenario: Progress changes while the same Pi worker remains active
+    Given an autonomous Pi worker is running
+    When it updates phase files and the feature phase inventory
+    Then MemoryBank file events refresh the dashboard from a fresh scan
+    And the displayed current phase follows the saved phase status
+    And HEPHA sends no additional conversation turn
 
   Scenario: Supervised execution ends at the selected phase boundary
     Given autonomy is false or omitted
@@ -72,7 +74,8 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
   Scenario: Partial task progress can resume within the same supervised phase
     Given the selected phase remains unfinished
     When a worker persists completed task evidence and yields
-    Then a fresh session resumes that same phase within the existing authority
+    Then HEPHA reports the incomplete result without launching another session
+    And a later explicit user action starts a fresh session for that phase
 
   Scenario: Known folder-status aliases remain resumable
     Given a document uses a declared lifecycle-folder alias matching its actual folder
@@ -83,8 +86,8 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
 
   Scenario: No-progress returns are bounded
     Given a worker returns success without advancing phase or task evidence
-    When a second fresh session also returns without progress
-    Then the durable workflow is blocked with a no-progress diagnosis and never reported completed
+    When HEPHA validates that return
+    Then the workflow is blocked as incomplete after one session and never reported completed
 
   Scenario: Cancellation wins over a late worker result
     Given the user cancels the durable workflow during a worker session
@@ -133,3 +136,10 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
     When the phase gate record is evaluated
     Then the contradiction requires same-phase reconciliation
     And correcting the applicability declaration admits the same execution without a percentage threshold
+
+  Scenario: Supervised scope includes task state before phase activation
+    Given one phase is authorized
+    When the worker starts a later task without changing its phase header
+    Then HEPHA rejects the supervised scope violation
+    But host-seeded manual obligations are part of the pre-launch baseline
+    And prior completed task evidence cannot regress

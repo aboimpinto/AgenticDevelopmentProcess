@@ -96,6 +96,24 @@ cancellation, or durable phase/feature completion:
 Feature-, phase-, and task-specific special cases are not acceptable workflow
 corrections. Generalize the contract and prove it with reusable evidence.
 
+## MCP execution boundary
+
+MCP actions launch one Pi session with the requested mode. Autonomous mode
+belongs to the whole action; supervised mode belongs to its single phase. Pi
+owns context sizing and compaction. Do not attach HEPHA's request guard, impose
+a host tokenizer prerequisite, inject conversation turns, or launch automatic
+phase/repair/finalization sessions after it returns. Native HEPHA routes retain
+their existing request policies. Explicit incompatible host token caps must be
+reported before launch, never silently ignored. Validate host policy against the
+original host configuration as well as the isolated launch environment: isolation
+may intentionally filter settings. Cover that boundary with an integration test,
+not only a pre-populated launch stub.
+
+Observe MemoryBank file events and derive progress from current phase documents
+and feature phase inventories. Agent prose is not acceptance evidence. Validate
+declared gate evidence and artifact postconditions at return, preserving
+cancellation, scope boundaries and unresolved human decisions.
+
 ## Public repository hygiene
 
 - Keep public documentation understandable without access to another private
