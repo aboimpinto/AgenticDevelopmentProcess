@@ -38,7 +38,8 @@ stage. The selected procedure contains the stage's question/result format.
 HEPHA stores questions and answers and applies versioned exact text edits to the
 current primary snapshot. The `deep-dive.edits` exchange rejects partial Markdown,
 truncated JSON, ambiguous/missing anchors, overlapping edits and whole-document
-replacement. Untouched text survives, and source changes during model execution
+replacement. Untouched text and formatting survive; an empty edit list leaves the file and
+its modification time unchanged. Source changes during model execution
 prevent the write. The MCP schema and host decoder share the same versioned
 exchange contract. All hosted Deep-Dive model calls
 run without file/shell tools, context-file discovery, skills or templates. An

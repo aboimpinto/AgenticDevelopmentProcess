@@ -4255,7 +4255,7 @@
       "whyHappened": "Review found that the initial hosted context omitted fresh primary content, follow-up design constraints and earlier chat decisions. Unvalidated full rewrites could erase source, and HTTP limits were applied after buffering.",
       "causalChain": "Stale/incomplete context -> conflicting model decisions; empty or partial rewrites -> destructive source replacement; late response limits -> avoidable memory use.",
       "testGap": "Initial tests used unchanged primary content, one question and short successful responses. They did not exercise intervening edits, truncated output, conflicting anchors or streamed oversized bodies.",
-      "missingDecision": "Use current preparation snapshots and complete saved decisions; publish versioned exact edits against the snapshot; validate shape, uniqueness and overlap before applying; refuse a source changed during execution; enforce transport byte limits while reading and cancel oversized streams.",
+      "missingDecision": "Use current preparation snapshots and complete saved decisions; publish versioned exact edits against the snapshot; validate shape, uniqueness and overlap before applying; refuse a source changed during execution; enforce transport byte limits while reading and cancel oversized streams. Persist scoped edits verbatim, and skip identical writes after checking the expected snapshot so no-op exchanges preserve formatting, hashes and modification times.",
       "codeChanges": [
         "apps/orchestrator/src/exchanges/deep-dive-edits.ts",
         "apps/orchestrator/src/application/deep-dive/deep-dive-mcp-procedure.ts",

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StoredDeepDiveSession } from "@hepha/db";
@@ -182,6 +182,21 @@ describe("MCP owns hosted Deep-Dive procedures", () => {
     writeFileSync(path, "New user edit");
     expect(() => new DeepDiveSourceDocumentRepository().write(path, "Model result", "Earlier snapshot")).toThrow("DEEP_DIVE_SOURCE_CHANGED");
     expect(readFileSync(path, "utf8")).toBe("New user edit");
+  });
+
+  it.each([false, true])("preserves source formatting when persisting scoped edits (no-op=%s)", noOp => {
+    const directory = mkdtempSync(join(tmpdir(), "hepha-deep-dive-format-")); roots.push(directory);
+    const path = join(directory, "target.md");
+    const original = "\n\n# Keep this heading\nPending decision\n\n  ";
+    writeFileSync(path, original);
+    utimesSync(path, 1, 1);
+    const repository = new DeepDiveSourceDocumentRepository();
+    const evidence = repository.readEvidence(path);
+    const edits = noOp ? [] : [{ before: "Pending decision", after: "Saved decision" }];
+    const updated = applyDeepDiveEdits(deepDiveEditsProtocol.encode({ edits }), original);
+    repository.write(path, updated, original);
+    expect(readFileSync(path, "utf8")).toBe(noOp ? original : original.replace("Pending decision", "Saved decision"));
+    if (noOp) expect(repository.readEvidence(path)).toEqual(evidence);
   });
 
   it.each([false, true])("stops oversized response reads and cancels the stream (length header=%s)", async header => {

@@ -28,3 +28,9 @@ Feature: One procedural authority for a hosted Deep-Dive
     Given the recipe server streams more than the response byte limit
     When HEPHA reads the response
     Then the stream is cancelled and no model call is made
+
+  Scenario: Scoped edits preserve formatting and empty edits leave the file untouched
+    Given the current source has intentional leading and trailing whitespace
+    When the host persists a validated edit exchange against that snapshot
+    Then untouched whitespace remains byte-for-byte unchanged
+    And an empty edit list preserves the file hash and modification time
