@@ -895,6 +895,13 @@ readiness explanations, direct HTTP admission, refinement promotion, and
 manual-test seeding all use that same provider-selected authority. The HTTP
 boundary also resolves stable project/FEAT identity and rejects an
 already-running workflow.
+
+The MCP gateway invocation uses an explicit server selector and the original
+server tool name. HEPHA does not synthesize display prefixes or normalize tool
+punctuation for a model/provider. The gateway resolves its configured display
+aliases; changing the model does not change this contract. Explicit recipe
+handoffs use the same lookup. Missing tools remain blocking failures.
+
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
 records one workflow run and dispatches a plan-bound Pi worker with the
 registered action/model identity. That

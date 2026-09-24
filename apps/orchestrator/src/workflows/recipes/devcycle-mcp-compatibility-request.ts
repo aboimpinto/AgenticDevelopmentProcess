@@ -32,7 +32,6 @@ export interface DevCycleMcpCompatibilityRequest {
   readonly arguments: Readonly<Record<string, string>>;
   readonly command: FeatureWorkflowCommand;
   readonly operation: FeatureRecipeOperation;
-  readonly prefixedToolName: string;
   readonly serverName: "devcycle-mcp";
   readonly toolName: string;
 }
@@ -58,7 +57,6 @@ export function createDevCycleMcpCompatibilityRequest(input: {
     arguments: Object.freeze(args),
     command: mapping.command,
     operation: input.operation,
-    prefixedToolName: `${serverName.replace(/-/g, "_")}_${mapping.toolName}`,
     serverName,
     toolName: mapping.toolName,
   });
@@ -76,8 +74,10 @@ export function renderDevCycleMcpCompatibilityPrompt(
     "",
     "Call this MCP recipe tool exactly once:",
     "```js",
-    `mcp({ server: ${JSON.stringify(request.serverName)}, tool: ${JSON.stringify(request.prefixedToolName)}, args: ${JSON.stringify(request.arguments)} })`,
+    `mcp({ server: ${JSON.stringify(request.serverName)}, tool: ${JSON.stringify(request.toolName)}, args: ${JSON.stringify(request.arguments)} })`,
     "```",
+    "The server selector scopes the original MCP tool name. Preserve both names exactly; do not add a gateway display prefix or normalize punctuation for a model/provider.",
+    "Use the same server-scoped original-name lookup for explicit DevCycle command handoffs.",
     "If metadata is not live, connect to the server first with:",
     "```js",
     `mcp({ connect: ${JSON.stringify(request.serverName)} })`,

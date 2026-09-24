@@ -22,7 +22,6 @@ describe("DevCycle MCP compatibility request", () => {
       },
       command: "start-implementing",
       operation: "startImplementing",
-      prefixedToolName: "devcycle_mcp_start-feature",
       serverName: "devcycle-mcp",
       toolName: "start-feature",
     });
@@ -52,7 +51,7 @@ describe("DevCycle MCP compatibility request", () => {
     const prompt = renderDevCycleMcpCompatibilityPrompt(request);
 
     expect(prompt).toContain('server: "devcycle-mcp"');
-    expect(prompt).toContain('tool: "devcycle_mcp_refine-feature"');
+    expect(prompt).toContain('tool: "refine-feature"');
     expect(prompt).toContain("Call this MCP recipe tool exactly once");
     expect(prompt).toContain('status == "pending_execution"');
     expect(prompt).toContain("execute the returned instructions locally");
