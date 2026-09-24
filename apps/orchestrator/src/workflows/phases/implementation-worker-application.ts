@@ -22,6 +22,7 @@ export interface ImplementationWorkerPromptOptions {
   timeoutMs?: number;
   workflowRunId: string;
   runtimeContext: {
+    projectId: string;
     cardKey: string | null;
     phaseExecutionContractId: string | null;
     phaseNumber: number | null;
@@ -134,6 +135,7 @@ export class ImplementationWorkerApplication {
         ...(input.timeoutMs !== undefined ? { timeoutMs: input.timeoutMs } : {}),
         workflowRunId: input.runId,
         runtimeContext: {
+          projectId: input.project.rootPath,
           cardKey: input.cardKey,
           phaseExecutionContractId: input.phaseExecutionContractId ?? null,
           phaseNumber: input.phaseExecutionContractId ? input.phaseNumber : null,

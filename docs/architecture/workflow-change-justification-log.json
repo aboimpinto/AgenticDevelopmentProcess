@@ -4256,19 +4256,23 @@
       ],
       "whyHappened": "Workers always inherited the registered checkout even when a dedicated feature worktree existed. External MemoryBank Git ownership was not declared.",
       "causalChain": "Wrong launch cwd plus shared external documents led the worker to treat unrelated parent edits as an acceptance blocker.",
-      "testGap": "Lifecycle fixtures had no real Git topology and did not assert the worker cwd with a dirty external document owner.",
+      "testGap": "Lifecycle fixtures had no real Git topology and did not assert the worker cwd with a dirty external document owner. Review exposed receipt identity coupled to cwd and missing historical relative-report lookup.",
       "missingDecision": "Resolve a unique feature checkout before launch; keep code cleanliness gates there and leave external parent Git state untouched.",
       "codeChanges": [
         "apps/orchestrator/src/workflows/recipes/compatibility-execution-workspace.ts",
         "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
         "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
-        "apps/orchestrator/src/bootstrap/feature-recipe-source-applications.ts"
+        "apps/orchestrator/src/bootstrap/feature-recipe-source-applications.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/exchanges/phase-gates-repository.ts"
       ],
       "testsAdded": [
         "apps/orchestrator/test/compatibility-execution-workspace.integration.test.ts",
         "apps/orchestrator/test/compatibility-execution-workspace.feature",
         "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
-        "apps/orchestrator/test/implementation-worker-application.test.ts"
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/phase-gates-repository.test.ts"
       ]
     }
   ]

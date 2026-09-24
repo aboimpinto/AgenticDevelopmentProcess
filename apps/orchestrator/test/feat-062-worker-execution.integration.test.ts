@@ -1,3 +1,4 @@
+import { ImplementationWorkerApplication } from "../src/workflows/phases/implementation-worker-application.js";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -63,6 +64,39 @@ const connection = {
 } as ProviderConnectionRecord;
 
 describe("FEAT-062 plan-bound worker execution integration", () => {
+  it("keeps worktree worker receipts under the registered project identity", async () => {
+    const store = RuntimeInvocationStore.createInMemory();
+    const vault = new InMemorySecretVault();
+    await vault.createSecret("vault-custom", "synthetic-worktree-secret");
+    const executionCwd = resolve(root, "feature-worktree");
+    const runPinnedPrompt = vi.fn(async (_prompt, _launch, options) => {
+      expect(options.cwd).toBe(executionCwd);
+      return "done";
+    });
+    const runPrompt = createPlanBoundPiPromptRunner({
+      connections: { getConnection: () => connection },
+      contextFactory: new IsolatedPiWorkerContext({ baseEnvironment: () => ({ PATH: "/bin" }), createUniqueId: () => `worktree-${randomUUID()}`, runtimeRoot: root }),
+      providerIdForConnection: () => "hepha-connection-custom", receipts: store, runPinnedPrompt, vault, workspaceRoot: root,
+    });
+    const worker = new ImplementationWorkerApplication({
+      appendAudit: () => {}, appendProfile: s => s, assertRunActive: () => {}, buildSessionFile: () => resolve(root, "session.json"), createId: randomUUID,
+      formatFailure: ({ error }) => String(error), isCancelled: () => false, recordAgentRun: async () => {}, runPrompt,
+      summarizeOutput: s => s, validateActionPlan: () => true, validateNodeSkill: () => ({ status: "valid" }),
+    });
+    try {
+      await worker.execute({ agentAction: "start-feature", agentName: "Worker", agentRole: "implementation", cardKey: "feature:sample", feature: {} as never,
+        plan, phaseNumber: 2, phaseTitle: "Implementation", phaseExecutionContractId: "sample-contract", project: { id: "registered", rootPath: root } as never,
+        executionCwd, prompt: "approved action", runId: "worktree-run", step: "Implementing", mcpProfile: true });
+      const evidence = store.listFeatureInvocations({ schemaVersion: "runtime-execution/v1", projectId: root, cardKey: "feature:sample", limit: 10 });
+      if (!evidence.ok) throw new Error(evidence.code);
+      expect(evidence.value).toHaveLength(1);
+      expect(evidence.value[0]).toMatchObject({ receipt: { projectId: root, phaseExecutionContractId: "sample-contract", status: "completed" } });
+      const wrongProject = store.listFeatureInvocations({ schemaVersion: "runtime-execution/v1", projectId: executionCwd, cardKey: "feature:sample", limit: 10 });
+      if (!wrongProject.ok) throw new Error(wrongProject.code);
+      expect(wrongProject.value).toEqual([]);
+    } finally { store.close(); }
+  });
+
   it("binds the Product Owner launch scenarios to the public executor", () => {
     const feature = readFileSync(featurePath, "utf8");
     for (const tag of ["E011-PROV-004", "E011-ROUTE-001", "E011-ROUTE-005", "E011-LAUNCH-001", "E011-LAUNCH-002", "E011-LAUNCH-004"]) {

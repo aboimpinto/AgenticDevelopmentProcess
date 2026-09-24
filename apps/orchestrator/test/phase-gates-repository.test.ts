@@ -125,3 +125,23 @@ it.each(["No numeric production coverage threshold is configured.", "Instrumenta
     expect(f.gates().find(g => g.gate === "tests")?.status).toBe("satisfied");
   },
 );
+
+it("retains historical relative reports without replacing worktree source or hiding current failures", () => {
+  const f = fixture();
+  const registered = resolve(f.root, "registered");
+  const worktree = resolve(f.root, "worktree");
+  mkdirSync(registered); mkdirSync(worktree);
+  writeFileSync(resolve(registered, "old-tests.log"), "# pass 2\n# fail 0\n");
+  writeFileSync(resolve(registered, "old-review.md"), "**Status**: APPROVED\n");
+  writeFileSync(resolve(registered, "removed.test.ts"), "assert.equal(value, expected);");
+  f.record.flags.needCodeReview = true;
+  f.record.review = { outcome: "approved", reportPath: "old-review.md" };
+  f.record.checks = [{ id: "historical", gate: "tests", required: true, command: "node --test", cwd: ".", outcome: "passed", evidence: [{ path: "old-tests.log" }] }];
+  f.save();
+  const gates = () => readPhaseGates({ documentPath: f.documentPath }, worktree, [registered])!;
+  expect(gates().filter(g => g.gate === "tests" || g.gate === "code_review").every(g => g.status === "satisfied")).toBe(true);
+  expect(phaseGateProof(f.documentPath, worktree, ["."], [registered]).source("removed.test.ts")).toBe(false);
+  // A current failing report is authoritative; the old passing copy cannot mask it.
+  writeFileSync(resolve(worktree, "old-tests.log"), "# pass 1\n# fail 1\n");
+  expect(gates().find(g => g.gate === "tests")?.status).toBe("missing");
+});

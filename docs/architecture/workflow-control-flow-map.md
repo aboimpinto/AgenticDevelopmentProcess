@@ -937,7 +937,12 @@ gate evidence; ambiguity, locked/prunable worktrees and missing continuation
 workspaces block before launch. Initial start may use a primary main/master checkout
 when no feature worktree exists, leaving feature initialization to MCP. It cannot
 silently start in another feature's checkout. Project registration, scanner identity
-and the supplied MemoryBank feature path remain unchanged.
+and the supplied MemoryBank feature path remain unchanged. Runtime receipts keep
+the registered project identity independently of Pi cwd. Historical relative
+execution/review reports can fall back to the registered checkout when absent in
+the selected checkout; current failures remain authoritative. Source validation
+never uses that historical-report fallback. New gate records use absolute working
+directories and report paths for stable reads by the project evidence view.
 
 The launch declares repository authority separately from MCP procedure: code Git
 operations and the clean-worktree gate apply to the selected code checkout. An

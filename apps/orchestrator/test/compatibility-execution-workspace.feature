@@ -20,3 +20,15 @@ Feature: Feature-scoped MCP execution workspace
     When initial implementation is requested
     Then MCP may initialize the feature from that checkout
     And an internal MemoryBank remains within the code repository scope
+
+  Scenario: Runtime receipts survive a code checkout change
+    Given the worker cwd is the feature worktree
+    When the plan-bound runtime records an invocation and phase contract
+    Then project evidence remains indexed under the registered project
+
+  Scenario: Historical relative evidence survives continuation
+    Given a prior invocation stored relative execution and review reports in the registered checkout
+    When acceptance is evaluated from the feature worktree
+    Then those historical reports remain readable
+    And historical source files cannot substitute for missing worktree source
+    And a current failing report cannot fall back to an older passing report

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, sep } from "node:path";
 import type { StoredProject } from "../../projects/stored-project.js";
 import type { FeatureRecipeOperation } from "./feature-recipe-source-policy.js";
 
@@ -73,6 +73,7 @@ export function resolveCompatibilityExecutionWorkspace(input: {
       initializing
         ? "This is only the initialization base. Follow MCP to establish this feature's branch/worktree before code edits, then use that checkout for implementation, tests and Git acceptance. Do not develop on main/master or another feature branch."
         : "Use this code checkout for implementation, tests and Git acceptance. Do not switch or modify other checkouts.",
+      "Publish absolute check working directories and execution/review evidence paths so evidence remains readable from the registered project after checkout changes.",
       "Preserve existing feature work; unresolved changes remain subject to the MCP code gate.",
       ...(external ? [
         "The MemoryBank is external documentation in a shared workspace. Update only this feature's authorized lifecycle artifacts and lessons learned there.",

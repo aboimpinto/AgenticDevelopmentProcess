@@ -54,6 +54,7 @@ describe("ImplementationWorkerApplication", () => {
     });
     expect(item.runPrompt).toHaveBeenCalledWith("prompt", selectedPlan, expect.objectContaining({
       runtimeContext: {
+        projectId: "/project",
         cardKey: "card",
         phaseExecutionContractId: "semantic-phase-contract",
         phaseNumber: 0,

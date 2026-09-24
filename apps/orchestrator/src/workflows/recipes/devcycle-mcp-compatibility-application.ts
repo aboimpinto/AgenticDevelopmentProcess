@@ -306,7 +306,7 @@ export class DevCycleMcpCompatibilityApplication {
       if (current.resolved.has(p.number) && (!initial.resolved.has(p.number) || p.number === phase?.number)
         && !loadPhaseGateRecord(p.documentPath)) problems.push(`${p.title}: Publish the structured phase gate record; report prose is not acceptance evidence.`);
       if (current.resolved.has(p.number) || p.number === phase?.number) {
-        problems.push(...(readPhaseGates(p, workspace.cwd) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
+        problems.push(...(readPhaseGates(p, workspace.cwd, [project.rootPath]) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
       }
     }
     const unresolved = firstPhaseGateRepair(feature);

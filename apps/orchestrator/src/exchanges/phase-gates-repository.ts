@@ -45,10 +45,15 @@ export function testExecutionProblem(output: string): string | null {
   return "Execution needs a native runner result showing tests actually ran; import the runner report before repeating execution.";
 }
 
-export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = []) {
+export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = [], historicalEvidenceRoots: readonly string[] = []) {
   const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
-  function locate(path: string) { return bases.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
-  function text(path: string) { const file = locate(path); return file ? readFileSync(file, "utf8") : null; }
+  // Old launch locations may contain receipts/reports, never substitute source
+  // files from a different checkout when validating current acceptance coverage.
+  const evidenceBases = [...bases, ...historicalEvidenceRoots.flatMap(root => [
+    ...workingDirectories.map(cwd => resolve(root, cwd)), root,
+  ])];
+  function locate(path: string, roots = bases) { return roots.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
+  function text(path: string) { const file = locate(path, evidenceBases); return file ? readFileSync(file, "utf8") : null; }
   return {
     source: (path: string) => !!locate(path),
     review(path: string): string | null {
@@ -98,14 +103,14 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
   };
 }
 
-export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string): FeaturePhaseQualityGateDecision[] | null {
+export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string, historicalEvidenceRoots: readonly string[] = []): FeaturePhaseQualityGateDecision[] | null {
   const record = loadPhaseGateRecord(phase.documentPath);
   if (!record) return null;
   if (!record.valid) return [{ gate: "tests", status: "missing", evidencePaths: [phaseGateRecordPath(phase.documentPath)],
     justification: `Repair phase gate JSON: ${record.diagnostics.map(d => d.message).join("; ")}` }];
   if (record.value.payload.phaseId !== basename(phase.documentPath)) return [{ gate: "tests", status: "missing", evidencePaths: [], justification: "Gate result belongs to another phase document; retain its assigned opaque identity." }];
   try {
-    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd));
+    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd), historicalEvidenceRoots);
     const baselinePath = `${phase.documentPath}.gates.baseline.json`;
     if (existsSync(baselinePath)) {
       const baseline = phaseGatesProtocol.decode(readFileSync(baselinePath, "utf8"));
