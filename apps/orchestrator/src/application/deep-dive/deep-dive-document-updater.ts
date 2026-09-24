@@ -60,7 +60,7 @@ export class DeepDiveDocumentUpdater {
       );
 
       if (context) return applyDeepDiveEdits(output, context.target.markdown);
-      return cleanResolvedValidationMarkerText(stripMarkdownFence(output));
+      return `${cleanResolvedValidationMarkerText(stripMarkdownFence(output)).trim()}\n`;
     } catch (error) {
       if (this.dependencies.mcpPrompt) throw error;
       this.dependencies.warn?.(
