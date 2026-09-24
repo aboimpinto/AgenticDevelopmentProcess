@@ -919,6 +919,14 @@ server/tool/arguments, current validation diagnostics, authorized session bounda
 phase record location and shell-observation ledger location. Deterministic artifact,
 receipt and gate validation still runs when the worker returns.
 
+The host refuses refinement before dispatch when the selected target has
+unresolved Deep-Dive decisions (`WF-MCP-REFINE-DECISION-ADMISSION`). It rechecks
+the target after execution, even if the worker has moved it to Ready, and uses
+the existing blocked Deep-Dive recovery when decisions remain unresolved.
+Sibling decisions never select this boundary. An independent MCP response
+fixture exercises schema-to-record interoperability through real host admission;
+incompatible exchange versions or missing mandatory flags remain blocked.
+
 A host-directed phase-gate repair is a distinct recovery action: it does not fetch
 an MCP recipe and therefore receives HEPHA's local gate contract. Native workflow
 prompts continue to receive their own policies. This launch-prompt reduction does
@@ -1030,12 +1038,13 @@ flowchart LR
   Policy -->|"WF-RECIPE-SOURCE-MCP<br/>preparation action"| McpWorker
   Policy -->|"Start / Continue"| Admission
   Admission -->|"valid provider artifacts"| McpWorker
+  Admission -.->|"WF-MCP-REFINE-DECISION-ADMISSION<br/>unresolved target decision; no dispatch"| DeepDiveRecovery
   Admission -.->|"WF-MCP-ARTIFACT-VALIDATION-FAIL<br/>invalid provider artifacts"| Failure
   McpWorker -->|"valid pending_execution contract"| Invariants
   Invariants --> Recipe
   Recipe --> ProviderArtifacts
   ProviderArtifacts -->|"valid artifacts + lifecycle postconditions"| ActionDone["Action completed"]
-  ProviderArtifacts -->|"WF-MCP-REFINE-POSTCONDITION-BLOCK<br/>FEAT remains outside Ready"| DeepDiveRecovery
+  ProviderArtifacts -->|"WF-MCP-REFINE-POSTCONDITION-BLOCK<br/>outside Ready or target decisions unresolved"| DeepDiveRecovery
   McpWorker -.->|"asset, transport, or contract failure"| Failure
   ProviderArtifacts -.->|"WF-MCP-ARTIFACT-VALIDATION-FAIL<br/>invalid or deferred human gate"| Failure
   ProviderArtifacts -->|"WF-MCP-SESSION-CONTINUE<br/>authorized remaining work + progress"| Admission

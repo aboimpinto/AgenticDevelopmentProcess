@@ -183,7 +183,7 @@ export class DevCycleMcpCompatibilityApplication {
       const refreshed = (await this.dependencies.scanProject(project))
         .find((candidate) => candidate.externalId === feature.externalId);
       if (input.request.operation === "refineFeature") {
-        if (refreshed?.stateFolder !== "02_READY_TO_DEVELOP") {
+        if (refreshed?.stateFolder !== "02_READY_TO_DEVELOP" || refreshed.validation?.needsValidationCount > 0) {
           await this.dependencies.metadata.block({
             ...metadata,
             currentNodeId: "evaluate-result",
@@ -405,6 +405,9 @@ export class DevCycleMcpCompatibilityApplication {
 
   private assertOperationArtifacts(operation: FeatureRecipeOperation, feature: WorkItemCard, allowRecovery = false): void {
     if (operation === "refineFeature") {
+      if (feature.validation?.needsValidationCount > 0) {
+        throw new Error("REFINEMENT_DECISIONS_UNRESOLVED: Resolve outstanding target decisions through Deep-Dive before refinement.");
+      }
       const blocker = featureDesignPrerequisite(feature.featureWorkflow?.uiRequirementDecision, feature.featureWorkflow?.hasDesignArtifacts ?? false);
       if (blocker) throw new Error(blocker);
     }

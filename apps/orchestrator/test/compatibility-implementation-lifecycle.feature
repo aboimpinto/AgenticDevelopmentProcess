@@ -121,6 +121,12 @@ Feature: Orchestrator-owned compatibility implementation lifecycle
     Then the same user workflow admits the phase and finalizes
     And no extra Continue click or phase-specific rule is required
 
+  Scenario: Returned MCP gate schema interoperates with host phase admission
+    Given the returned MCP recipe supplies a versioned phase-gate schema
+    When a documentation-only worker publishes its record from that contract
+    Then the host accepts the completed phase without another repair session
+    But incompatible versions and missing required flags block phase admission
+
   Scenario: Numeric measurement absence cannot bypass an active acceptance assessment
     Given actual passing test execution and acceptance assertion mappings
     And the record disables acceptance coverage because numeric measurement is unavailable

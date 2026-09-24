@@ -41,6 +41,13 @@ Feature: Generic DevCycle MCP recipe-source compatibility
     And the dashboard offers the normal interactive FEAT Deep-Dive
     And retrying Refine is withheld until that decision round completes
 
+  Scenario: MCP refinement requires resolved target decisions at admission and completion
+    Given a target feature has an unresolved Deep-Dive decision
+    When refinement is requested through the MCP route
+    Then no worker or workflow mutation is started
+    And unresolved target decisions discovered after execution block refinement completion
+    But unresolved sibling decisions do not block a resolved target
+
   Scenario: MCP refinement cannot defer autonomous decisions to human gates
     Given the DevCycle MCP recipe source is configured for refinement
     And target Deep-Dive decisions are complete

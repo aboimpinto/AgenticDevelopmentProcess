@@ -677,18 +677,19 @@
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
-        "apps/orchestrator/test/project-test-plan-authoring.feature"
+        "apps/orchestrator/test/project-test-plan-authoring.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature"
       ]
     },
     {
       "id": "WF-MCP-REFINE-POSTCONDITION-BLOCK",
       "scope": "preparation",
       "from": "terminal MCP refinement worker with unresolved preparation lifecycle state",
-      "trigger": "postcondition scan finds that the FEAT remains outside Ready To Develop after refinement",
+      "trigger": "postcondition scan finds the FEAT outside Ready To Develop or the target still has unresolved decisions after refinement",
       "to": "blocked result evaluation with interactive FEAT Deep-Dive recovery",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.execute",
-      "rationale": "A zero-exit model process is transport success, not refinement completion. When refinement cannot promote the FEAT into Ready To Develop because preparation decisions remain unresolved, preserve the worker summary and expose the standard interactive Deep-Dive recovery. A FEAT that is already Ready but has invalid provider artifacts follows WF-MCP-ARTIFACT-VALIDATION-FAIL instead so Refine remains available for deterministic repair.",
+      "rationale": "A zero-exit model process is transport success, not refinement completion. When refinement cannot promote the FEAT into Ready To Develop because preparation decisions remain unresolved, preserve the worker summary and expose the standard interactive Deep-Dive recovery. A FEAT that is already Ready but has invalid provider artifacts follows WF-MCP-ARTIFACT-VALIDATION-FAIL instead so Refine remains available for deterministic repair. Ready folder state cannot override unresolved target decision markers; linked or sibling decisions are not consulted.",
       "unitTestPaths": [
         "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
         "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
@@ -2306,6 +2307,22 @@
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/phase-quality-resolution.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-REFINE-DECISION-ADMISSION",
+      "scope": "preparation admission",
+      "from": "requested MCP refinement of the selected feature",
+      "trigger": "target validation reports unresolved Deep-Dive decisions",
+      "to": "refused refinement before worker dispatch or workflow mutation, with Deep-Dive guidance",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
+      "rationale": "The host enforces the existing target decision boundary deterministically without duplicating MCP instructions. Refine consumes resolved intent; sibling/context decisions cannot block a resolved target. Completion rechecks the target through WF-MCP-REFINE-POSTCONDITION-BLOCK.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
       ]
     }
   ]

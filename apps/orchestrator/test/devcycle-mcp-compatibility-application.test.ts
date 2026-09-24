@@ -1,4 +1,5 @@
 import type { HandoffPlanV1, WorkItemCard } from "@hepha/shared";
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { DevCycleMcpCompatibilityApplication } from "../src/workflows/recipes/devcycle-mcp-compatibility-application.js";
 
@@ -25,6 +26,53 @@ const project = { id: "project", name: "Project", rootPath: "/project", memoryBa
 const plan = { resolvedRoute: { action: { actionId: "refine-feature" } } } as HandoffPlanV1;
 
 describe("DevCycle MCP compatibility application", () => {
+  it.each(["admission", "result", "resolved"])("enforces target refinement decisions at %s", async boundary => {
+    expect(readFileSync(new URL("./generic-devcycle-mcp-compatibility.feature", import.meta.url), "utf8")).toContain("Scenario: MCP refinement requires resolved target decisions at admission and completion");
+    const unresolved = { needsValidationCount: 1 } as WorkItemCard["validation"];
+    const events: string[] = [];
+    const worker = vi.fn(async () => "Refinement completed");
+    const applyManualTestDeferrals = vi.fn(async () => 0);
+    const application = new DevCycleMcpCompatibilityApplication({
+      applyManualTestDeferrals,
+      seedManualTestSkips: async () => 0,
+      createCardKey: () => "feature:FEAT-X",
+      createId: () => "run-id",
+      metadata: {
+        block: async input => { events.push(`blocked:${input.currentStep}`); },
+        complete: async () => { events.push("completed"); },
+        fail: async () => { events.push("failed"); },
+        start: async () => { events.push("started"); },
+      },
+      notifyChanged: () => undefined,
+      resolvePlan: () => plan,
+      resolveTarget: async () => ({ feature: { ...feature, ...(boundary === "admission" ? { validation: unresolved } : {}) }, project }),
+      runWorker: worker,
+      // An unresolved sibling must not block the selected target.
+      scanProject: async () => [
+        { ...refinedFeature, externalId: "FEAT-SIBLING", validation: unresolved },
+        { ...refinedFeature, ...(boundary === "result" ? { validation: unresolved } : {}) },
+      ],
+      summarizeProject: () => ({ id: "project", name: "Project" }) as never,
+      summarizeOutput: output => output,
+      isWorkflowActive: async () => true,
+      reconcileImplementationState: () => undefined,
+      validateCompletedArtifacts: () => ({ valid: true, errors: [] }),
+      validateImplementationArtifacts: () => ({ valid: true, errors: [] }),
+      validateRefinementArtifacts: () => ({ valid: true, errors: [] }),
+    });
+    const run = application.start("refineFeature", { cardId: feature.id, projectId: "project" });
+    if (boundary === "admission") {
+      await expect(run).rejects.toThrow("REFINEMENT_DECISIONS_UNRESOLVED");
+      expect(events).toEqual([]);
+      expect(worker).not.toHaveBeenCalled();
+      expect(applyManualTestDeferrals).not.toHaveBeenCalled();
+    } else {
+      await run;
+      await vi.waitFor(() => expect(events).toHaveLength(2));
+      expect(events).toEqual(["started", boundary === "result" ? "blocked:Waiting for FEAT Deep-Dive answers" : "completed"]);
+    }
+  });
+
   it.each(["deepseek-v4-flash", "gpt-5.6-terra", "qwen-coder"])("dispatches the same tool contract through model route %s", async (modelId) => {
     const plan = { resolvedRoute: { action: { actionId: "refine-feature" }, route: { connectionId: "synthetic-provider", modelId } } } as HandoffPlanV1;
     const events: string[] = [];

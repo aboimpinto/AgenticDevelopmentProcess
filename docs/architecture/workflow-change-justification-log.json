@@ -4193,6 +4193,30 @@
         "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
       ]
+    },
+    {
+      "id": "WJ-2026-150",
+      "date": "2026-09-24",
+      "summary": "Enforce MCP refinement decision boundaries and exercise returned gate-schema interoperability",
+      "transitionIds": [
+        "WF-MCP-REFINE-DECISION-ADMISSION",
+        "WF-MCP-REFINE-POSTCONDITION-BLOCK",
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Prompt de-duplication exposed a refinement decision boundary that was only expressed in worker instructions; existing launch tests did not exercise the returned gate schema.",
+      "causalChain": "Unresolved target decisions plus provider Ready projection could produce false refinement completion; incompatible wire records could otherwise go unnoticed in prompt-only tests.",
+      "testGap": "No refusal-before-dispatch test, no Ready-with-unresolved-decisions result test, and no independent returned MCP schema-to-published-record lifecycle fixture.",
+      "missingDecision": "Enforce target decisions at host admission and completion. Validate independent provider schema compatibility and actual record admission without restoring policy duplication or inferring applicability from phase identity.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/orchestrator/test/fixtures/mcp-phase-gate-response.json"
+      ]
     }
   ]
 }
