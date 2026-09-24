@@ -4257,7 +4257,7 @@
       "whyHappened": "Workers always inherited the registered checkout even when a dedicated feature worktree existed. External MemoryBank Git ownership was not declared.",
       "causalChain": "Wrong launch cwd plus shared external documents led the worker to treat unrelated parent edits as an acceptance blocker.",
       "testGap": "Lifecycle fixtures had no real Git topology and did not assert the worker cwd with a dirty external document owner. Review exposed receipt identity coupled to cwd and missing historical relative-report lookup.",
-      "missingDecision": "Resolve a unique feature checkout before launch; keep code cleanliness gates there and leave external parent Git state untouched. Historical report fallback requires an unchanged pre-worker record; new or revised payloads cannot acquire stale passing evidence.",
+      "missingDecision": "Resolve a unique feature checkout before launch; keep code cleanliness gates there and leave external parent Git state untouched. Historical report fallback requires an exact unchanged pre-worker check/review reference; new or revised checks cannot acquire stale passing evidence. Resolve each check against its own working directory, and retain valid references across unrelated record changes.",
       "codeChanges": [
         "apps/orchestrator/src/workflows/recipes/compatibility-execution-workspace.ts",
         "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",

@@ -46,6 +46,11 @@ export function testExecutionProblem(output: string): string | null {
   return "Execution needs a native runner result showing tests actually ran; import the runner report before repeating execution.";
 }
 
+/** Prose explanations are not execution identity or proof of a new run. */
+function sameGateReference(left: { reason?: string }, right: { reason?: string }): boolean {
+  return isDeepStrictEqual({ ...left, reason: undefined }, { ...right, reason: undefined });
+}
+
 export interface HistoricalPhaseGateEvidence {
   readonly projectRoot: string;
   /** Immutable pre-worker gate record, not the current or newly written record. */
@@ -54,22 +59,20 @@ export interface HistoricalPhaseGateEvidence {
 
 export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = [],
   history?: HistoricalPhaseGateEvidence & { readonly currentRecord: PhaseGateRecord }) {
-  const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
+  const documentBases = [projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
+  const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), ...documentBases];
   // Old launch locations may contain receipts/reports, never substitute source
   // files from a different checkout when validating current acceptance coverage.
   const historicalRecord = history?.record.phaseId === basename(documentPath)
-    && isDeepStrictEqual(history.record, history.currentRecord) ? history.record : undefined;
-  const evidenceBases = historicalRecord && history ? [...bases,
-    ...historicalRecord.checks.map(check => resolve(history.projectRoot, check.cwd)), history.projectRoot,
-  ] : bases;
-  function locate(path: string, roots = bases) { return roots.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
-  function text(path: string, allowHistory = false) { const file = locate(path, allowHistory ? evidenceBases : bases); return file ? readFileSync(file, "utf8") : null; }
+    && history.currentRecord.phaseId === history.record.phaseId ? history.record : undefined;
+  function locate(path: string, roots: readonly string[] = bases) { return roots.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
+  function text(path: string, reportBases: readonly string[]) { const file = locate(path, reportBases); return file ? readFileSync(file, "utf8") : null; }
   return {
     source: (path: string) => !!locate(path),
     review(path: string): string | null {
       const allowHistory = !!historicalRecord && historicalRecord.review.reportPath === path
-        && isDeepStrictEqual(historicalRecord.review, history?.currentRecord.review);
-      const report = text(path, allowHistory);
+        && !!history && sameGateReference(historicalRecord.review, history.currentRecord.review);
+      const report = text(path, [...documentBases, ...(allowHistory && history ? [history.projectRoot] : [])]);
       if (!report) return "Review report is unavailable.";
       // Review verdict fields are an established report protocol, not phase names.
       return /^\s*\*{0,2}(?:Status|Verdict|Result)\*{0,2}\s*:\s*\*{0,2}APPROVED(?:_WITH_NOTES)?\b/im.test(report)
@@ -78,10 +81,17 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
     },
     check(check: PhaseGateRecord["checks"][number]): string | null {
       if (!check.evidence.length) return `${check.id}: execution evidence is missing.`;
-      const allowHistory = !!historicalRecord?.checks.some(previous => isDeepStrictEqual(previous, check));
+      const allowHistory = !!historicalRecord?.checks.some(previous => sameGateReference(previous, check));
+      // Resolve this check's reports from its own cwd, never another check's
+      // directory just because both use a generic name such as report.log.
+      const checkRoot = resolve(projectRoot ?? dirname(documentPath), check.cwd);
+      const featureBases = [resolve(dirname(documentPath), ".."), dirname(documentPath)]
+        .filter(base => base !== projectRoot || base === checkRoot);
+      const reportBases = [checkRoot, ...featureBases,
+        ...(allowHistory && history ? [resolve(history.projectRoot, check.cwd)] : [])];
       let verified = false;
       for (const evidence of check.evidence) {
-        const raw = text(evidence.path, allowHistory);
+        const raw = text(evidence.path, reportBases);
         if (!raw) return `${check.id}: evidence is unavailable: ${evidence.path}`;
         if (!evidence.toolCallId && (check.gate === "tests" || check.gate === "gherkin_e2e") && !raw.trimStart().startsWith("{")) {
           const problem = testExecutionProblem(raw);

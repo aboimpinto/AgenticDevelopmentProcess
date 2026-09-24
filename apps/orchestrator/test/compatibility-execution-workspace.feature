@@ -35,6 +35,16 @@ Feature: Feature-scoped MCP execution workspace
 
   Scenario: A new gate cannot reuse an unrelated old report
     Given a registered checkout contains an old passing report
-    When the worker creates or changes a gate record after launch
-    Then historical fallback is unavailable for that record
+    When the worker creates or changes a check after launch
+    Then historical fallback is unavailable for that check
     And missing current evidence blocks acceptance
+
+  Scenario: Unrelated record changes retain prior check evidence
+    Given a check has a historical report referenced before launch
+    When another check or a documentation field changes
+    Then the unchanged check retains access to its historical report
+
+  Scenario: Checks use distinct same-named reports
+    Given two checks in different directories reference report.log
+    When their results are evaluated
+    Then each check reads only its own directory's report

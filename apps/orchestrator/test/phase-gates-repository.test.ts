@@ -139,6 +139,7 @@ it("retains historical relative reports without replacing worktree source or hid
   f.record.checks = [{ id: "historical", gate: "tests", required: true, command: "node --test", cwd: ".", outcome: "passed", evidence: [{ path: "old-tests.log" }] }];
   f.save();
   const history = { projectRoot: registered, record: structuredClone(f.record) };
+  f.record.review.reason = "Clarified review description"; f.save();
   const gates = () => readPhaseGates({ documentPath: f.documentPath }, worktree, history)!;
   expect(gates().filter(g => g.gate === "tests" || g.gate === "code_review").every(g => g.status === "satisfied")).toBe(true);
   expect(phaseGateProof(f.documentPath, worktree, ["."], { ...history, currentRecord: f.record }).source("removed.test.ts")).toBe(false);
@@ -167,8 +168,36 @@ it("does not grant new or changed gate records access to historical passing repo
   f.record.checks[0]!.command = "node --test changed.test.cjs"; f.save();
   const changed = readPhaseGates({ documentPath: f.documentPath }, worktree, { projectRoot: registered, record: recorded })!;
   expect(changed.find(g => g.gate === "tests")?.status).toBe("missing");
-  f.record.checks = recorded.checks;
-  f.record.criteria = [{ id: "new-scope", description: "Different acceptance scope" }]; f.save();
-  const newScope = readPhaseGates({ documentPath: f.documentPath }, worktree, { projectRoot: registered, record: recorded })!;
-  expect(newScope.find(g => g.gate === "tests")?.status).toBe("missing");
+});
+
+
+it("keeps prior check evidence when an unrelated check is added", () => {
+  const f = fixture();
+  const registered = resolve(f.root, "registered"); const worktree = resolve(f.root, "worktree");
+  mkdirSync(registered); mkdirSync(worktree);
+  writeFileSync(resolve(registered, "prior.log"), "# pass 2\n# fail 0\n");
+  const prior: PhaseGateRecord["checks"][number] = { id: "prior", gate: "tests", required: true, command: "node --test prior.test.cjs", cwd: ".", outcome: "passed", evidence: [{ path: "prior.log" }] };
+  f.record.checks = [prior];
+  const before = structuredClone(f.record);
+  const added = { ...prior, id: "added", command: "node --test added.test.cjs" };
+  f.record.checks.push(added);
+  f.record.coverage.reason = "Unrelated documentation clarification";
+  prior.reason = "Clarified report description";
+  const proof = phaseGateProof(f.documentPath, worktree, ["."], { projectRoot: registered, record: before, currentRecord: f.record });
+  expect(proof.check(prior)).toBeNull();
+  expect(proof.check(added)).toContain("evidence is unavailable");
+});
+
+it.each([["current", "checks/a"], ["historical", "checks/a"], ["current", "."], ["historical", "."]])("does not mix same-named reports across %s check directories including %s", (location, firstCwd) => {
+  const f = fixture();
+  const registered = resolve(f.root, "registered"); const worktree = resolve(f.root, "worktree");
+  mkdirSync(registered); mkdirSync(worktree);
+  const reportRoot = location === "historical" ? registered : worktree;
+  for (const dir of [firstCwd!, "checks/b"]) mkdirSync(resolve(reportRoot, dir), { recursive: true });
+  writeFileSync(resolve(reportRoot, firstCwd!, "report.log"), "# pass 2\n# fail 0\n");
+  writeFileSync(resolve(reportRoot, "checks/b/report.log"), "# pass 1\n# fail 1\n");
+  f.record.checks = ["a", "b"].map(id => ({ id, gate: "tests", required: true, command: `node --test ${id}.test.cjs`, cwd: id === "a" ? firstCwd! : "checks/b", outcome: "passed", evidence: [{ path: "report.log" }] }));
+  const proof = phaseGateProof(f.documentPath, worktree, f.record.checks.map(c => c.cwd), { projectRoot: registered, record: structuredClone(f.record), currentRecord: f.record });
+  expect(proof.check(f.record.checks[0]!)).toBeNull();
+  expect(proof.check(f.record.checks[1]!)).toContain("Runner reports failing tests");
 });
