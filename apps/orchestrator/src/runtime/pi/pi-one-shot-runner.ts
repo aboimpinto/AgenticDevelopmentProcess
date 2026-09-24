@@ -63,9 +63,11 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
     if (options.mcpProfile) {
       // Pi owns request sizing, tokenizer compatibility and compaction. Do not
       // silently bypass a separately configured host-only spending/output cap.
-      if (inputSpendingLimit("attempt", piEnv) !== null || options.maxOutputTokens !== undefined
+      if (inputSpendingLimit("attempt", config.argumentEnv) !== null
+        || inputSpendingLimit("attempt", piEnv) !== null || options.maxOutputTokens !== undefined
+        || config.argumentEnv.HEPHA_PI_OUTPUT_TOKEN_LIMIT?.trim()
         || piEnv.HEPHA_PI_OUTPUT_TOKEN_LIMIT?.trim()) {
-        throw new Error("MCP_PI_CONTEXT_CONFIGURATION_CONFLICT: MCP workers use Pi-owned context management; HEPHA request-token/output caps are unsupported on this route. No worker was started. Use a configured process deadline or a Pi-owned budget instead.");
+        throw new Error("HEPHA_SPENDING_CONFIGURATION_INVALID: MCP_PI_CONTEXT_CONFIGURATION_CONFLICT: MCP workers use Pi-owned context management; HEPHA request-token/output caps are unsupported on this route. No worker was started. Use a configured process deadline or a Pi-owned budget instead.");
       }
     } else {
       modelTokenizerEncoding({ id: model.model, provider: model.provider });

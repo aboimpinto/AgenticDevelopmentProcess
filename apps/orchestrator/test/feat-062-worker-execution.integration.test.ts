@@ -14,6 +14,7 @@ import {
 } from "@hepha/shared";
 import { InMemorySecretVault } from "../src/provider-connections/secret-vault.js";
 import { HandoffPlanExecutor } from "../src/runtime/pi/handoff-plan-executor.js";
+import { createPiOneShotPromptRunner } from "../src/runtime/pi/pi-one-shot-runner.js";
 import { IsolatedPiWorkerContext } from "../src/runtime/pi/isolated-pi-worker-context.js";
 import {
   createPlanBoundDetachedPromptLauncher,
@@ -183,6 +184,45 @@ describe("FEAT-062 plan-bound worker execution integration", () => {
     expect(runPinnedPrompt.mock.calls[0]![1].environment).not.toHaveProperty("OPENAI_API_KEY");
     expect(store.listFeatureInvocations({ schemaVersion: "runtime-execution/v1", projectId: root, cardKey: null, limit: 10 }).ok).toBe(true);
     store.close();
+  });
+
+  it("rejects a host-only output cap through real isolation before spawning or falling back", async () => {
+    const store = RuntimeInvocationStore.createInMemory();
+    const hostEnvironment = { PATH: process.env.PATH, HEPHA_PI_OUTPUT_TOKEN_LIMIT: "16000" };
+    const invocation = vi.fn(() => { throw new Error("Must reject before process resolution"); });
+    const register = vi.fn();
+    const runPinnedPrompt = createPiOneShotPromptRunner({
+      argumentEnv: hostEnvironment, defaultTimeoutMs: 1000, implementationTimeoutMs: 1000,
+      implementationIdleTimeoutMs: 1000, implementationSkillPaths: [],
+      formatInvocation: () => "synthetic", formatSpawnError: () => "synthetic",
+      getInvocation: invocation, processRegistry: { register, unregister: vi.fn() },
+      sessionDirectory: resolve(root, "cap-sessions"), workspaceRoot: root,
+    });
+    const contextFactory = new IsolatedPiWorkerContext({
+      baseEnvironment: hostEnvironment, createUniqueId: () => `cap-${randomUUID()}`, runtimeRoot: root,
+    });
+    const prepare = vi.spyOn(contextFactory, "prepare");
+    const isolatedLaunch = vi.fn(async (...args: Parameters<typeof runPinnedPrompt>) => {
+      expect(args[1].environment).not.toHaveProperty("HEPHA_PI_OUTPUT_TOKEN_LIMIT");
+      return runPinnedPrompt(...args);
+    });
+    const runPrompt = createPlanBoundPiPromptRunner({
+      connections: { getConnection: () => ({ ...connection, kind: "pi_session", provider: { kind: "pi_session" }, secretRef: null, secretVersion: null }) },
+      contextFactory, providerIdForConnection: () => "hepha-connection-custom", receipts: store,
+      runPinnedPrompt: isolatedLaunch, vault: new InMemorySecretVault(), workspaceRoot: root,
+    });
+    const withFallback: HandoffPlanV1 = { ...plan, resolvedRoute: { ...plan.resolvedRoute, policySource: "action" }, steps: [
+      { kind: "primary", route }, { kind: "recovery", route: { connectionId: "second", modelId: "second-model" } },
+    ] };
+    try {
+      await expect(runPrompt("approved prompt", withFallback, {
+        implementationProfile: true, mcpProfile: true, cwd: root, workflowRunId: "workflow-host-cap",
+      })).rejects.toThrow("MCP_PI_CONTEXT_CONFIGURATION_CONFLICT");
+      expect(prepare).toHaveBeenCalledOnce();
+      expect(isolatedLaunch).toHaveBeenCalledOnce();
+      expect(invocation).not.toHaveBeenCalled();
+      expect(register).not.toHaveBeenCalled();
+    } finally { store.close(); }
   });
 
   it("preserves the primary stall cause and checkpoints artifact mutations before route exhaustion", async () => {

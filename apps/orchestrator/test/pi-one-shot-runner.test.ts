@@ -95,8 +95,11 @@ console.log(JSON.stringify({type:'message_end',message:{role:'assistant',stopRea
       .rejects.toThrow();
   });
 
-  it.each(["input", "output", "task-output"])("rejects an explicit incompatible %s cap before MCP launch", async cap => {
-    const { run, register } = createRunner('throw new Error("must not spawn");');
+  it.each(["input", "output", "task-output", "host-input", "host-output"])("rejects an explicit incompatible %s cap before MCP launch", async cap => {
+    const { run, register } = createRunner('throw new Error("must not spawn");', {
+      argumentEnv: { ...(cap === "host-input" ? { HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS: "512000" } : {}),
+        ...(cap === "host-output" ? { HEPHA_PI_OUTPUT_TOKEN_LIMIT: "16000" } : {}) },
+    });
     await expect(run("prompt", { ...launch, environment: { ...launch.environment,
       ...(cap === "input" ? { HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS: "512000" } : {}),
       ...(cap === "output" ? { HEPHA_PI_OUTPUT_TOKEN_LIMIT: "16000" } : {}),

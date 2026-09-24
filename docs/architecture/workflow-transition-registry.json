@@ -183,12 +183,12 @@
     {
       "id": "WF-MODEL-REQUEST-POLICY",
       "scope": "runtime",
-      "from": "prepared Pi provider request",
+      "from": "prepared native HEPHA Pi provider request",
       "trigger": "before each provider request including continued tool turns",
       "to": "High-reasoning bounded request or terminal policy refusal without fallback",
       "ownerPath": "apps/orchestrator/src/runtime/pi/model-request-guard.ts",
       "ownerSymbol": "modelRequestGuard",
-      "rationale": "Apply locally tokenized context and independent token-spending admission to every Pi invocation. Bind the readiness output allowance only on supported transports; Codex subscription requests omit unsupported output fields and reserve catalogue maximum output consistently in planning and the wire guard. Resolve transport through the actual connection provider, never a feature/model name or display label. Use this reservation for 50/80 percent thresholds. Bytes are diagnostics, never tokens. Compact only losslessly at the provider boundary, never omit evidence or downgrade reasoning to fit. Resolve verified tokenizer capability before worker spawn; provider-qualified aliases select separately pinned tokenizer revisions. Readiness and request preparation share the resolver. Unknown selections report their identity before executing work; invalid assets never use estimated token counts.",
+      "rationale": "Apply locally tokenized context and independent token-spending admission to native HEPHA Pi invocations. MCP compatibility actions delegate context and compaction to Pi and omit this extension; explicit incompatible host caps reject at launch rather than being ignored. Bind the readiness output allowance only on supported transports; Codex subscription requests omit unsupported output fields and reserve catalogue maximum output consistently in planning and the wire guard. Resolve transport through the actual connection provider, never a feature/model name or display label. Use this reservation for 50/80 percent thresholds. Bytes are diagnostics, never tokens. Compact only losslessly at the provider boundary, never omit evidence or downgrade reasoning to fit. Resolve verified tokenizer capability before worker spawn; provider-qualified aliases select separately pinned tokenizer revisions. Readiness and request preparation share the resolver. Unknown selections report their identity before executing work; invalid assets never use estimated token counts.",
       "unitTestPaths": [
         "apps/orchestrator/test/model-request-policy.test.ts",
         "apps/orchestrator/test/model-request-policy.integration.test.ts",

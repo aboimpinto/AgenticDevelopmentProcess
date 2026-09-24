@@ -1313,8 +1313,10 @@ authentication, provider projection, secret, or context preparation is
 unavailable records only a safe preparation failure and never spawns or claims
 an actual route.
 
-Every Pi launch pins `--thinking high` and explicitly loads HEPHA's
-`model-request-guard`, even in no-tools/no-auto-extensions mode. Immediately
+Every Pi launch pins `--thinking high`. Native HEPHA launches explicitly load
+HEPHA's `model-request-guard`, even in no-tools/no-auto-extensions mode.
+MCP compatibility actions omit this extension and delegate context to Pi, as
+defined in the MCP execution boundary above. Immediately
 before each provider request (including subsequent tool/session turns), the
 guard checks the effective High level and the runtime model's context/output
 limits. Unknown limits or unsupported reasoning reject instead of guessing.
@@ -1333,8 +1335,8 @@ reserves the catalogue maximum consistently with planning, including fallbacks.
 Catalogue discovery reads exact configured token capacities from the installed Pi
 SDK without model-network access; the rounded CLI table is not a capacity source.
 Provider identity is filtered before models enter the connection catalogue.
-Native Pi compaction runs after an agent run; HEPHA's request guard still runs
-before every provider call. Readiness assessment has no five-minute absolute
+On native HEPHA routes, HEPHA's request guard still runs before every provider
+call. MCP compatibility sessions use Pi's own compaction lifecycle exclusively. Readiness assessment has no five-minute absolute
 deadline: a resettable 120-second observable-activity watchdog remains, alongside
 token spending and checkpoint/assessment bounds. This is not a coverage waiver
 or an automatic restart after a timeout. Manual-test authoring retains its existing deadline.
@@ -1353,7 +1355,7 @@ flowchart LR
   Guard --> Prepare["Exact connection + isolated context"]
   Prepare --> Spawn["Pinned provider/model process"]
   Spawn --> Receipt["Normalized terminal receipt + cleanup"]
-  Spawn -->|"WF-MODEL-REQUEST-POLICY before each provider request"| Budget["High reasoning + bounded context; refusal is terminal"]
+  Spawn -->|"WF-MODEL-REQUEST-POLICY native HEPHA requests"| Budget["High reasoning + bounded context; refusal is terminal"]
   Guard -.->|"WF-RUNTIME-LAUNCH-REJECT"| Reject["Sanitized rejection; no substitute spawn"]
   Prepare -.->|"WF-RUNTIME-LAUNCH-REJECT"| Failed["Safe preparation failure; no actual route"]
 ```

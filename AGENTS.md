@@ -104,7 +104,10 @@ owns context sizing and compaction. Do not attach HEPHA's request guard, impose
 a host tokenizer prerequisite, inject conversation turns, or launch automatic
 phase/repair/finalization sessions after it returns. Native HEPHA routes retain
 their existing request policies. Explicit incompatible host token caps must be
-reported before launch, never silently ignored.
+reported before launch, never silently ignored. Validate host policy against the
+original host configuration as well as the isolated launch environment: isolation
+may intentionally filter settings. Cover that boundary with an integration test,
+not only a pre-populated launch stub.
 
 Observe MemoryBank file events and derive progress from current phase documents
 and feature phase inventories. Agent prose is not acceptance evidence. Validate
