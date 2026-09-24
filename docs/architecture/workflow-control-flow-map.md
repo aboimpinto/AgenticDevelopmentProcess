@@ -903,9 +903,10 @@ aliases; changing the model does not change this contract. Explicit recipe
 handoffs use the same lookup. Missing tools remain blocking failures.
 For an installed compatibility gateway, run `pnpm test:mcp-adapter` to check
 rendered invocations against its actual tool-name candidate resolver, under
-all four display-prefix settings. This offline check uses
-`HEPHA_MCP_ADAPTER_EXTENSION_PATH` (relative to the repository root or absolute),
-otherwise the runtime's workspace-scoped adapter location. Missing adapters
+all four display-prefix settings. This offline check uses the same runtime environment and MCP configuration
+resolvers as HEPHA, including process-environment precedence over workspace
+`.env`, configured path expansion and the workspace-scoped default. The configured
+MCP config and adapter paths must exist; the check does not connect to the server. Missing adapters
 or incompatible resolver exports fail the check; they are never skipped.
 CI's isolated gateway fixture remains independent of a local Pi installation.
 This contract check does not replace live provider/workflow verification.

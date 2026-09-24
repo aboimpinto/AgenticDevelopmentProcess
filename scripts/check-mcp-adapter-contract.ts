@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
+import { createOrchestratorRuntimeEnvironment } from "../apps/orchestrator/src/runtime/orchestrator-runtime-configuration.js";
+import { resolveMcpCompatibilityRuntimeConfiguration } from "../apps/orchestrator/src/runtime/mcp-compatibility-runtime-configuration.js";
 import {
   createDevCycleMcpCompatibilityRequest,
   renderDevCycleMcpCompatibilityPrompt,
@@ -11,8 +13,13 @@ import {
 // Offline contract check against the installed gateway, not a replacement
 // resolver. It neither connects to a server nor invokes an LLM or recipe.
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const adapterPath = resolve(repositoryRoot, process.env.HEPHA_MCP_ADAPTER_EXTENSION_PATH?.trim()
-  || "../.pi/npm/node_modules/pi-mcp-adapter");
+const configuration = resolveMcpCompatibilityRuntimeConfiguration({
+  enabled: true,
+  environment: createOrchestratorRuntimeEnvironment({ workspacePath: repositoryRoot }),
+  workspaceRoot: repositoryRoot,
+});
+assert.ok(configuration);
+const adapterPath = configuration.extensionPath;
 const manifest = JSON.parse(await readFile(resolve(adapterPath, "package.json"), "utf8"));
 assert.equal(manifest.name, "pi-mcp-adapter");
 const { getToolNameCandidates } = await import(pathToFileURL(resolve(adapterPath, "types.ts")).href);
