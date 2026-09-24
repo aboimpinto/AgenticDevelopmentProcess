@@ -4171,6 +4171,52 @@
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
         "scripts/check-mcp-adapter-contract.ts"
       ]
+    },
+    {
+      "id": "WJ-2026-149",
+      "date": "2026-09-24",
+      "summary": "Delegate MCP recipe policy to the returned instructions instead of duplicating it in the launch prompt",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "The compatibility launcher composed shared native verification and acceptance prose with a full phase-gate schema even though the MCP response already supplies them.",
+      "causalChain": "Native policy injection plus recipe policy plus repeated schema -> larger startup context and competing procedural instructions.",
+      "testGap": "Prompt tests required copied policy strings and did not check the complete implementation launch for duplicate schema or instructions.",
+      "missingDecision": "MCP owns procedural instructions. HEPHA launch metadata supplies routing, current diagnostics, session authority and local integration paths; host validation remains deterministic. Host-directed repair without a recipe response retains its own contract.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-phase-gate-repair.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
+      ]
+    },
+    {
+      "id": "WJ-2026-150",
+      "date": "2026-09-24",
+      "summary": "Enforce MCP refinement decision boundaries and exercise returned gate-schema interoperability",
+      "transitionIds": [
+        "WF-MCP-REFINE-DECISION-ADMISSION",
+        "WF-MCP-REFINE-POSTCONDITION-BLOCK",
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Prompt de-duplication exposed a refinement decision boundary that was only expressed in worker instructions; existing launch tests did not exercise the returned gate schema.",
+      "causalChain": "Unresolved target decisions plus provider Ready projection could produce false refinement completion; incompatible wire records could otherwise go unnoticed in prompt-only tests.",
+      "testGap": "No refusal-before-dispatch test, no Ready-with-unresolved-decisions result test, and no independent returned MCP schema-to-published-record lifecycle fixture.",
+      "missingDecision": "Enforce target decisions at host admission and completion. Validate independent provider schema compatibility and actual record admission without restoring policy duplication or inferring applicability from phase identity.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/orchestrator/test/fixtures/mcp-phase-gate-response.json"
+      ]
     }
   ]
 }

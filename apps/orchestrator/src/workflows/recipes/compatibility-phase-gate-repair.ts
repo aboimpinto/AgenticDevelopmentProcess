@@ -14,6 +14,16 @@ export function firstPhaseGateRepair(feature: WorkItemCard) {
     && s.gates.some(isUnresolvedQualityGate));
 }
 
+/** Integration locations only; the requested MCP recipe supplies policy and schema. */
+export function mcpGateExchangeContext(documentPath: string, observationsPath: string): string {
+  return `\nHEPHA integration context:
+Phase document: ${documentPath}
+Phase gate record: ${phaseGateRecordPath(documentPath)}
+Use the phase-gate schema and instructions supplied by the MCP response.
+Host shell observation ledger: ${observationsPath}; reference actual execution toolCallId values when publishing evidence.`;
+}
+
+/** Host-directed repair has no recipe response, so it needs the local gate contract. */
 export function gateExchangePrompt(documentPath: string, observationsPath: string): string {
   return `\nPhase gate exchange (same policy for every phase): write ${phaseGateRecordPath(documentPath)} before accepting this phase.
 ${LOGICAL_ACCEPTANCE_COVERAGE_CONTRACT}

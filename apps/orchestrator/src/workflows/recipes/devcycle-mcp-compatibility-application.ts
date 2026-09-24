@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { loadPhaseGateRecord, retainPhaseGateBaseline, admitPhaseGateBaseline } from "../../exchanges/phase-gates-repository.js";
-import { firstPhaseGateRepair, gateExchangePrompt, gateRevisionProblem, observePhaseGateTools, phaseGateProgressKey } from "./compatibility-phase-gate-repair.js";
+import { firstPhaseGateRepair, gateExchangePrompt, mcpGateExchangeContext, gateRevisionProblem, observePhaseGateTools, phaseGateProgressKey } from "./compatibility-phase-gate-repair.js";
 import type {
   FeatureWorkflowActionInput,
   FeatureWorkflowActionResponse,
@@ -183,7 +183,7 @@ export class DevCycleMcpCompatibilityApplication {
       const refreshed = (await this.dependencies.scanProject(project))
         .find((candidate) => candidate.externalId === feature.externalId);
       if (input.request.operation === "refineFeature") {
-        if (refreshed?.stateFolder !== "02_READY_TO_DEVELOP") {
+        if (refreshed?.stateFolder !== "02_READY_TO_DEVELOP" || refreshed.validation?.needsValidationCount > 0) {
           await this.dependencies.metadata.block({
             ...metadata,
             currentNodeId: "evaluate-result",
@@ -264,7 +264,7 @@ export class DevCycleMcpCompatibilityApplication {
         phaseNumber: phase?.number ?? null, phaseTitle: phase?.title ?? null,
         plan: this.dependencies.resolvePlan(request.agentAction), project,
         onPiEvent: observePhaseGateTools(observations),
-        prompt: renderDevCycleMcpCompatibilityPrompt(request) + (phase ? gateExchangePrompt(phase.documentPath, observations) : "") + (operation === "completeFeature"
+        prompt: renderDevCycleMcpCompatibilityPrompt(request) + (phase ? mcpGateExchangeContext(phase.documentPath, observations) : "") + (operation === "completeFeature"
           ? "\nHEPHA verified that all implementation phases are resolved. Execute final verification and feature finalization only. Project canonical COMPLETED status when moving to the completed folder; do not claim success if finalization remains unfinished."
           : "\nHEPHA owns the outer workflow. Execute only this single phase and its review/acceptance, then return. Do not activate a later phase or finalize the feature from a phase session. Preserve canonical FeatureTasks status IN_PROGRESS (folder names are storage paths). If a real task/gate blocks work, persist BLOCKED in both phase projections and report the evidence. A session yield is not feature completion."),
         runId: input.runId, step: `Executing ${request.toolName} from DevCycle MCP`,
@@ -405,6 +405,9 @@ export class DevCycleMcpCompatibilityApplication {
 
   private assertOperationArtifacts(operation: FeatureRecipeOperation, feature: WorkItemCard, allowRecovery = false): void {
     if (operation === "refineFeature") {
+      if (feature.validation?.needsValidationCount > 0) {
+        throw new Error("REFINEMENT_DECISIONS_UNRESOLVED: Resolve outstanding target decisions through Deep-Dive before refinement.");
+      }
       const blocker = featureDesignPrerequisite(feature.featureWorkflow?.uiRequirementDecision, feature.featureWorkflow?.hasDesignArtifacts ?? false);
       if (blocker) throw new Error(blocker);
     }

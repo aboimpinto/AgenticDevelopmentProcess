@@ -6,6 +6,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, write
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFeatureRecipeSourceApplications } from "../src/bootstrap/feature-recipe-source-applications.js";
 import { createFeatureProjectionApplications } from "../src/bootstrap/feature-projection-applications.js";
@@ -90,6 +91,53 @@ async function fixture(initialCompleted = 2, initialState: MemoryBankStateFolder
 }
 
 describe("compatibility implementation lifecycle across scanner, validator, SQLite and dashboard", () => {
+  it.each(["valid", "wrong_version", "missing_flag"])("consumes the returned MCP gate contract and validates the published record (%s)", async variant => {
+    const scenario = "Returned MCP gate schema interoperates with host phase admission";
+    expect(readFileSync(new URL("./compatibility-implementation-lifecycle.feature", import.meta.url), "utf8")).toContain(`Scenario: ${scenario}`);
+    // Independent provider fixture: do not generate it with the host encoder.
+    const response = JSON.parse(readFileSync(new URL("./fixtures/mcp-phase-gate-response.json", import.meta.url), "utf8"));
+    expect(response.structuredContent).toMatchObject({ status: "pending_execution", action: "execute_procedure", execution_owner: "client_llm", retry_same_tool: false });
+    const contract = response.structuredContent.phase_gate_exchange_schema;
+    expect(contract).toEqual(phaseGatesProtocol.schema);
+    expect(response.structuredContent.instructions).toContain("Publish the supplied phase.gates");
+    const f = await fixture();
+    const mcp = vi.fn(() => response);
+    f.behavior(async input => {
+      if (input.step === "Repairing phase quality gates") return "No repair found; investigate the incompatible exchange.";
+      const invocation = input.prompt.match(/```js\n(mcp\([^\n]+\))\n```/)?.[1];
+      expect(invocation).toBeDefined();
+      const recipe = runInNewContext(invocation!, { mcp }, { timeout: 1000 }).structuredContent;
+      const phaseId = `phase-${input.phaseNumber}-work.md`;
+      const gateSchema = recipe.phase_gate_exchange_schema;
+      // Simulate the recipe publisher using the returned wire contract, not
+      // phaseGatesProtocol.encode, then exercise real disk/scanner/host admission.
+      const record = {
+        schemaVersion: variant === "wrong_version" ? "incompatible/v2" : gateSchema.properties.schemaVersion.const,
+        kind: gateSchema.properties.kind.const,
+        payload: {
+          phaseId, flags: { needCodeReview: false, ...(variant === "missing_flag" ? {} : { needTestCoverage: false }) },
+          criteria: [], checks: [],
+          coverage: { outcome: "not_applicable", criteria: [], reason: "Documentation-only deliverable; no behavioral coverage assigned." },
+          review: { outcome: "not_applicable", reason: "Documentation-only deliverable; no production changes." },
+        },
+      };
+      const phasePath = resolve(f.folder(), "Phases", phaseId);
+      writeFileSync(`${phasePath}.gates.json`, JSON.stringify(record));
+      writeFileSync(phasePath, readFileSync(phasePath, "utf8").replace("PENDING", "COMPLETED").replace("- [ ]", "- [x]"));
+      const tasks = resolve(f.folder(), "FeatureTasks.md");
+      writeFileSync(tasks, readFileSync(tasks, "utf8").replace(`| ${input.phaseNumber} | Work ${input.phaseNumber} | PENDING |`, `| ${input.phaseNumber} | Work ${input.phaseNumber} | COMPLETED |`));
+      return "Recipe published its phase gate exchange.";
+    });
+    const result = await f.run(false);
+    expect(mcp).toHaveBeenCalledExactlyOnceWith({ server: "devcycle-mcp", tool: "continue-implementation", args: {
+      feature_id: f.cardKey.split(":")[1], feature_path: f.folder(), workflow_mode: "single_phase",
+    } });
+    expect(result?.workflowStatus).toBe(variant === "valid" ? "completed" : "blocked");
+    if (variant === "valid") expect(f.calls).toHaveLength(1);
+    else expect(result?.workflowSummary).toContain("QUALITY_GATES_BLOCKED");
+    expect(f.folder()).toContain("03_IN_PROGRESS");
+  });
+
   it.each([false, true])("reconciles legacy execution layouts before final completion (failed=%s)", async failed => {
     const scenario = "Equivalent execution records permit finalization with optional health warnings";
     expect(readFileSync(new URL("./compatibility-implementation-lifecycle.feature", import.meta.url), "utf8")).toContain(`Scenario: ${scenario}`);
@@ -194,6 +242,15 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.completed()).toBe(3);
     expect(f.folder()).toContain("03_IN_PROGRESS");
     expect(f.calls[0]!.prompt).toContain('"workflow_mode":"single_phase"');
+    const prompt = f.calls[0]!.prompt;
+    expect(prompt).toContain("phase-2-work.md.gates.json");
+    expect(prompt).toContain(".hepha/phase-evidence/");
+    expect(prompt).toContain("MCP response");
+    expect(prompt).toContain("Execute only this single phase");
+    expect(prompt).not.toContain('"$schema"');
+    expect(prompt).not.toContain("Logical acceptance coverage:");
+    expect(prompt).not.toContain("project-test-plan-authoring/v1");
+    expect(Buffer.byteLength(prompt)).toBeLessThan(6000);
   });
 
   it("allows known lifecycle folder aliases and canonicalizes the status during execution", async () => {

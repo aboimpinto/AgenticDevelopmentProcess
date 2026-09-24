@@ -660,7 +660,7 @@
       "to": "bounded plan-bound MCP compatibility sessions using mapped recipes under one durable workflow",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
-      "rationale": "Compare the proven legacy recipe with native Hepha while preserving the selected action/model identity, provider-owned artifact format, and phase-scoped implementation telemetry. Recipe selection also selects the one provider-owned artifact validator used for refinement promotion, dashboard readiness, and Start/Continue admission; a zero-exit worker and file presence alone never establish readiness. Manual-test obligations bind to unique stable [contract:<taskId>] task markers rather than reconstructed prose headings. Hepha still enforces Deep-Dive decision closure, prohibits deferred human gates, and delegates autonomous review/acceptance. Refine Feature remains documentation-only: stack and quality commands are discovered statically and no package-manager, compiler, build, test, lint, audit, registry-search, or version-probe command may execute during planning. Refinement conditionally generates a Rust/Cargo foreground execution profile only when the target product workspace has Cargo.toml and the feature or configured gates will invoke Cargo; FeatureTasks and every phase inherit that activated profile, sequential foreground Cargo invocations are permitted, background and sibling concurrent Cargo processes are prohibited, and non-Cargo features receive no Cargo instructions. Implementation dispatch is technology-neutral and applies only inherited stack constraints. Implementation completion and release readiness are independent: only in-scope tasks and configured executable gates block phase or feature implementation acceptance, while external release dependencies become findings and follow-up work. Zero-warning authority remains universal for executed in-scope commands: no configured warning may be classified green even when the process exits zero. Project command authoring follows project-test-plan-authoring/v1: refinement writes the FeatureDescription TestPlan, developers validate and maintain it, and Phase files reference checks. This prompt contract does not alter runtime source snapshot semantics. Gateway calls use the explicit server selector and exact original tool name, independently of model/provider and display-prefix settings; do not synthesize or normalize tool aliases.",
+      "rationale": "Select the MCP recipe by action identity and preserve its exact server/tool/arguments across model routes. MCP responses are the sole procedural instruction authority: launch prompts carry transport, current validation diagnostics, session boundaries and host evidence/record locations, not duplicate verification, acceptance, test-plan, manual-test or gate-schema instructions. Provider-selected artifact validation, manual receipt persistence and deterministic gate admission remain host responsibilities; worker exit alone never proves acceptance. Native prompt policy and host-directed gate repair remain separate. The outer workflow preserves the authorized phase/feature boundary and resumes from rescanned evidence.",
       "unitTestPaths": [
         "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
         "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
@@ -672,22 +672,24 @@
         "apps/orchestrator/test/devcycle-refine-artifact-validator.test.ts",
         "apps/orchestrator/test/feat-062-projection-composition.test.ts",
         "apps/orchestrator/test/project-test-plan-authoring-policy.test.ts",
-        "apps/orchestrator/test/devcycle-mcp-tool-identity.integration.test.ts"
+        "apps/orchestrator/test/devcycle-mcp-tool-identity.integration.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts"
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
-        "apps/orchestrator/test/project-test-plan-authoring.feature"
+        "apps/orchestrator/test/project-test-plan-authoring.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature"
       ]
     },
     {
       "id": "WF-MCP-REFINE-POSTCONDITION-BLOCK",
       "scope": "preparation",
       "from": "terminal MCP refinement worker with unresolved preparation lifecycle state",
-      "trigger": "postcondition scan finds that the FEAT remains outside Ready To Develop after refinement",
+      "trigger": "postcondition scan finds the FEAT outside Ready To Develop or the target still has unresolved decisions after refinement",
       "to": "blocked result evaluation with interactive FEAT Deep-Dive recovery",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.execute",
-      "rationale": "A zero-exit model process is transport success, not refinement completion. When refinement cannot promote the FEAT into Ready To Develop because preparation decisions remain unresolved, preserve the worker summary and expose the standard interactive Deep-Dive recovery. A FEAT that is already Ready but has invalid provider artifacts follows WF-MCP-ARTIFACT-VALIDATION-FAIL instead so Refine remains available for deterministic repair.",
+      "rationale": "A zero-exit model process is transport success, not refinement completion. When refinement cannot promote the FEAT into Ready To Develop because preparation decisions remain unresolved, preserve the worker summary and expose the standard interactive Deep-Dive recovery. A FEAT that is already Ready but has invalid provider artifacts follows WF-MCP-ARTIFACT-VALIDATION-FAIL instead so Refine remains available for deterministic repair. Ready folder state cannot override unresolved target decision markers; linked or sibling decisions are not consulted.",
       "unitTestPaths": [
         "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
         "apps/orchestrator/test/feature-workflow-summary-projector.test.ts",
@@ -2305,6 +2307,22 @@
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/phase-quality-resolution.feature"
+      ]
+    },
+    {
+      "id": "WF-MCP-REFINE-DECISION-ADMISSION",
+      "scope": "preparation admission",
+      "from": "requested MCP refinement of the selected feature",
+      "trigger": "target validation reports unresolved Deep-Dive decisions",
+      "to": "refused refinement before worker dispatch or workflow mutation, with Deep-Dive guidance",
+      "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+      "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
+      "rationale": "The host enforces the existing target decision boundary deterministically without duplicating MCP instructions. Refine consumes resolved intent; sibling/context decisions cannot block a resolved target. Completion rechecks the target through WF-MCP-REFINE-POSTCONDITION-BLOCK.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
       ]
     }
   ]

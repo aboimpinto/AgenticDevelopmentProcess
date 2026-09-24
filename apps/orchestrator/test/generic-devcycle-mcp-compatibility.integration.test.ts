@@ -11,7 +11,8 @@ const implementationWorker = readFileSync(fileURLToPath(new URL("../src/workflow
 
 describe("generic DevCycle MCP compatibility Gherkin integration", () => {
   it("defines identity-blind recipe-source behavior", () => {
-    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(13);
+    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(15);
+    expect(feature).toContain("MCP owns procedure instructions without duplicate launch policies");
     expect(feature).toContain("human sign-off and owner-attestation tasks are rejected");
     expect(feature).toContain("refinement run fails with deterministic artifact diagnostics");
     expect(feature).toContain("rejected before a workflow run or manual-test mutation is recorded");
