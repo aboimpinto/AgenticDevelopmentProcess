@@ -1,3 +1,4 @@
+import { samePhaseGateEvidenceScope } from "./phase-gate-evidence-scope.js";
 import { isDeepStrictEqual } from "node:util";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
@@ -71,7 +72,8 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
     source: (path: string) => !!locate(path),
     review(path: string): string | null {
       const allowHistory = !!historicalRecord && historicalRecord.review.reportPath === path
-        && !!history && sameGateReference(historicalRecord.review, history.currentRecord.review);
+        && !!history && sameGateReference(historicalRecord.review, history.currentRecord.review)
+        && samePhaseGateEvidenceScope(historicalRecord, history.currentRecord);
       const report = text(path, [...documentBases, ...(allowHistory && history ? [history.projectRoot] : [])]);
       if (!report) return "Review report is unavailable.";
       // Review verdict fields are an established report protocol, not phase names.
@@ -81,7 +83,9 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
     },
     check(check: PhaseGateRecord["checks"][number]): string | null {
       if (!check.evidence.length) return `${check.id}: execution evidence is missing.`;
-      const allowHistory = !!historicalRecord?.checks.some(previous => sameGateReference(previous, check));
+      const allowHistory = !!historicalRecord && !!history
+        && historicalRecord.checks.some(previous => sameGateReference(previous, check))
+        && samePhaseGateEvidenceScope(historicalRecord, history.currentRecord, check);
       // Resolve this check's reports from its own cwd, never another check's
       // directory just because both use a generic name such as report.log.
       const checkRoot = resolve(projectRoot ?? dirname(documentPath), check.cwd);

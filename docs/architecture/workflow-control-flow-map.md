@@ -941,6 +941,8 @@ and the supplied MemoryBank feature path remain unchanged. Runtime receipts keep
 the registered project identity independently of Pi cwd. Historical relative
 execution/review reports can fall back to the registered checkout only for exact
 check/review references captured before worker launch and retained unchanged.
+Retained test references also require unchanged mapped criteria, assertions, test
+paths and applicability. Reviews require unchanged reviewed acceptance scope.
 New or changed checks receive no historical fallback; unrelated record edits do
 not invalidate retained checks. Each check resolves reports from its own working
 directory, never another check's directory. When a report exists in the selected checkout, current failures remain authoritative. Source validation

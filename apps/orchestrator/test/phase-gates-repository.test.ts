@@ -201,3 +201,35 @@ it.each([["current", "checks/a"], ["historical", "checks/a"], ["current", "."], 
   expect(proof.check(f.record.checks[0]!)).toBeNull();
   expect(proof.check(f.record.checks[1]!)).toContain("Runner reports failing tests");
 });
+
+
+it("rejects historical tests and approval for revised acceptance scope while retaining unrelated mapped checks", () => {
+  const f = fixture();
+  const registered = resolve(f.root, "registered"); const worktree = resolve(f.root, "worktree");
+  mkdirSync(registered); mkdirSync(worktree);
+  writeFileSync(resolve(registered, "prior.log"), "# pass 2\n# fail 0\n");
+  writeFileSync(resolve(registered, "review.md"), "**Status**: APPROVED\n");
+  f.record.flags = { needCodeReview: true, needTestCoverage: true };
+  f.record.criteria = [{ id: "first", description: "Original first behavior" }, { id: "second", description: "Original second behavior" }];
+  f.record.checks = ["first", "second"].map(id => ({ id, gate: "tests", required: true, command: `node --test ${id}.test.cjs`, cwd: ".", outcome: "passed", evidence: [{ path: "prior.log" }] }));
+  f.record.review = { outcome: "approved", reportPath: "review.md" };
+  f.record.coverage = { outcome: "sufficient", criteria: ["first", "second"].map(id => ({ criterionId: id, checkIds: [id], testPaths: [`${id}.test.cjs`], assertions: "Preserves the original behavior" })) };
+  const before = structuredClone(f.record);
+  const proof = () => phaseGateProof(f.documentPath, worktree, ["."], { projectRoot: registered, record: before, currentRecord: f.record });
+  expect(proof().check(f.record.checks[0]!)).toBeNull();
+  expect(proof().review("review.md")).toBeNull();
+  f.record.criteria[0]!.description = "Revised first behavior";
+  expect(proof().check(f.record.checks[0]!)).toContain("evidence is unavailable");
+  expect(proof().check(f.record.checks[1]!)).toBeNull();
+  expect(proof().review("review.md")).toBe("Review report is unavailable.");
+  f.record.criteria = before.criteria;
+  f.record.coverage.criteria[0]!.assertions = "A newly required assertion";
+  expect(proof().check(f.record.checks[0]!)).toContain("evidence is unavailable");
+  expect(proof().check(f.record.checks[1]!)).toBeNull();
+  // Assertion allocation changes test evidence, not unchanged review criteria.
+  expect(proof().review("review.md")).toBeNull();
+  f.record.coverage.criteria = structuredClone(before.coverage.criteria);
+  f.record.coverage.criteria[0]!.checkIds.push("another-check");
+  expect(proof().check(f.record.checks[0]!)).toBeNull();
+  expect(proof().review("review.md")).toBeNull();
+});

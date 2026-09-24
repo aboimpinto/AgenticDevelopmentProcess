@@ -48,3 +48,10 @@ Feature: Feature-scoped MCP execution workspace
     Given two checks in different directories reference report.log
     When their results are evaluated
     Then each check reads only its own directory's report
+
+  Scenario: Revised criteria require corresponding evidence
+    Given historical test and review references were captured before launch
+    When a criterion or assertion mapping changes
+    Then historical fallback is unavailable for checks mapped to that revised scope
+    And historical approval cannot cover the revised review scope
+    And unrelated mapped checks retain their evidence
