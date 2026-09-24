@@ -194,6 +194,15 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.completed()).toBe(3);
     expect(f.folder()).toContain("03_IN_PROGRESS");
     expect(f.calls[0]!.prompt).toContain('"workflow_mode":"single_phase"');
+    const prompt = f.calls[0]!.prompt;
+    expect(prompt).toContain("phase-2-work.md.gates.json");
+    expect(prompt).toContain(".hepha/phase-evidence/");
+    expect(prompt).toContain("MCP response");
+    expect(prompt).toContain("Execute only this single phase");
+    expect(prompt).not.toContain('"$schema"');
+    expect(prompt).not.toContain("Logical acceptance coverage:");
+    expect(prompt).not.toContain("project-test-plan-authoring/v1");
+    expect(Buffer.byteLength(prompt)).toBeLessThan(6000);
   });
 
   it("allows known lifecycle folder aliases and canonicalizes the status during execution", async () => {

@@ -41,7 +41,7 @@ describe("DevCycle MCP compatibility request", () => {
     expect(request.arguments).toHaveProperty("workflow_mode", "single_phase");
   });
 
-  it("renders one bounded MCP call contract with Hepha lifecycle invariants", () => {
+  it("renders one bounded MCP call contract with host integration boundaries", () => {
     const request = createDevCycleMcpCompatibilityRequest({
       autonomous: true,
       featureId: "FEAT-Z",
@@ -56,33 +56,22 @@ describe("DevCycle MCP compatibility request", () => {
     expect(prompt).toContain('status == "pending_execution"');
     expect(prompt).toContain("execute the returned instructions locally");
     expect(prompt).toContain("selected workflow mode");
-    expect(prompt).toContain("The MCP response supplies the recipe; Hepha retains lifecycle invariants");
+    expect(prompt).toContain("The MCP response is the sole source of workflow procedure and gate instructions");
     expect(prompt).not.toContain("Phase 0");
   });
 
-  it("forbids Refine Feature from publishing deferred human decisions", () => {
-    const prompt = renderDevCycleMcpCompatibilityPrompt(createDevCycleMcpCompatibilityRequest({
-      autonomous: true,
-      featureId: "FEAT-R",
-      featurePath: "/memory/feature-r",
-      operation: "refineFeature",
-    }));
-
-    expect(prompt).toContain("Deep-Dive owns clarification");
-    expect(prompt).toContain("MUST NOT create human-sign-off");
-    expect(prompt).toContain("before publishing any refinement artifacts");
-    expect(prompt).toContain("linked or contextual documents must not block the target feature");
-    expect(prompt).toContain("documentation-only planning action");
-    expect(prompt).toContain("Do not execute package-manager, compiler, build, test, lint, audit, dependency-search, or version-probe commands");
-    expect(prompt).toContain("Discover technology and configured commands statically");
-    expect(prompt).toContain("Do not modify product implementation repositories during refinement");
-    expect(prompt).toContain("AUTOMATABLE or MANUAL_TEST_REQUIRED");
-    expect(prompt).toContain("ManualTestObligations.json");
-    expect(prompt).toContain("[contract:<taskId>]");
-    expect(prompt).toContain("numbered `### Task` heading or status prose is descriptive and is never task identity");
-    expect(prompt).toContain("validate the complete provider-owned refinement set as one contract");
-    expect(prompt).toContain("This test cannot be automated and the user needs to test it manually.");
-  });
+  it.each(["designFeature", "refineFeature", "startImplementing", "continueImplementing", "completeFeature"] as const)(
+    "delegates %s procedures to MCP without copying workflow policies", operation => {
+      const request = createDevCycleMcpCompatibilityRequest({ autonomous: true, featureId: "FEAT-R", featurePath: "/memory/feature-r", operation });
+      const prompt = renderDevCycleMcpCompatibilityPrompt(request);
+      expect(prompt).toContain(`tool: "${request.toolName}"`);
+      expect(prompt).toContain(JSON.stringify(request.arguments));
+      for (const duplicated of ["collective-verification/v2", "project-test-plan-authoring/v1", "acceptance-responsibility/v1", "Logical acceptance coverage:", "Deep-Dive owns clarification", "configured gate that prints any warning", "HEPHA_MANUAL_TEST_DEFERRAL_V1"]) {
+        expect(prompt).not.toContain(duplicated);
+      }
+      expect(Buffer.byteLength(prompt)).toBeLessThan(4000);
+    },
+  );
 
   it("includes deterministic provider diagnostics when repairing existing refinement artifacts", () => {
     const prompt = renderDevCycleMcpCompatibilityPrompt(createDevCycleMcpCompatibilityRequest({
@@ -99,28 +88,10 @@ describe("DevCycle MCP compatibility request", () => {
     expect(prompt).toContain("Repair every item before reporting COMPLETED");
   });
 
-  it("gives autonomous continuation delegated authority instead of human approval stops", () => {
-    const prompt = renderDevCycleMcpCompatibilityPrompt(createDevCycleMcpCompatibilityRequest({
-      autonomous: true,
-      featureId: "FEAT-C",
-      featurePath: "/memory/feature-c",
-      operation: "continueImplementing",
-    }));
-
-    expect(prompt).toContain("NEVER stop to request human sign-off");
-    expect(prompt).toContain("delegated decision authority");
-    expect(prompt).toContain("treat it as a refinement defect");
-    expect(prompt).toContain("automated code review and phase acceptance");
-    expect(prompt).toContain("Apply stack-specific execution constraints only when refinement activated them");
-    expect(prompt).toContain("FeatureTasks.md and the active phase file");
-    expect(prompt).not.toContain("Cargo discipline is turn-scoped and mandatory");
-    expect(prompt).toContain("A configured gate that prints any warning is RED");
-    expect(prompt).toContain("Never classify a warning as pre-existing, benign, accepted, or green");
-    expect(prompt).toContain("Implementation completion and release readiness are independent outcomes");
-    expect(prompt).toContain("Out-of-scope or external release dependencies are non-blocking implementation findings");
-    expect(prompt).toContain("Only an in-scope task or configured executable gate");
-    expect(prompt).toContain("do not stop implementation or leave the phase incomplete");
-    expect(prompt).toContain("HEPHA_MANUAL_TEST_DEFERRAL_V1");
-    expect(prompt).toContain("Hepha owns SKIPPED persistence");
+  it("preserves transport errors and the selected mode without substituting native recipes", () => {
+    const prompt = renderDevCycleMcpCompatibilityPrompt(createDevCycleMcpCompatibilityRequest({ autonomous: true, featureId: "FEAT-C", featurePath: "/memory/feature-c", operation: "continueImplementing" }));
+    expect(prompt).toContain('"workflow_mode":"autonomous"');
+    expect(prompt).toContain("blocking failure");
+    expect(prompt).toContain("do not substitute native Hepha instructions");
   });
 });

@@ -911,6 +911,19 @@ or incompatible resolver exports fail the check; they are never skipped.
 CI's isolated gateway fixture remains independent of a local Pi installation.
 This contract check does not replace live provider/workflow verification.
 
+MCP recipe launches contain transport instructions and host integration metadata
+only. The returned MCP instructions own verification, TestPlan authoring,
+acceptance, manual-test receipt formats and the phase-gate schema. HEPHA does not
+prepend copies of native policy text or that schema. It supplies the requested
+server/tool/arguments, current validation diagnostics, authorized session boundary,
+phase record location and shell-observation ledger location. Deterministic artifact,
+receipt and gate validation still runs when the worker returns.
+
+A host-directed phase-gate repair is a distinct recovery action: it does not fetch
+an MCP recipe and therefore receives HEPHA's local gate contract. Native workflow
+prompts continue to receive their own policies. This launch-prompt reduction does
+not change Pi context-budget guards or the host-owned phase continuation loop.
+
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
 records one workflow run and dispatches a plan-bound Pi worker with the
 registered action/model identity. That

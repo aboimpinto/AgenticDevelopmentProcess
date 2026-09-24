@@ -77,7 +77,7 @@ Feature: Generic DevCycle MCP recipe-source compatibility
     When the mapped implementation worker executes a phase
     Then implementation dispatch applies only inherited stack-specific constraints
     And it does not invent Cargo instructions
-    And every configured warning remains red even when its command exits successfully
+    And configured gate outcomes are evaluated by their declared policy
 
   Scenario: Invalid configuration fails before workflow execution
     Given a configured recipe source is not recognized
@@ -90,3 +90,11 @@ Feature: Generic DevCycle MCP recipe-source compatibility
     Then the invocation uses the exact server and original tool name
     And the arguments preserve the selected workflow mode
     And one recipe invocation occurs without model-specific name repair
+
+  Scenario: MCP owns procedure instructions without duplicate launch policies
+    Given the selected MCP recipe supplies verification policies and a phase-gate schema
+    When HEPHA launches a preparation or implementation recipe worker
+    Then the prompt supplies the exact MCP invocation and authorized execution boundary
+    And phase workers receive their gate-record and native evidence ledger locations
+    But no native verification acceptance test-plan or gate-schema copy is appended
+    And HEPHA still validates returned artifacts and evidence before advancing
