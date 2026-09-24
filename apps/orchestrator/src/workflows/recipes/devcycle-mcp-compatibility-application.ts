@@ -19,7 +19,7 @@ import {
   renderDevCycleMcpCompatibilityPrompt,
 } from "./devcycle-mcp-compatibility-request.js";
 import type { FeatureRecipeOperation } from "./feature-recipe-source-policy.js";
-import { readCompatibilityProgress } from "./compatibility-lifecycle-state.js";
+import { readCompatibilityProgress, readCompatibilityTaskStates } from "./compatibility-lifecycle-state.js";
 import { compatibilityRecoveryKind } from "./compatibility-lifecycle-recovery-policy.js";
 import { CompatibilityImplementationRecovery, uniqueCompatibilityFeature } from "./compatibility-implementation-recovery.js";
 import { isUnresolvedQualityGate } from "@hepha/shared";
@@ -230,7 +230,6 @@ export class DevCycleMcpCompatibilityApplication {
     }
     this.assertOperationArtifacts(operation, feature);
     this.dependencies.reconcileImplementationState(feature);
-    const initial = readCompatibilityProgress(feature);
     const initialPhases = getNumberedPhases(feature);
     const gap = firstPhaseGateRepair(feature);
     const phase = (gap ? initialPhases.find(p => p.number === gap.phaseNumber) : null)
@@ -243,6 +242,9 @@ export class DevCycleMcpCompatibilityApplication {
       await this.dependencies.seedManualTestSkips({ cardKey: input.cardKey, feature, project, runId: input.runId });
     }
     if (!await this.dependencies.isWorkflowActive(metadata)) return;
+    // Include deterministic pre-launch manual-task seeding in the baseline.
+    const initial = readCompatibilityProgress(feature);
+    const initialTasks = readCompatibilityTaskStates(feature);
     const baselines = new Map(initialPhases.map(p => [p.number, retainPhaseGateBaseline(p.documentPath)]));
     const observations = resolve(project.rootPath, ".hepha", "phase-evidence", `${metadata.runId}.jsonl`);
     const request = createDevCycleMcpCompatibilityRequest({
@@ -276,14 +278,17 @@ export class DevCycleMcpCompatibilityApplication {
     this.dependencies.reconcileImplementationState(feature);
     const current = readCompatibilityProgress(feature);
     const phases = getNumberedPhases(feature);
+    const currentTasks = readCompatibilityTaskStates(feature);
     if (phases.length !== initialPhases.length || initialPhases.some(p => !phases.some(q => q.number === p.number))) {
       throw new Error("COMPATIBILITY_SCOPE_EXCEEDED: The worker changed the approved phase inventory.");
     }
-    if ([...initial.resolved].some(n => !current.resolved.has(n))) {
-      throw new Error("COMPATIBILITY_STATE_REGRESSION: Previously resolved phases became unresolved.");
+    if ([...initial.resolved].some(n => !current.resolved.has(n))
+      || [...initial.completedTasks].some(id => !current.completedTasks.has(id))) {
+      throw new Error("COMPATIBILITY_STATE_REGRESSION: Previously completed phase/task evidence regressed.");
     }
     if (!autonomous && operation !== "completeFeature" && (terminal || phases.some(p =>
-      p.number !== phase?.number && (p.status !== initialPhases.find(q => q.number === p.number)?.status
+      p.number !== phase?.number && (currentTasks.get(p.number) !== initialTasks.get(p.number)
+        || p.status !== initialPhases.find(q => q.number === p.number)?.status
         || (!initial.resolved.has(p.number) && current.resolved.has(p.number)))))) {
       throw new Error("COMPATIBILITY_SCOPE_EXCEEDED: Worker crossed the authorized single-phase boundary.");
     }

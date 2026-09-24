@@ -1,4 +1,5 @@
 // Execution fixtures assert TAP evidence; pin the reporter across Node versions.
+import { persistManualTestObligation, MANUAL_TEST_DEFERRAL_SCHEMA, MANUAL_TEST_SKIP_REASON } from "../src/manual-test-obligation.js";
 import { phaseGatesProtocol, type PhaseGateRecord } from "../src/exchanges/phase-gates.js";
 import { createCardMetadataStore } from "@hepha/db";
 import type { HandoffPlanV1, MemoryBankStateFolder, WorkItemCard } from "@hepha/shared";
@@ -487,6 +488,51 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(f.projection()?.canContinueImplementing).toBe(false);
     await expect(f.run(false)).rejects.toThrow("PHASE_STATUS_MISMATCH");
     expect(f.calls).toHaveLength(0);
+  });
+
+  it("does not mistake pre-launch manual-task seeding for supervised worker scope expansion", async () => {
+    const f = await fixture(0, "02_READY_TO_DEVELOP");
+    persistManualTestObligation(f.folder(), "FEAT-803", {
+      schemaVersion: MANUAL_TEST_DEFERRAL_SCHEMA, id: "physical", title: "Physical target check",
+      reason: MANUAL_TEST_SKIP_REASON, phaseNumber: 4, taskId: "work-4",
+      preconditions: ["Physical target available"], steps: ["Inspect the target"],
+      expectedResult: "Target behaves as specified", evidenceRequirements: ["Record the outcome"],
+    });
+    f.behavior(async () => {
+      const future = resolve(f.folder(), "Phases/phase-4-work.md");
+      expect(readFileSync(future, "utf8")).toContain("- [x]");
+      f.move("03_IN_PROGRESS");
+      const tasks = resolve(f.folder(), "FeatureTasks.md");
+      writeFileSync(tasks, readFileSync(tasks, "utf8").replace("READY_TO_DEVELOP", "IN_PROGRESS"));
+      f.acceptPhase(0);
+      return "Selected phase completed; manual obligation still pending";
+    });
+    expect(await f.run(false, "startImplementing")).toMatchObject({ workflowStatus: "completed" });
+    expect(f.calls).toHaveLength(1);
+    expect(readFileSync(resolve(f.folder(), "ManualTestObligations.json"), "utf8")).toContain('"PENDING"');
+  });
+
+  it("rejects supervised task progress in another phase even before its phase status changes", async () => {
+    const f = await fixture();
+    f.behavior(async () => {
+      const path = resolve(f.folder(), "Phases/phase-3-work.md");
+      writeFileSync(path, readFileSync(path, "utf8").replace("- [ ]", "- [-]"));
+      return "Started a later task";
+    });
+    expect(await f.run(false)).toMatchObject({ workflowStatus: "failed", workflowError: expect.stringContaining("SCOPE_EXCEEDED") });
+    expect(f.calls).toHaveLength(1);
+  });
+
+  it("rejects regression of completed tasks inside an unfinished phase", async () => {
+    const f = await fixture();
+    const path = resolve(f.folder(), "Phases/phase-2-work.md");
+    writeFileSync(path, readFileSync(path, "utf8").replace("- [ ]", "- [x]"));
+    f.behavior(async () => {
+      writeFileSync(path, readFileSync(path, "utf8").replace("- [x]", "- [ ]"));
+      return "Reset the task";
+    });
+    expect(await f.run(true)).toMatchObject({ workflowStatus: "failed", workflowError: expect.stringContaining("STATE_REGRESSION") });
+    expect(f.calls).toHaveLength(1);
   });
 
   it("rejects a worker that crosses the supervised phase boundary", async () => {

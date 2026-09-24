@@ -4235,7 +4235,9 @@
       "codeChanges": [
         "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts",
         "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
-        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts"
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-lifecycle-state.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-implementation-recovery.ts"
       ],
       "testsAdded": [
         "apps/orchestrator/test/pi-one-shot-runner.test.ts",

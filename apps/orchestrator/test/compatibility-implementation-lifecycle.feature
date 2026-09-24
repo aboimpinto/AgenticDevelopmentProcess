@@ -136,3 +136,10 @@ Feature: Pi-owned MCP execution with artifact-based progress
     When the phase gate record is evaluated
     Then the contradiction requires same-phase reconciliation
     And correcting the applicability declaration admits the same execution without a percentage threshold
+
+  Scenario: Supervised scope includes task state before phase activation
+    Given one phase is authorized
+    When the worker starts a later task without changing its phase header
+    Then HEPHA rejects the supervised scope violation
+    But host-seeded manual obligations are part of the pre-launch baseline
+    And prior completed task evidence cannot regress
