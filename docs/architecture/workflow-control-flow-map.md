@@ -901,6 +901,14 @@ server tool name. HEPHA does not synthesize display prefixes or normalize tool
 punctuation for a model/provider. The gateway resolves its configured display
 aliases; changing the model does not change this contract. Explicit recipe
 handoffs use the same lookup. Missing tools remain blocking failures.
+For an installed compatibility gateway, run `pnpm test:mcp-adapter` to check
+rendered invocations against its actual tool-name candidate resolver, under
+all four display-prefix settings. This offline check uses
+`HEPHA_MCP_ADAPTER_EXTENSION_PATH` (relative to the repository root or absolute),
+otherwise the runtime's workspace-scoped adapter location. Missing adapters
+or incompatible resolver exports fail the check; they are never skipped.
+CI's isolated gateway fixture remains independent of a local Pi installation.
+This contract check does not replace live provider/workflow verification.
 
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
 records one workflow run and dispatches a plan-bound Pi worker with the
