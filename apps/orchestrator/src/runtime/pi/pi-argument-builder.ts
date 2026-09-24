@@ -91,12 +91,12 @@ export function buildPiPromptArgs(
   }
   if (config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_TOOLS === "1") args.push("--no-tools");
   if (config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_EXTENSIONS === "1") args.push("--no-extensions");
-  if (config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_SKILLS === "1") {
+  if (options.mcpProfile || config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_SKILLS === "1") {
     args.push("--no-skills");
   } else {
     for (const skillPath of config.skillPaths) args.push("--skill", skillPath);
   }
-  if (config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_PROMPT_TEMPLATES === "1") {
+  if (options.mcpProfile || config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_PROMPT_TEMPLATES === "1") {
     args.push("--no-prompt-templates");
   }
   if (config.env.HEPHA_PI_IMPLEMENTATION_DISABLE_CONTEXT_FILES === "1") {

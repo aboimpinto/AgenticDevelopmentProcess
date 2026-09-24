@@ -1,5 +1,22 @@
 import type { DeepDiveQuestion } from "@hepha/shared";
 
+/** Hosted JSON cannot silently turn a malformed question into interview closure. */
+export function parseHostedDeepDiveQuestions(output: string): DeepDiveQuestion[] {
+  let parsed: unknown;
+  try { parsed = JSON.parse(output); } catch { throw new Error("MCP_DEEP_DIVE_QUESTIONS_INVALID"); }
+  const questions = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).questions : undefined;
+  if (!Array.isArray(questions) || questions.length > 1) throw new Error("MCP_DEEP_DIVE_QUESTIONS_INVALID");
+  const normalized = parseGeneratedDeepDiveQuestions(output);
+  if (normalized.length !== questions.length || questions.some(question => {
+    const options = question?.options;
+    return !Array.isArray(options) || options.length < 3 || options.length > 4
+      || options.some(option => !option || typeof option.label !== "string" || !option.label.trim()
+        || typeof option.description !== "string" || !option.description.trim())
+      || !options.some(option => option.label === question.recommendedOptionLabel);
+  })) throw new Error("MCP_DEEP_DIVE_QUESTIONS_INVALID");
+  return normalized;
+}
+
 export function parseGeneratedDeepDiveQuestions(output: string): DeepDiveQuestion[] {
   const normalizedOutput = stripMarkdownFence(output);
   const jsonStart = normalizedOutput.indexOf("{");

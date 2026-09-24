@@ -4217,6 +4217,31 @@
         "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
         "apps/orchestrator/test/fixtures/mcp-phase-gate-response.json"
       ]
+    },
+    {
+      "id": "WJ-2026-151",
+      "date": "2026-09-24",
+      "summary": "Move hosted Deep-Dive procedures into MCP and remove native workflow skill injection from MCP workers",
+      "transitionIds": [
+        "WF-DD-MCP-PROCEDURE",
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Deep-Dive retained its own native interview procedures while the delivery calls used MCP. MCP delivery workers also exposed native workflow skill/template discovery.",
+      "causalChain": "Two procedural authorities -> repeated context or conflicting workflow selection; a full interactive MCP recipe cannot safely replace one hosted UI turn.",
+      "testGap": "No cross-boundary coverage for hosted MCP opening/follow-up/chat/apply-answers stages, one-copy context, cancellation during retrieval, malformed follow-up closure, or recipe-source isolation of workflow skills.",
+      "missingDecision": "Define bounded hosted stages in MCP. Fetch and validate the selected contract, then run Pi without tools using procedure plus saved data once. Keep UI/storage/routing/admission in HEPHA. Recipe failure cannot synthesize a native result.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/devcycle-deep-dive-recipe-client.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-mcp-procedure.ts",
+        "apps/orchestrator/src/bootstrap/deep-dive-applications.ts",
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-mcp-procedure.integration.test.ts",
+        "apps/orchestrator/test/deep-dive-mcp-procedure.feature",
+        "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts"
+      ]
     }
   ]
 }

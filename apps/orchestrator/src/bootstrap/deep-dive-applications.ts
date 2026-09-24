@@ -20,6 +20,7 @@ import { RoutingActionResolver } from "../agent-routing/routing-action-resolver.
 import { createUiRequirementSourceHash } from "../workflows/prompts/feature-entry-prompts.js";
 import { hashText } from "../workflow-receipt.js";
 import type { createOrchestratorRuntimeSettings } from "./orchestrator-runtime-settings.js";
+import { createDevCycleDeepDiveRecipeClient } from "../runtime/devcycle-deep-dive-recipe-client.js";
 
 type RuntimeSettings = ReturnType<typeof createOrchestratorRuntimeSettings>;
 type StartDependencies = ConstructorParameters<typeof DeepDiveStartApplication>[0];
@@ -39,24 +40,33 @@ export interface DeepDiveApplicationsDependencies {
     | "deepDiveModelRewriteMaxChars"
     | "runTimeoutMs"
     | "sessionDir"
+    | "deepDiveMcpConfigPath"
   >;
   workItems: WorkItemQueryApplication;
 }
 
 /** Composes interactive deep-dive planning, chat, document update, completion, and recovery. */
 export function createDeepDiveApplications(dependencies: DeepDiveApplicationsDependencies) {
+  const mcpPrompt = dependencies.settings.deepDiveMcpConfigPath
+    ? createDevCycleDeepDiveRecipeClient(dependencies.settings.deepDiveMcpConfigPath, fetch, async id => {
+      const session = await dependencies.metadataStore.getDeepDiveSession(id);
+      return !!session && !session.completedAt && session.status !== "failed";
+    }) : undefined;
   const findProject = (projectId: string) => dependencies.registry.get(projectId) ?? null;
   const scanProject = (project: Parameters<WorkItemQueryApplication["scan"]>[0]) => dependencies.workItems.scan(project);
   const deepDiveChatResponder = new DeepDiveChatResponder({
+    mcpPrompt,
     resolveModel: () => dependencies.routeResolver.resolvePlan("deep-dive"),
     runPrompt: dependencies.runPrompt,
   });
   const deepDiveFollowUpPlanner = new DeepDiveFollowUpPlanner({
+    mcpPrompt,
     resolveModel: () => dependencies.routeResolver.resolvePlan("deep-dive"),
     runPrompt: dependencies.runPrompt,
     stallTimeoutMs: dependencies.settings.runTimeoutMs,
   });
   const deepDiveQuestionPlanner = new DeepDiveQuestionPlanner({
+    mcpPrompt,
     renderLessons: (project) => dependencies.lessons.render(project, {
       agentRole: "deep-dive",
       maxDocuments: 12,
@@ -67,6 +77,7 @@ export function createDeepDiveApplications(dependencies: DeepDiveApplicationsDep
     warn: (message, error) => console.warn(message, error instanceof Error ? error.message : error),
   });
   const deepDiveDocumentUpdater = new DeepDiveDocumentUpdater({
+    mcpPrompt,
     maxModelRewriteCharacters: dependencies.settings.deepDiveModelRewriteMaxChars,
     runPrompt: dependencies.runPrompt,
     sessionDirectory: dependencies.settings.sessionDir,

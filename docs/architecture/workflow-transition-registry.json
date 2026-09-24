@@ -2324,6 +2324,24 @@
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature"
       ]
+    },
+    {
+      "id": "WF-DD-MCP-PROCEDURE",
+      "scope": "preparation",
+      "from": "opening, follow-up, clarification or apply-answers interview stage",
+      "trigger": "Deep-Dive recipe source selects devcycle-mcp",
+      "to": "validated hosted recipe plus saved context in a tool-free registered model call",
+      "ownerPath": "apps/orchestrator/src/runtime/devcycle-deep-dive-recipe-client.ts",
+      "ownerSymbol": "createDevCycleDeepDiveRecipeClient",
+      "rationale": "MCP owns hosted interview procedure and format; HEPHA owns UI and durable answers/source writes. Consume one structured response, bind version/stage/target/output/no-mutation, retain context once, and refuse inactive sessions or incompatible recipes without native fallback. MCP implementation workers disable native skills and prompt templates.",
+      "unitTestPaths": [
+        "apps/orchestrator/test/deep-dive-mcp-procedure.integration.test.ts",
+        "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts"
+      ],
+      "gherkinPaths": [
+        "apps/orchestrator/test/deep-dive-mcp-procedure.feature"
+      ]
     }
   ]
 }

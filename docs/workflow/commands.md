@@ -6,9 +6,16 @@ Commands are native orchestrator actions by default. During the explicit
 DevCycle compatibility period, Design Feature, Refine Feature, Start
 Implementing, Continue Implementing, and Complete Feature may instead dispatch
 one selected Pi model through the proven `devcycle-mcp` recipe. Set
-`HEPHA_FEATURE_RECIPE_SOURCE=devcycle-mcp` for all five actions, or use the
+`HEPHA_FEATURE_RECIPE_SOURCE=devcycle-mcp` for these actions and Deep-Dive, or use the
 per-action overrides documented in `.env.example`. `native-hepha` remains the
 default and immediate rollback path.
+
+Deep-Dive uses MCP-owned hosted stages while retaining HEPHA's question-and-answer
+UI. `HEPHA_DEEP_DIVE_RECIPE_SOURCE` can override its source independently. Deploy
+the `devcycle-deep-dive-host/v1` server contract first. The host fetches each stage
+over the configured DevCycle HTTP endpoint; Pi receives the procedure and context
+once without tools or native workflow skills. See the
+[procedure ownership audit](../architecture/mcp-procedure-ownership-audit.md).
 
 The compatibility worker loads only the workspace-root MCP adapter and config
 resolved by `HEPHA_MCP_ADAPTER_EXTENSION_PATH` and

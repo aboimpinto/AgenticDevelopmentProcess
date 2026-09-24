@@ -9,6 +9,7 @@ import {
 } from "./deep-dive-workflow-policy.js";
 import { toDeepDiveQuestions, toDeepDiveSession } from "./deep-dive-session-application.js";
 import type { DeepDiveSourceDocumentRepository } from "./deep-dive-source-document-repository.js";
+import type { DeepDivePreparationSource } from "./deep-dive-preparation-source.js";
 
 type DeepDiveCompletionStore = Pick<CardMetadataStore,
   | "enabled"
@@ -41,7 +42,7 @@ export class DeepDiveCompletionApplication {
     updateDocument: (
       session: StoredDeepDiveSession,
       questions: DeepDiveQuestion[],
-      options: { cwd: string; plan: import("@hepha/shared").HandoffPlanV1; preparationContext?: string; workflowRunId: string },
+      options: { cwd: string; plan: import("@hepha/shared").HandoffPlanV1; preparationContext?: string; preparationSource?: DeepDivePreparationSource; workflowRunId: string },
     ) => Promise<string>;
   }) {}
 
@@ -78,14 +79,15 @@ export class DeepDiveCompletionApplication {
           status: "updating_document",
           updatedAt: this.dependencies.clock(),
         });
-        const preparationContext = this.dependencies.documents.readPreparationSource?.(
+        const preparationSource = this.dependencies.documents.readPreparationSource?.(
           session.originalDocumentPath!,
           session.cardKind as WorkItemCard["kind"],
-        ).promptMarkdown;
+        );
         const updatedMarkdown = await this.dependencies.updateDocument(updatingSession, questions, {
           cwd: project.rootPath,
           plan: this.dependencies.requireModel(undefined, `${command} update-document node`),
-          preparationContext,
+          preparationContext: preparationSource?.promptMarkdown,
+          preparationSource,
           workflowRunId: session.id,
         });
         this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown);

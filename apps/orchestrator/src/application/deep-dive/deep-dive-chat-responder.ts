@@ -1,5 +1,6 @@
 import type { StoredDeepDiveSession } from "@hepha/db";
 import type { DeepDiveQuestion, WorkItemCard } from "@hepha/shared";
+import { deepDiveSessionContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
 import {
   formatWorkItemKind,
   getDeepDiveWorkflowCommand,
@@ -7,6 +8,7 @@ import {
 } from "./deep-dive-workflow-policy.js";
 
 interface DeepDiveChatResponderDependencies {
+  mcpPrompt?: DeepDiveMcpPrompt;
   resolveModel: (command: DeepDiveWorkflowCommand) => import("@hepha/shared").HandoffPlanV1;
   runPrompt: (prompt: string, plan: import("@hepha/shared").HandoffPlanV1) => Promise<string>;
 }
@@ -20,9 +22,11 @@ export class DeepDiveChatResponder {
     userMessage: string,
   ): Promise<string> {
     const command = getDeepDiveWorkflowCommand(session.cardKind as WorkItemCard["kind"]);
-    const prompt = buildDeepDiveChatPrompt(session, question, userMessage);
-
     try {
+      const prompt = this.dependencies.mcpPrompt ? await this.dependencies.mcpPrompt({
+        stage: "clarify", workflowRunId: session.id, targetPath: requireDeepDiveTargetPath(session.originalDocumentPath),
+        context: { ...deepDiveSessionContext(session, [question]), activeQuestionId: question.id, userMessage },
+      }) : buildDeepDiveChatPrompt(session, question, userMessage);
       return await this.dependencies.runPrompt(prompt, this.dependencies.resolveModel(command));
     } catch (error) {
       return [
