@@ -70,6 +70,9 @@ describe("Pi argument builder", () => {
       "--extension", "/workspace/.pi/npm/node_modules/pi-mcp-adapter",
       "--mcp-config", "/workspace/.mcp.json",
     ]));
+    expect(args).not.toContain(MODEL_REQUEST_GUARD_PATH);
+    expect(args.filter(arg => arg === "--thinking")).toHaveLength(1);
+    expect(args[args.indexOf("--thinking") + 1]).toBe("high");
   });
 
   it("honors every implementation isolation toggle", () => {

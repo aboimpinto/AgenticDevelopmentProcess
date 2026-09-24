@@ -42,6 +42,69 @@ function createRunner(script: string, overrides: Partial<PiOneShotRunnerConfig> 
 }
 
 describe("Pi one-shot prompt runner", () => {
+  it.each([false, true])("delegates MCP context to Pi across a real process boundary (mcp=%s)", async mcpProfile => {
+    const events: string[] = [];
+    const { root, run, register } = createRunner(`
+const args = process.argv.slice(2);
+const guard = args.find(a => a.endsWith('/model-request-guard.ts'));
+// Execute the actual host guard if launch arguments load it. This fake Pi
+// transport isolates ownership; it does not assert a live model's compaction.
+if (guard) {
+  const { register } = await import(${JSON.stringify(import.meta.resolve("tsx/esm/api"))});
+  register();
+  let handler;
+  (await import(guard)).default({ on: (_, h) => handler = h, getThinkingLevel: () => 'high' });
+  await handler({payload:{input:[{type:'function_call_output',call_id:'synthetic',output:'evidence '.repeat(145000)}]}},
+    {model:{id:'gpt-5',provider:'openai-codex',api:'openai-codex-responses',contextWindow:272000,maxTokens:128000,reasoning:true}});
+}
+let extraInput = '';
+for await (const chunk of process.stdin) extraInput += chunk;
+if (extraInput) throw new Error('Host injected another conversation turn');
+const promptArg = args.at(-1);
+const prompt = promptArg.startsWith('@') ? (await import('node:fs')).readFileSync(promptArg.slice(1), 'utf8') : promptArg;
+if (prompt !== 'continue-implementing FEAT-123 autonomous') throw new Error('Launch prompt changed');
+console.log(JSON.stringify({type:'auto_compaction_start',reason:'threshold'}));
+console.log(JSON.stringify({type:'auto_compaction_end',result:{tokensBefore:145000}}));
+console.log(JSON.stringify({type:'message_end',message:{role:'assistant',stopReason:'stop',content:'Pi completed',usage:{input:1700,output:10,cacheRead:0}}}));
+`, { defaultTimeoutMs: 10000, implementationTimeoutMs: 10000,
+      mcpCompatibility: { extensionPath: '/synthetic/mcp-adapter.ts', configPath: '/synthetic/mcp.json' } });
+    const result = run("continue-implementing FEAT-123 autonomous", launch, {
+      implementationProfile: true, mcpProfile, stallTimeoutMs: 10000,
+      onPiEvent: event => events.push(event.type),
+    });
+    if (!mcpProfile) {
+      await expect(result).rejects.toThrow("HEPHA_CONTEXT_BUDGET_EXCEEDED");
+      expect(events).not.toContain("auto_compaction_start");
+    } else {
+      await expect(result).resolves.toBe("Pi completed");
+      expect(events).toContain("auto_compaction_end");
+      const audit = readdirSync(root).find(name => name.endsWith('-usage.jsonl'))!;
+      expect(readFileSync(resolve(root, audit), 'utf8')).toContain('"input":1700');
+    }
+    expect(register).toHaveBeenCalledOnce();
+  });
+
+  it("lets Pi resolve MCP model compatibility without a host tokenizer prerequisite", async () => {
+    const { run } = createRunner('console.log("Pi selected requested model");', {
+      mcpCompatibility: { extensionPath: '/synthetic/adapter.ts', configPath: '/synthetic/config.json' },
+    });
+    await expect(run("prompt", { ...launch, model: { model: "future-provider-model", provider: "synthetic" } }, {
+      implementationProfile: true, mcpProfile: true,
+    })).resolves.toBe("Pi selected requested model");
+    await expect(run("prompt", { ...launch, model: { model: "future-provider-model", provider: "synthetic" } }))
+      .rejects.toThrow();
+  });
+
+  it.each(["input", "output", "task-output"])("rejects an explicit incompatible %s cap before MCP launch", async cap => {
+    const { run, register } = createRunner('throw new Error("must not spawn");');
+    await expect(run("prompt", { ...launch, environment: { ...launch.environment,
+      ...(cap === "input" ? { HEPHA_PI_MAX_ATTEMPT_INPUT_TOKENS: "512000" } : {}),
+      ...(cap === "output" ? { HEPHA_PI_OUTPUT_TOKEN_LIMIT: "16000" } : {}),
+    } }, { implementationProfile: true, mcpProfile: true, ...(cap === "task-output" ? { maxOutputTokens: 16000 } : {}) }))
+      .rejects.toThrow("MCP_PI_CONTEXT_CONFIGURATION_CONFLICT");
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it("preserves request telemetry in logs but returns only the actionable budget failure", async () => {
     const { root, run } = createRunner(`
 console.error('HEPHA_MODEL_REQUEST {"inputTokens":40000}');

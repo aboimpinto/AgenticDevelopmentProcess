@@ -1,4 +1,5 @@
 import { modelTokenizerEncoding } from "./model-token-counter.js";
+import { inputSpendingLimit } from "./input-spending-policy.js";
 import { randomUUID } from "node:crypto";
 import { presentModelRequestFailure } from "./model-request-failure.js";
 import { createPromptUsageAudit } from "./prompt-usage-audit.js";
@@ -59,8 +60,16 @@ export function createPiOneShotPromptRunner(config: PiOneShotRunnerConfig) {
   ): Promise<string> {
     const piEnv = launch.environment;
     const model = launch.model;
-    // Reject unsupported selections before a worker or provider request exists.
-    modelTokenizerEncoding({ id: model.model, provider: model.provider });
+    if (options.mcpProfile) {
+      // Pi owns request sizing, tokenizer compatibility and compaction. Do not
+      // silently bypass a separately configured host-only spending/output cap.
+      if (inputSpendingLimit("attempt", piEnv) !== null || options.maxOutputTokens !== undefined
+        || piEnv.HEPHA_PI_OUTPUT_TOKEN_LIMIT?.trim()) {
+        throw new Error("MCP_PI_CONTEXT_CONFIGURATION_CONFLICT: MCP workers use Pi-owned context management; HEPHA request-token/output caps are unsupported on this route. No worker was started. Use a configured process deadline or a Pi-owned budget instead.");
+      }
+    } else {
+      modelTokenizerEncoding({ id: model.model, provider: model.provider });
+    }
 
     await mkdir(config.sessionDirectory, { recursive: true });
     const usageAudit = createPromptUsageAudit(resolve(config.sessionDirectory, `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID()}-usage.jsonl`));
