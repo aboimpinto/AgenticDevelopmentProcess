@@ -198,3 +198,12 @@ scenario inventories, and file-format checks for authored evidence.
   preserve historical artifact identity"; FEAT-070 Lessons Learned §22,
   "Artifact audits must run after final machine projection and preserve
   immutable identity"
+
+
+## External Adapter Tool Identity
+
+- Trigger: changing a prompt or adapter boundary that dispatches external tools.
+- Preserve the exact server and original tool identity; let the gateway own display aliases. Never depend on a model repairing a generated tool name.
+- A synthetic gateway fixture proves HEPHA's caller contract but can hide an incorrect assumption about the installed adapter. Pair it with an adapter-backed contract check before shipping integration changes.
+- For DevCycle MCP compatibility, run `pnpm test:mcp-adapter` against the installed adapter. It must resolve all rendered operations uniquely without a live recipe/model call. Live provider behavior is separate evidence.
+- Source: issue #48 and PR #49, including Greptile's external-resolver coverage finding.

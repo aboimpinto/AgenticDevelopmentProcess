@@ -25,7 +25,8 @@ const project = { id: "project", name: "Project", rootPath: "/project", memoryBa
 const plan = { resolvedRoute: { action: { actionId: "refine-feature" } } } as HandoffPlanV1;
 
 describe("DevCycle MCP compatibility application", () => {
-  it("dispatches the selected action to one MCP-enabled model worker", async () => {
+  it.each(["deepseek-v4-flash", "gpt-5.6-terra", "qwen-coder"])("dispatches the same tool contract through model route %s", async (modelId) => {
+    const plan = { resolvedRoute: { action: { actionId: "refine-feature" }, route: { connectionId: "synthetic-provider", modelId } } } as HandoffPlanV1;
     const events: string[] = [];
     const worker = vi.fn(async () => "MCP recipe completed");
     const application = new DevCycleMcpCompatibilityApplication({
@@ -61,7 +62,7 @@ describe("DevCycle MCP compatibility application", () => {
       agentAction: "refine-feature",
       mcpProfile: true,
       plan,
-      prompt: expect.stringContaining("devcycle_mcp_refine-feature"),
+      prompt: expect.stringContaining('mcp({ server: "devcycle-mcp", tool: "refine-feature",'),
     }));
     expect(events).toEqual(["started", "workflow.started", "completed", "workflow.completed"]);
   });

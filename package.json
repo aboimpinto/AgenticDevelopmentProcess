@@ -27,7 +27,8 @@
     "release:audit": "node scripts/public-release-audit.mjs",
     "release:prepare": "node scripts/prepare-public-release.mjs",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:mcp-adapter": "pnpm --filter @hepha/orchestrator exec tsx ../../scripts/check-mcp-adapter-contract.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

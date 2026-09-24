@@ -895,6 +895,22 @@ readiness explanations, direct HTTP admission, refinement promotion, and
 manual-test seeding all use that same provider-selected authority. The HTTP
 boundary also resolves stable project/FEAT identity and rejects an
 already-running workflow.
+
+The MCP gateway invocation uses an explicit server selector and the original
+server tool name. HEPHA does not synthesize display prefixes or normalize tool
+punctuation for a model/provider. The gateway resolves its configured display
+aliases; changing the model does not change this contract. Explicit recipe
+handoffs use the same lookup. Missing tools remain blocking failures.
+For an installed compatibility gateway, run `pnpm test:mcp-adapter` to check
+rendered invocations against its actual tool-name candidate resolver, under
+all four display-prefix settings. This offline check uses the same runtime environment and MCP configuration
+resolvers as HEPHA, including process-environment precedence over workspace
+`.env`, configured path expansion and the workspace-scoped default. The configured
+MCP config and adapter paths must exist; the check does not connect to the server. Missing adapters
+or incompatible resolver exports fail the check; they are never skipped.
+CI's isolated gateway fixture remains independent of a local Pi installation.
+This contract check does not replace live provider/workflow verification.
+
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
 records one workflow run and dispatches a plan-bound Pi worker with the
 registered action/model identity. That

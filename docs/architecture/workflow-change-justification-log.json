@@ -4149,6 +4149,28 @@
         "apps/orchestrator/test/phase-quality-resolution.integration.test.ts",
         "apps/orchestrator/test/phase-quality-resolution.feature"
       ]
+    },
+    {
+      "id": "WJ-2026-148",
+      "date": "2026-09-24",
+      "summary": "Keep compatibility MCP tool identity independent of model and display-prefix configuration",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "The prompt normalized the server prefix and instructed the worker to call an identifier the gateway did not advertise.",
+      "causalChain": "Synthesized display alias -> tool lookup fails -> no recipe execution -> unchanged lifecycle evidence.",
+      "testGap": "Existing prompt tests repeated the incorrect alias and did not execute the rendered invocation against a server-scoped tool catalog. Review also identified that a gateway fixture alone assumes external resolver behavior; the repeatable installed-adapter contract check now verifies that boundary.",
+      "missingDecision": "Use exact original tool identity with an explicit server selector. Prefix formatting belongs to the gateway, never a model/provider branch. Preserve response validation, workflow modes and existing failure and retry policy.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-request.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/devcycle-mcp-tool-identity.integration.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
+        "apps/orchestrator/test/devcycle-mcp-compatibility-application.test.ts",
+        "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
+        "scripts/check-mcp-adapter-contract.ts"
+      ]
     }
   ]
 }

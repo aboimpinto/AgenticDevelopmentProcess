@@ -83,3 +83,10 @@ Feature: Generic DevCycle MCP recipe-source compatibility
     Given a configured recipe source is not recognized
     When runtime configuration is constructed
     Then construction fails without selecting an action or starting a worker
+
+  Scenario: Model selection does not change the MCP tool contract
+    Given a configured recipe server with original tool names and configurable display prefixes
+    When any supported feature action is dispatched through a selected model route
+    Then the invocation uses the exact server and original tool name
+    And the arguments preserve the selected workflow mode
+    And one recipe invocation occurs without model-specific name repair
