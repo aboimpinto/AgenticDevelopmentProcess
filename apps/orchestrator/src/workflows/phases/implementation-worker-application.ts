@@ -44,6 +44,8 @@ export interface ImplementationWorkerInput {
   phaseTitle: string | null;
   taskId?: string | null;
   project: StoredProject;
+  /** Validated feature checkout; project identity and MemoryBank location stay unchanged. */
+  executionCwd?: string;
   prompt: string;
   runId: string;
   step: string;
@@ -120,7 +122,7 @@ export class ImplementationWorkerApplication {
       this.dependencies.assertRunActive(input.runId);
       this.audit(input, modelName, "pi_attempt_started", "running");
       const promptOptions: ImplementationWorkerPromptOptions = {
-        cwd: input.project.rootPath, implementationProfile: true,
+        cwd: input.executionCwd ?? input.project.rootPath, implementationProfile: true,
         sessionFile: this.dependencies.buildSessionFile({ agentRole: input.agentRole, agentRunId: id, runId: input.runId }),
         // Fixer agents (resolve-review-findings): no hard timeout, only stall detection
         ...(input.agentAction === "resolve-review-findings" ? { maxRuntimeMs: null as null, stallTimeoutMs: 600000 } : {}),

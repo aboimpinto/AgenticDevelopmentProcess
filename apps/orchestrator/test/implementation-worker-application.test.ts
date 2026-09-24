@@ -23,6 +23,14 @@ function target(overrides: Record<string, unknown> = {}) {
 }
 
 describe("ImplementationWorkerApplication", () => {
+  it("uses a validated execution cwd without changing the registered project identity", async () => {
+    const item = target();
+    await item.application.execute({ ...input, executionCwd: "/worktrees/feature", mcpProfile: true });
+    expect(item.runPrompt).toHaveBeenCalledWith("prompt", selectedPlan, expect.objectContaining({ cwd: "/worktrees/feature", mcpProfile: true }));
+    expect(item.recordAgentRun).toHaveBeenCalledWith(expect.objectContaining({ projectId: "project" }));
+    expect(input.project.rootPath).toBe("/project");
+  });
+
   it("persists running, audits the attempt, runs Pi, and persists completion in order", async () => {
     const item = target();
     await expect(item.application.execute(input)).resolves.toBe("DONE");

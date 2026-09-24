@@ -1,3 +1,4 @@
+import type { CompatibilityExecutionWorkspace } from "./compatibility-execution-workspace.js";
 import { resolve } from "node:path";
 import { loadPhaseGateRecord, retainPhaseGateBaseline, admitPhaseGateBaseline, readPhaseGates } from "../../exchanges/phase-gates-repository.js";
 import { firstPhaseGateRepair, mcpGateExchangeContext, gateRevisionProblem, observePhaseGateTools } from "./compatibility-phase-gate-repair.js";
@@ -68,6 +69,7 @@ export interface DevCycleMcpCompatibilityDependencies {
   readonly notifyChanged: (projectId: string, eventType: string, externalId: string) => void;
   readonly resolvePlan: (actionId: ReturnType<typeof createDevCycleMcpCompatibilityRequest>["agentAction"]) => HandoffPlanV1;
   readonly resolveTarget: (input: FeatureWorkflowActionInput) => Promise<CompatibilityTarget>;
+  readonly resolveExecutionWorkspace: (input: { project: StoredProject; featureId: string; operation: FeatureRecipeOperation }) => CompatibilityExecutionWorkspace;
   readonly runWorker: (input: ImplementationWorkerInput) => Promise<string>;
   readonly scanProject: (project: StoredProject) => Promise<WorkItemCard[]>;
   readonly seedManualTestSkips: (input: {
@@ -229,6 +231,7 @@ export class DevCycleMcpCompatibilityApplication {
       feature = repaired;
     }
     this.assertOperationArtifacts(operation, feature);
+    let workspace = this.dependencies.resolveExecutionWorkspace({ project, featureId: feature.externalId, operation });
     this.dependencies.reconcileImplementationState(feature);
     const initialPhases = getNumberedPhases(feature);
     const gap = firstPhaseGateRepair(feature);
@@ -246,7 +249,7 @@ export class DevCycleMcpCompatibilityApplication {
     const initial = readCompatibilityProgress(feature);
     const initialTasks = readCompatibilityTaskStates(feature);
     const baselines = new Map(initialPhases.map(p => [p.number, retainPhaseGateBaseline(p.documentPath)]));
-    const observations = resolve(project.rootPath, ".hepha", "phase-evidence", `${metadata.runId}.jsonl`);
+    const observations = resolve(workspace.cwd, ".hepha", "phase-evidence", `${metadata.runId}.jsonl`);
     const request = createDevCycleMcpCompatibilityRequest({
       autonomous, operation, featureId: feature.externalId, featurePath: feature.folderPath,
     });
@@ -254,14 +257,17 @@ export class DevCycleMcpCompatibilityApplication {
       agentAction: request.agentAction, agentName: "DevCycle MCP Compatibility Agent",
       agentRole: "devcycle-mcp-compatibility", cardKey: input.cardKey, feature, mcpProfile: true,
       phaseNumber: phase?.number ?? null, phaseTitle: phase?.title ?? null,
-      plan: this.dependencies.resolvePlan(request.agentAction), project,
+      plan: this.dependencies.resolvePlan(request.agentAction), project, executionCwd: workspace.cwd,
       onPiEvent: observePhaseGateTools(observations),
-      prompt: renderDevCycleMcpCompatibilityPrompt(request)
+      prompt: renderDevCycleMcpCompatibilityPrompt(request) + workspace.context
         + (phase ? mcpGateExchangeContext(phase.documentPath, observations) : `\nHost shell observation ledger: ${observations}`)
         + (gap ? `\nCurrent artifact diagnostics: ${JSON.stringify(gap.gates.filter(isUnresolvedQualityGate))}` : ""),
       runId: input.runId, step: `Executing ${request.toolName} from DevCycle MCP`,
     });
     if (!await this.dependencies.isWorkflowActive(metadata)) return;
+    // Initial start may establish its feature worktree inside the one MCP session.
+    // Revalidate ownership before reading relative evidence, including continuation.
+    workspace = this.dependencies.resolveExecutionWorkspace({ project, featureId: feature.externalId, operation: "continueImplementing" });
     feature = uniqueCompatibilityFeature(await this.dependencies.scanProject(project), feature.externalId);
     if (!await this.dependencies.isWorkflowActive(metadata)) return;
     await this.dependencies.applyManualTestDeferrals({ cardKey: input.cardKey, feature, output, project, runId: input.runId });
@@ -295,12 +301,12 @@ export class DevCycleMcpCompatibilityApplication {
     const summary = this.dependencies.summarizeOutput(output, "Pi action returned.");
     const problems: string[] = [];
     for (const p of phases) {
-      const revision = gateRevisionProblem(baselines.get(p.number) ?? null, p.documentPath, project.rootPath);
+      const revision = gateRevisionProblem(baselines.get(p.number) ?? null, p.documentPath, workspace.cwd);
       if (revision) problems.push(`${p.title}: ${revision}`);
       if (current.resolved.has(p.number) && (!initial.resolved.has(p.number) || p.number === phase?.number)
         && !loadPhaseGateRecord(p.documentPath)) problems.push(`${p.title}: Publish the structured phase gate record; report prose is not acceptance evidence.`);
       if (current.resolved.has(p.number) || p.number === phase?.number) {
-        problems.push(...(readPhaseGates(p, project.rootPath) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
+        problems.push(...(readPhaseGates(p, workspace.cwd) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
       }
     }
     const unresolved = firstPhaseGateRepair(feature);

@@ -29,6 +29,8 @@ async function fixture(initialCompleted = 2, initialState: MemoryBankStateFolder
   const project = { id: "synthetic", name: "Sample", rootPath, memoryBankPath, createdAt: "2031-01-01", updatedAt: "2031-01-01" };
   const externalId = ["FEAT", "803"].join("-");
   const cardKey = `feature:${externalId}`;
+  const initialized = spawnSync("git", ["init", "-b", `feat/${externalId}-sample`, rootPath], { encoding: "utf8" });
+  if (initialized.status !== 0) throw new Error(initialized.stderr);
   const states: MemoryBankStateFolder[] = ["02_READY_TO_DEVELOP", "03_IN_PROGRESS", "04_COMPLETED"];
   let state = initialState;
   let folder = resolve(memoryBankPath, "Features", state, `${externalId}-sample`);

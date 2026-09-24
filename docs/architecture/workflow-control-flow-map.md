@@ -930,6 +930,23 @@ an MCP recipe and therefore receives HEPHA's local gate contract. Native workflo
 prompts continue to receive their own policies. This launch-prompt reduction does
 not change Pi context-budget guards or the host-owned phase continuation loop.
 
+Implementation actions resolve the feature's code checkout before launching Pi.
+The resolver enumerates Git worktrees and matches the feature identifier at branch
+component boundaries. A unique existing worktree owns the worker cwd and relative
+gate evidence; ambiguity, locked/prunable worktrees and missing continuation
+workspaces block before launch. Initial start may use a primary main/master checkout
+when no feature worktree exists, leaving feature initialization to MCP. It cannot
+silently start in another feature's checkout. Project registration, scanner identity
+and the supplied MemoryBank feature path remain unchanged.
+
+The launch declares repository authority separately from MCP procedure: code Git
+operations and the clean-worktree gate apply to the selected code checkout. An
+external MemoryBank permits scoped lifecycle-document updates, not Git authority
+over its shared parent. The worker must not stage, commit, push, stash or clean that
+parent, or demand that unrelated projects there be clean. Existing unfinished code
+is preserved and still governed by MCP acceptance. This location contract adds no
+new acceptance criteria and does not waive failed checks.
+
 `DevCycleMcpCompatibilityApplication.start` owns `WF-RECIPE-SOURCE-MCP`. It
 records one workflow run and dispatches a plan-bound Pi worker with the
 registered action/model identity. That
