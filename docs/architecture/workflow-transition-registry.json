@@ -660,7 +660,7 @@
       "to": "one plan-bound Pi action with the MCP adapter and requested mode",
       "ownerPath": "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
       "ownerSymbol": "DevCycleMcpCompatibilityApplication.start",
-      "rationale": "MCP owns procedure; Pi owns context. HEPHA retains deterministic admission, observation, cancellation and artifact-result validation without duplicating procedures.",
+      "rationale": "MCP owns procedure; Pi owns context. HEPHA retains deterministic admission, observation, cancellation and artifact-result validation without duplicating procedures. Implementation launch resolves the feature worktree and declares separate code and external-document Git authority; ambiguous or unavailable workspaces fail before Pi.",
       "unitTestPaths": [
         "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
         "apps/orchestrator/test/devcycle-mcp-compatibility-request.test.ts",
@@ -673,12 +673,16 @@
         "apps/orchestrator/test/feat-062-projection-composition.test.ts",
         "apps/orchestrator/test/project-test-plan-authoring-policy.test.ts",
         "apps/orchestrator/test/devcycle-mcp-tool-identity.integration.test.ts",
-        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts"
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/compatibility-execution-workspace.integration.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/phase-gates-repository.test.ts"
       ],
       "gherkinPaths": [
         "apps/orchestrator/test/generic-devcycle-mcp-compatibility.feature",
         "apps/orchestrator/test/project-test-plan-authoring.feature",
-        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature"
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/orchestrator/test/compatibility-execution-workspace.feature"
       ]
     },
     {

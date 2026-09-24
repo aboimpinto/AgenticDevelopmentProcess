@@ -1,3 +1,5 @@
+import { samePhaseGateEvidenceScope } from "./phase-gate-evidence-scope.js";
+import { isDeepStrictEqual } from "node:util";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import type { FeaturePhaseQualityGateDecision, PhaseSummary } from "@hepha/shared";
@@ -45,14 +47,34 @@ export function testExecutionProblem(output: string): string | null {
   return "Execution needs a native runner result showing tests actually ran; import the runner report before repeating execution.";
 }
 
-export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = []) {
-  const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
-  function locate(path: string) { return bases.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
-  function text(path: string) { const file = locate(path); return file ? readFileSync(file, "utf8") : null; }
+/** Prose explanations are not execution identity or proof of a new run. */
+function sameGateReference(left: { reason?: string }, right: { reason?: string }): boolean {
+  return isDeepStrictEqual({ ...left, reason: undefined }, { ...right, reason: undefined });
+}
+
+export interface HistoricalPhaseGateEvidence {
+  readonly projectRoot: string;
+  /** Immutable pre-worker gate record, not the current or newly written record. */
+  readonly record: PhaseGateRecord;
+}
+
+export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = [],
+  history?: HistoricalPhaseGateEvidence & { readonly currentRecord: PhaseGateRecord }) {
+  const documentBases = [projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
+  const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), ...documentBases];
+  // Old launch locations may contain receipts/reports, never substitute source
+  // files from a different checkout when validating current acceptance coverage.
+  const historicalRecord = history?.record.phaseId === basename(documentPath)
+    && history.currentRecord.phaseId === history.record.phaseId ? history.record : undefined;
+  function locate(path: string, roots: readonly string[] = bases) { return roots.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
+  function text(path: string, reportBases: readonly string[]) { const file = locate(path, reportBases); return file ? readFileSync(file, "utf8") : null; }
   return {
     source: (path: string) => !!locate(path),
     review(path: string): string | null {
-      const report = text(path);
+      const allowHistory = !!historicalRecord && historicalRecord.review.reportPath === path
+        && !!history && sameGateReference(historicalRecord.review, history.currentRecord.review)
+        && samePhaseGateEvidenceScope(historicalRecord, history.currentRecord);
+      const report = text(path, [...documentBases, ...(allowHistory && history ? [history.projectRoot] : [])]);
       if (!report) return "Review report is unavailable.";
       // Review verdict fields are an established report protocol, not phase names.
       return /^\s*\*{0,2}(?:Status|Verdict|Result)\*{0,2}\s*:\s*\*{0,2}APPROVED(?:_WITH_NOTES)?\b/im.test(report)
@@ -61,9 +83,19 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
     },
     check(check: PhaseGateRecord["checks"][number]): string | null {
       if (!check.evidence.length) return `${check.id}: execution evidence is missing.`;
+      const allowHistory = !!historicalRecord && !!history
+        && historicalRecord.checks.some(previous => sameGateReference(previous, check))
+        && samePhaseGateEvidenceScope(historicalRecord, history.currentRecord, check);
+      // Resolve this check's reports from its own cwd, never another check's
+      // directory just because both use a generic name such as report.log.
+      const checkRoot = resolve(projectRoot ?? dirname(documentPath), check.cwd);
+      const featureBases = [resolve(dirname(documentPath), ".."), dirname(documentPath)]
+        .filter(base => base !== projectRoot || base === checkRoot);
+      const reportBases = [checkRoot, ...featureBases,
+        ...(allowHistory && history ? [resolve(history.projectRoot, check.cwd)] : [])];
       let verified = false;
       for (const evidence of check.evidence) {
-        const raw = text(evidence.path);
+        const raw = text(evidence.path, reportBases);
         if (!raw) return `${check.id}: evidence is unavailable: ${evidence.path}`;
         if (!evidence.toolCallId && (check.gate === "tests" || check.gate === "gherkin_e2e") && !raw.trimStart().startsWith("{")) {
           const problem = testExecutionProblem(raw);
@@ -98,14 +130,14 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
   };
 }
 
-export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string): FeaturePhaseQualityGateDecision[] | null {
+export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string, history?: HistoricalPhaseGateEvidence): FeaturePhaseQualityGateDecision[] | null {
   const record = loadPhaseGateRecord(phase.documentPath);
   if (!record) return null;
   if (!record.valid) return [{ gate: "tests", status: "missing", evidencePaths: [phaseGateRecordPath(phase.documentPath)],
     justification: `Repair phase gate JSON: ${record.diagnostics.map(d => d.message).join("; ")}` }];
   if (record.value.payload.phaseId !== basename(phase.documentPath)) return [{ gate: "tests", status: "missing", evidencePaths: [], justification: "Gate result belongs to another phase document; retain its assigned opaque identity." }];
   try {
-    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd));
+    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd), history ? { ...history, currentRecord: record.value.payload } : undefined);
     const baselinePath = `${phase.documentPath}.gates.baseline.json`;
     if (existsSync(baselinePath)) {
       const baseline = phaseGatesProtocol.decode(readFileSync(baselinePath, "utf8"));

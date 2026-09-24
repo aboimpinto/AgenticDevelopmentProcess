@@ -33,6 +33,7 @@ describe("DevCycle MCP compatibility application", () => {
     const worker = vi.fn(async () => "Refinement completed");
     const applyManualTestDeferrals = vi.fn(async () => 0);
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -78,6 +79,7 @@ describe("DevCycle MCP compatibility application", () => {
     const events: string[] = [];
     const worker = vi.fn(async () => "MCP recipe completed");
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -118,6 +120,7 @@ describe("DevCycle MCP compatibility application", () => {
   it("blocks refinement when the provider exits cleanly without refinement postconditions", async () => {
     const events: string[] = [];
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -162,6 +165,7 @@ describe("DevCycle MCP compatibility application", () => {
       },
     } as HandoffPlanV1;
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -200,6 +204,7 @@ describe("DevCycle MCP compatibility application", () => {
     const order: string[] = [];
     const startPlan = { resolvedRoute: { action: { actionId: "start-feature" } } } as HandoffPlanV1;
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => { order.push("seed"); return 1; },
       createCardKey: () => "feature:FEAT-X",
@@ -233,6 +238,7 @@ describe("DevCycle MCP compatibility application", () => {
   it("records a durable failure when the MCP-enabled worker fails", async () => {
     const events: string[] = [];
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -266,6 +272,7 @@ describe("DevCycle MCP compatibility application", () => {
   it("fails refinement when Ready artifacts do not satisfy the selected provider contract", async () => {
     const events: string[] = [];
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips: async () => 0,
       createCardKey: () => "feature:FEAT-X",
@@ -313,6 +320,7 @@ describe("DevCycle MCP compatibility application", () => {
     const seedManualTestSkips = vi.fn(async () => 0);
     const worker = vi.fn(async () => "Started");
     const application = new DevCycleMcpCompatibilityApplication({
+      resolveExecutionWorkspace: ({ project }) => ({ cwd: project.rootPath, context: "" }),
       applyManualTestDeferrals: async () => 0,
       seedManualTestSkips,
       createCardKey: () => "feature:FEAT-X",

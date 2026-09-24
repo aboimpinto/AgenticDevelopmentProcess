@@ -22,6 +22,7 @@ export interface ImplementationWorkerPromptOptions {
   timeoutMs?: number;
   workflowRunId: string;
   runtimeContext: {
+    projectId: string;
     cardKey: string | null;
     phaseExecutionContractId: string | null;
     phaseNumber: number | null;
@@ -44,6 +45,8 @@ export interface ImplementationWorkerInput {
   phaseTitle: string | null;
   taskId?: string | null;
   project: StoredProject;
+  /** Validated feature checkout; project identity and MemoryBank location stay unchanged. */
+  executionCwd?: string;
   prompt: string;
   runId: string;
   step: string;
@@ -120,7 +123,7 @@ export class ImplementationWorkerApplication {
       this.dependencies.assertRunActive(input.runId);
       this.audit(input, modelName, "pi_attempt_started", "running");
       const promptOptions: ImplementationWorkerPromptOptions = {
-        cwd: input.project.rootPath, implementationProfile: true,
+        cwd: input.executionCwd ?? input.project.rootPath, implementationProfile: true,
         sessionFile: this.dependencies.buildSessionFile({ agentRole: input.agentRole, agentRunId: id, runId: input.runId }),
         // Fixer agents (resolve-review-findings): no hard timeout, only stall detection
         ...(input.agentAction === "resolve-review-findings" ? { maxRuntimeMs: null as null, stallTimeoutMs: 600000 } : {}),
@@ -132,6 +135,7 @@ export class ImplementationWorkerApplication {
         ...(input.timeoutMs !== undefined ? { timeoutMs: input.timeoutMs } : {}),
         workflowRunId: input.runId,
         runtimeContext: {
+          projectId: input.project.rootPath,
           cardKey: input.cardKey,
           phaseExecutionContractId: input.phaseExecutionContractId ?? null,
           phaseNumber: input.phaseExecutionContractId ? input.phaseNumber : null,
