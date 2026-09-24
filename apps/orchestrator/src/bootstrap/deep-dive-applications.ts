@@ -10,7 +10,7 @@ import { DeepDiveQuestionPlanner } from "../application/deep-dive/deep-dive-ques
 import { DeepDiveSessionApplication } from "../application/deep-dive/deep-dive-session-application.js";
 import { DeepDiveSourceDocumentRepository } from "../application/deep-dive/deep-dive-source-document-repository.js";
 import { DeepDiveStartApplication } from "../application/deep-dive/deep-dive-start-application.js";
-import { readDeepDivePreparationSource } from "../application/deep-dive/deep-dive-preparation-source.js";
+import { readDeepDivePreparationSource, readDeepDivePreparationSourceFromDocument } from "../application/deep-dive/deep-dive-preparation-source.js";
 import { EpicStateSynchronizationApplication } from "../application/epics/epic-state-synchronization-application.js";
 import { FeatureWorkflowRunCoordinator } from "../application/features/feature-workflow-run-coordinator.js";
 import { createWorkItemCardKey } from "../application/work-items/work-item-card-key-policy.js";
@@ -56,11 +56,13 @@ export function createDeepDiveApplications(dependencies: DeepDiveApplicationsDep
   const scanProject = (project: Parameters<WorkItemQueryApplication["scan"]>[0]) => dependencies.workItems.scan(project);
   const deepDiveChatResponder = new DeepDiveChatResponder({
     mcpPrompt,
+    readPreparationSource: readDeepDivePreparationSourceFromDocument,
     resolveModel: () => dependencies.routeResolver.resolvePlan("deep-dive"),
     runPrompt: dependencies.runPrompt,
   });
   const deepDiveFollowUpPlanner = new DeepDiveFollowUpPlanner({
     mcpPrompt,
+    readPreparationSource: readDeepDivePreparationSourceFromDocument,
     resolveModel: () => dependencies.routeResolver.resolvePlan("deep-dive"),
     runPrompt: dependencies.runPrompt,
     stallTimeoutMs: dependencies.settings.runTimeoutMs,

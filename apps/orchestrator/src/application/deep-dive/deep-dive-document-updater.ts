@@ -5,8 +5,9 @@ import type { StoredDeepDiveSession } from "@hepha/db";
 import type { DeepDiveQuestion, WorkItemCard } from "@hepha/shared";
 import { sanitizeValidationMarkerReferences } from "../../work-item-validation.js";
 import type { PiPromptRunOptions } from "../../runtime/pi/pi-argument-builder.js";
-import { deepDivePreparationContext, deepDiveSessionContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
+import { deepDiveSessionContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
 import type { DeepDivePreparationSource } from "./deep-dive-preparation-source.js";
+import { applyDeepDiveEdits } from "../../exchanges/deep-dive-edits.js";
 
 interface DeepDiveDocumentUpdaterDependencies {
   mcpPrompt?: DeepDiveMcpPrompt;
@@ -38,12 +39,11 @@ export class DeepDiveDocumentUpdater {
     }
 
     try {
+      const context = this.dependencies.mcpPrompt ? deepDiveSessionContext(session, questions, options.preparationSource) : null;
       const output = await this.dependencies.runPrompt(
         this.dependencies.mcpPrompt ? await this.dependencies.mcpPrompt({
           stage: "apply_answers", workflowRunId: options.workflowRunId ?? session.id, targetPath: requireDeepDiveTargetPath(session.originalDocumentPath),
-          context: { ...deepDiveSessionContext(session, questions),
-            preparationDocuments: deepDivePreparationContext(requireDeepDiveTargetPath(session.originalDocumentPath), options.preparationSource),
-          },
+          context: context!,
         }) : buildDeepDiveDocumentUpdatePrompt(session, questions, options.preparationContext),
         options.plan,
         {
@@ -59,6 +59,7 @@ export class DeepDiveDocumentUpdater {
         },
       );
 
+      if (context) return applyDeepDiveEdits(output, context.target.markdown);
       return cleanResolvedValidationMarkerText(stripMarkdownFence(output));
     } catch (error) {
       if (this.dependencies.mcpPrompt) throw error;

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { DeepDiveMcpPrompt, DeepDiveMcpRequest } from "../application/deep-dive/deep-dive-mcp-procedure.js";
 
-const outputs = { opening: "questions_json", follow_up: "questions_json", clarify: "clarification_text", apply_answers: "target_markdown" } as const;
+const outputs = { opening: "questions_json", follow_up: "questions_json", clarify: "clarification_text", apply_answers: "target_edits_json" } as const;
 const invalid = () => new Error("MCP_DEEP_DIVE_CONTRACT_INVALID: the configured DevCycle server must supply the requested hosted interview stage (v1).");
 
 /** DevCycle's stateless JSON-RPC HTTP recipe endpoint. Only instructions and a
@@ -33,8 +33,7 @@ export function createDevCycleDeepDiveRecipeClient(configPath: string, request: 
       });
     } catch { throw new Error("MCP_DEEP_DIVE_RECIPE_UNAVAILABLE: the recipe request failed or timed out."); }
     if (!response.ok) throw new Error(`MCP_DEEP_DIVE_RECIPE_UNAVAILABLE: HTTP ${response.status}.`);
-    const raw = await response.text();
-    if (Buffer.byteLength(raw) > 2_000_000) throw invalid();
+    const raw = await readBoundedResponse(response);
     let wire: any;
     try { wire = JSON.parse(raw); } catch { throw invalid(); }
     const recipe = wire?.result?.structuredContent;
@@ -51,4 +50,29 @@ export function createDevCycleDeepDiveRecipeClient(configPath: string, request: 
     }
     return `${recipe.instructions}\n\nHost interview data (JSON):\n${JSON.stringify(input.context)}`;
   };
+}
+
+async function readBoundedResponse(response: Response): Promise<string> {
+  const limit = 2_000_000;
+  if (Number(response.headers.get("content-length")) > limit) {
+    await response.body?.cancel();
+    throw invalid();
+  }
+  if (!response.body) throw invalid();
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      length += chunk.value.byteLength;
+      if (length > limit) {
+        await reader.cancel();
+        throw invalid();
+      }
+      chunks.push(chunk.value);
+    }
+    return Buffer.concat(chunks, length).toString("utf8");
+  } finally { reader.releaseLock(); }
 }

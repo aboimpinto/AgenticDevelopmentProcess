@@ -938,13 +938,18 @@ the feature worker adapter. HEPHA fetches exactly one stage contract, adds saved
 context once, invokes the registered model without tools, and preserves its UI and
 source persistence. Missing/incompatible contracts and invalid question output
 cannot fall back to native success. See the [four-call audit](mcp-procedure-ownership-audit.md).
+All hosted stages receive current preparation context and saved decisions.
+Apply-answers returns the versioned `deep-dive.edits` exchange. The host applies
+only unique, non-overlapping scoped edits and refuses a source changed during
+model execution. Whole/partial Markdown responses cannot replace the source.
+Response bodies are bounded during streaming; oversized streams are cancelled.
 
 ```mermaid
 flowchart LR
   Interview["HEPHA interview stage and saved state"] -->|"WF-DD-MCP-PROCEDURE<br/>MCP selected"| HostedRecipe["Fetch and validate one MCP hosted stage"]
   HostedRecipe -->|"active session + valid contract"| InterviewModel["Tool-free Pi: recipe + context once"]
   HostedRecipe -->|"missing/incompatible recipe or stopped session"| InterviewFailure["Visible failure; no native fallback"]
-  InterviewModel -->|"valid result"| InterviewUI["HEPHA UI, answer persistence and target write"]
+  InterviewModel -->|"valid result; exact edits; source still current"| InterviewUI["HEPHA UI, answer persistence and target write"]
   InterviewModel -->|"invalid result"| InterviewFailure
 ```
 

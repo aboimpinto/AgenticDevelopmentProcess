@@ -17,9 +17,11 @@ export function requireDeepDiveTargetPath(path: string | null | undefined): stri
 }
 
 /** Saved state is input data; procedural instructions come only from MCP. */
-export function deepDiveSessionContext(session: StoredDeepDiveSession, questions: readonly DeepDiveQuestion[]) {
+export function deepDiveSessionContext(session: StoredDeepDiveSession, questions: readonly DeepDiveQuestion[], source?: DeepDivePreparationSource) {
   return {
-    target: { id: session.cardExternalId, title: session.cardTitle, kind: session.cardKind, markdown: session.originalDocument },
+    target: { id: session.cardExternalId, title: session.cardTitle, kind: session.cardKind,
+      markdown: source?.documents.find(document => document.path === session.originalDocumentPath)?.markdown ?? session.originalDocument },
+    preparationDocuments: deepDivePreparationContext(requireDeepDiveTargetPath(session.originalDocumentPath), source),
     focus: session.focus ?? "",
     questions,
   };

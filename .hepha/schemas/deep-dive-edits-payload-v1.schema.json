@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hosted Deep-Dive exact edits v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["edits"],
+  "properties": {
+    "edits": {
+      "type": "array", "maxItems": 1000,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["before", "after"],
+        "properties": {
+          "before": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "after": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -90,7 +90,9 @@ export class DeepDiveCompletionApplication {
           preparationSource,
           workflowRunId: session.id,
         });
-        this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown);
+        const primary = preparationSource?.documents?.find(document => document.path === session.originalDocumentPath);
+        if (primary) this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown, primary.markdown);
+        else this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown);
         return {
           evidence: this.readPreparationEvidence(session),
           updatingSession,

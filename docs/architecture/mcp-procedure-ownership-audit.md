@@ -26,21 +26,28 @@ append the duplicate MCP text representation. No extra model call is needed to
 fetch the recipe. Source documents and answers stay in the Pi input; MCP receives
 only the target locator and stage.
 
-The primary document appears once. Preparation documents exclude that target.
+The current primary document appears once. Preparation documents exclude that target.
 A follow-up references its newest answer by ID in the saved transcript rather
-than repeating the answer. The host adds no native interview policy to an MCP
+than repeating the answer, and includes current design/preparation context.
+Clarification receives all saved answers and identifies the active question by ID.
+The host adds no native interview policy to an MCP
 stage. The selected procedure contains the stage's question/result format.
 
 ## Host responsibilities remain
 
-HEPHA stores questions and answers and writes the returned primary document
-through its existing completion application. All hosted Deep-Dive model calls
+HEPHA stores questions and answers and applies versioned exact text edits to the
+current primary snapshot. The `deep-dive.edits` exchange rejects partial Markdown,
+truncated JSON, ambiguous/missing anchors, overlapping edits and whole-document
+replacement. Untouched text survives, and source changes during model execution
+prevent the write. The MCP schema and host decoder share the same versioned
+exchange contract. All hosted Deep-Dive model calls
 run without file/shell tools, context-file discovery, skills or templates. An
 inactive session after recipe retrieval cannot start the model. Missing recipes,
 wrong target/stage/version/output contracts, mutation scope and invalid question
 responses fail visibly. Only explicit valid empty follow-up questions close a
 branch. MCP document-update failure never invokes the native deterministic
-rewrite fallback, including the native large-document threshold.
+rewrite fallback, including the native large-document threshold. HTTP responses
+are limited to two megabytes during streaming, with oversized streams cancelled.
 
 Host-directed gate repair remains a separate recovery action which does not
 fetch an MCP recipe. It receives the host's local gate exchange contract once;
