@@ -3,6 +3,7 @@
     "contract_version": "1.0",
     "tool_name": "continue-implementation",
     "status": "pending_execution",
+    "action": "execute_procedure",
     "tool_call_success": true,
     "execution_owner": "client_llm",
     "retry_same_tool": false,

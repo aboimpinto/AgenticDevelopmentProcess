@@ -96,6 +96,7 @@ describe("compatibility implementation lifecycle across scanner, validator, SQLi
     expect(readFileSync(new URL("./compatibility-implementation-lifecycle.feature", import.meta.url), "utf8")).toContain(`Scenario: ${scenario}`);
     // Independent provider fixture: do not generate it with the host encoder.
     const response = JSON.parse(readFileSync(new URL("./fixtures/mcp-phase-gate-response.json", import.meta.url), "utf8"));
+    expect(response.structuredContent).toMatchObject({ status: "pending_execution", action: "execute_procedure", execution_owner: "client_llm", retry_same_tool: false });
     const contract = response.structuredContent.phase_gate_exchange_schema;
     expect(contract).toEqual(phaseGatesProtocol.schema);
     expect(response.structuredContent.instructions).toContain("Publish the supplied phase.gates");
