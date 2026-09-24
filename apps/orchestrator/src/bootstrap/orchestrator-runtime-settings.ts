@@ -8,8 +8,8 @@ import {
 } from "../runtime/orchestrator-runtime-configuration.js";
 import { validatePortableModelAuthorityInventory } from "../portable-model-authority-inventory.js";
 import { createPiProcessEnvironment, ensureCargoShimDirectory } from "../runtime/pi/pi-process-environment.js";
-import { resolveMcpCompatibilityRuntimeConfiguration } from "../runtime/mcp-compatibility-runtime-configuration.js";
-import { createFeatureRecipeSourcePolicy } from "../workflows/recipes/feature-recipe-source-policy.js";
+import { resolveDevCycleRecipeConfigPath, resolveMcpCompatibilityRuntimeConfiguration } from "../runtime/mcp-compatibility-runtime-configuration.js";
+import { createFeatureRecipeSourcePolicy, deepDiveRecipeSource } from "../workflows/recipes/feature-recipe-source-policy.js";
 import {
   readOptionalPositiveIntegerEnvironment,
   readPositiveIntegerEnvironment,
@@ -30,6 +30,7 @@ export function createOrchestratorRuntimeSettings(input: {
     15,
   );
   const featureRecipeSourcePolicy = createFeatureRecipeSourcePolicy(runtimeEnv);
+  const deepDiveSource = deepDiveRecipeSource(runtimeEnv);
   const mcpCompatibility = resolveMcpCompatibilityRuntimeConfiguration({
     enabled: featureRecipeSourcePolicy.usesDevCycleMcp,
     environment: runtimeEnv,
@@ -114,6 +115,9 @@ export function createOrchestratorRuntimeSettings(input: {
     implementationRunTimeoutMs: explicitImplementationMaximum ?? legacyImplementationMaximum,
     implementationSkillPaths,
     featureRecipeSourcePolicy,
+    deepDiveSource,
+    deepDiveMcpConfigPath: deepDiveSource === "devcycle-mcp"
+      ? resolveDevCycleRecipeConfigPath({ environment: runtimeEnv, workspaceRoot: inferredWorkspaceRoot }) : null,
     mcpCompatibility,
     inferredWorkspaceRoot,
     localStateDir,

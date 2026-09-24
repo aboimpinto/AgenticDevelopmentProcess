@@ -42,3 +42,8 @@ function parseRecipeSource(value: string | undefined, fallback: FeatureRecipeSou
   if (normalized === "native-hepha" || normalized === "devcycle-mcp") return normalized;
   throw new Error(`FEATURE_RECIPE_SOURCE_INVALID: ${JSON.stringify(value)}`);
 }
+
+export function deepDiveRecipeSource(environment: NodeJS.ProcessEnv): FeatureRecipeSource {
+  return parseRecipeSource(environment.HEPHA_DEEP_DIVE_RECIPE_SOURCE,
+    parseRecipeSource(environment.HEPHA_FEATURE_RECIPE_SOURCE, "native-hepha"));
+}

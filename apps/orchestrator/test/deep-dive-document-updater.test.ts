@@ -66,7 +66,7 @@ describe("deep-dive document updater", () => {
       cwd: "/project",
       plan: handoffPlan("model-any"),
       workflowRunId: "run-any",
-    })).resolves.toBe("# Updated\n\nNo validation markers remain.");
+    })).resolves.toBe("# Updated\n\nNo validation markers remain.\n");
     expect(runPrompt).toHaveBeenCalledWith(
       expect.stringContaining("This is Deep-Dive stage 2 only"),
       handoffPlan("model-any"),

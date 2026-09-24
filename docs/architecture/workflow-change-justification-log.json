@@ -4217,6 +4217,56 @@
         "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
         "apps/orchestrator/test/fixtures/mcp-phase-gate-response.json"
       ]
+    },
+    {
+      "id": "WJ-2026-151",
+      "date": "2026-09-24",
+      "summary": "Move hosted Deep-Dive procedures into MCP and remove native workflow skill injection from MCP workers",
+      "transitionIds": [
+        "WF-DD-MCP-PROCEDURE",
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Deep-Dive retained its own native interview procedures while the delivery calls used MCP. MCP delivery workers also exposed native workflow skill/template discovery.",
+      "causalChain": "Two procedural authorities -> repeated context or conflicting workflow selection; a full interactive MCP recipe cannot safely replace one hosted UI turn.",
+      "testGap": "No cross-boundary coverage for hosted MCP opening/follow-up/chat/apply-answers stages, one-copy context, cancellation during retrieval, malformed follow-up closure, or recipe-source isolation of workflow skills.",
+      "missingDecision": "Define bounded hosted stages in MCP. Fetch and validate the selected contract, then run Pi without tools using procedure plus saved data once. Keep UI/storage/routing/admission in HEPHA. Recipe failure cannot synthesize a native result.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/devcycle-deep-dive-recipe-client.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-mcp-procedure.ts",
+        "apps/orchestrator/src/bootstrap/deep-dive-applications.ts",
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-mcp-procedure.integration.test.ts",
+        "apps/orchestrator/test/deep-dive-mcp-procedure.feature",
+        "apps/orchestrator/test/feature-recipe-source-policy.test.ts",
+        "apps/orchestrator/test/pi-argument-builder.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-152",
+      "date": "2026-09-24",
+      "summary": "Preserve current interview context and source content across MCP responses",
+      "transitionIds": [
+        "WF-DD-MCP-PROCEDURE",
+        "WF-DD-COMPLETE",
+        "WF-DD-FAIL"
+      ],
+      "whyHappened": "Review found that the initial hosted context omitted fresh primary content, follow-up design constraints and earlier chat decisions. Unvalidated full rewrites could erase source, and HTTP limits were applied after buffering.",
+      "causalChain": "Stale/incomplete context -> conflicting model decisions; empty or partial rewrites -> destructive source replacement; late response limits -> avoidable memory use.",
+      "testGap": "Initial tests used unchanged primary content, one question and short successful responses. They did not exercise intervening edits, truncated output, conflicting anchors or streamed oversized bodies.",
+      "missingDecision": "Use current preparation snapshots and complete saved decisions; publish versioned exact edits against the snapshot; validate shape, uniqueness and overlap before applying; refuse a source changed during execution; enforce transport byte limits while reading and cancel oversized streams. Persist scoped edits verbatim, and skip identical writes after checking the expected snapshot so no-op exchanges preserve formatting, hashes and modification times. Normalize complete native model rewrites in the native updater, including their final newline, without normalizing MCP exact edits.",
+      "codeChanges": [
+        "apps/orchestrator/src/exchanges/deep-dive-edits.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-mcp-procedure.ts",
+        "apps/orchestrator/src/application/deep-dive/deep-dive-source-document-repository.ts",
+        "apps/orchestrator/src/runtime/devcycle-deep-dive-recipe-client.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-mcp-procedure.integration.test.ts",
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts",
+        "apps/orchestrator/test/deep-dive-mcp-procedure.feature"
+      ]
     }
   ]
 }

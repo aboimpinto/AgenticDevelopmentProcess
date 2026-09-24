@@ -58,7 +58,7 @@ describe("Pi argument builder", () => {
       "prompt", model, { implementationProfile: true, mcpProfile: true },
       {
         env: {},
-        skillPaths: [],
+        skillPaths: ["/skills/native-refine", "/skills/native-continue"],
         mcpCompatibility: {
           configPath: "/workspace/.mcp.json",
           extensionPath: "/workspace/.pi/npm/node_modules/pi-mcp-adapter",
@@ -70,6 +70,9 @@ describe("Pi argument builder", () => {
       "--extension", "/workspace/.pi/npm/node_modules/pi-mcp-adapter",
       "--mcp-config", "/workspace/.mcp.json",
     ]));
+    expect(args).toEqual(expect.arrayContaining(["--no-skills", "--no-prompt-templates"]));
+    expect(args).not.toContain("--skill");
+    expect(args).not.toContain("/skills/native-refine");
   });
 
   it("honors every implementation isolation toggle", () => {

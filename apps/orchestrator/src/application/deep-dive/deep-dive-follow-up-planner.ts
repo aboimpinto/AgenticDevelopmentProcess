@@ -1,10 +1,15 @@
 import type { StoredDeepDiveSession } from "@hepha/db";
 import type { DeepDiveQuestion } from "@hepha/shared";
 import type { PiPromptRunOptions } from "../../runtime/pi/pi-argument-builder.js";
-import { parseGeneratedDeepDiveQuestions } from "./deep-dive-question-parser.js";
+import { parseGeneratedDeepDiveQuestions, parseHostedDeepDiveQuestions } from "./deep-dive-question-parser.js";
 import { toDeepDiveQuestions } from "./deep-dive-session-application.js";
+import { deepDiveSessionContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
+import type { readDeepDivePreparationSourceFromDocument } from "./deep-dive-preparation-source.js";
+import type { WorkItemCard } from "@hepha/shared";
 
 interface DeepDiveFollowUpPlannerDependencies {
+  mcpPrompt?: DeepDiveMcpPrompt;
+  readPreparationSource?: typeof readDeepDivePreparationSourceFromDocument;
   resolveModel(): import("@hepha/shared").HandoffPlanV1;
   runPrompt(
     prompt: string,
@@ -20,7 +25,11 @@ export class DeepDiveFollowUpPlanner {
 
   async create(session: StoredDeepDiveSession, answeredQuestion: DeepDiveQuestion): Promise<DeepDiveQuestion[]> {
     const output = await this.dependencies.runPrompt(
-      buildDeepDiveFollowUpPrompt(session, answeredQuestion),
+      this.dependencies.mcpPrompt ? await this.dependencies.mcpPrompt({
+        stage: "follow_up", workflowRunId: session.id, targetPath: requireDeepDiveTargetPath(session.originalDocumentPath),
+        context: { ...deepDiveSessionContext(session, toDeepDiveQuestions(session.questions),
+          this.dependencies.readPreparationSource?.(requireDeepDiveTargetPath(session.originalDocumentPath), session.cardKind as WorkItemCard["kind"])), newestAnswerId: answeredQuestion.id },
+      }) : buildDeepDiveFollowUpPrompt(session, answeredQuestion),
       this.dependencies.resolveModel(),
       {
         cwd: undefined,
@@ -31,7 +40,7 @@ export class DeepDiveFollowUpPlanner {
         workflowRunId: session.id,
       },
     );
-    const questions = parseGeneratedDeepDiveQuestions(output);
+    const questions = (this.dependencies.mcpPrompt ? parseHostedDeepDiveQuestions : parseGeneratedDeepDiveQuestions)(output);
     if (questions.length > 1) {
       throw new Error("Adaptive Deep-Dive follow-up must return zero or one immediate question.");
     }

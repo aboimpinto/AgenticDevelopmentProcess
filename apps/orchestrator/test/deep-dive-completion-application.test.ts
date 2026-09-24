@@ -82,15 +82,16 @@ function harness(initial = session(), options: {
     if (options.updateError) throw options.updateError;
     return "# Updated";
   });
+  const documents = {
+    readEvidence: vi.fn(() => evidence),
+    readPreparationEvidence: vi.fn(() => preparationEvidence),
+    readPreparationSource: vi.fn(() => ({ promptMarkdown: "# Feature\n\n# Design context" } as never)),
+    write: vi.fn(() => { events.push("document-written"); }),
+  };
   const application = new DeepDiveCompletionApplication({
     clock: () => "completed-time",
     createRunner: vi.fn(() => runner),
-    documents: {
-      readEvidence: vi.fn(() => evidence),
-      readPreparationEvidence: vi.fn(() => preparationEvidence),
-      readPreparationSource: vi.fn(() => ({ promptMarkdown: "# Feature\n\n# Design context" } as never)),
-      write: vi.fn(() => { events.push("document-written"); }),
-    },
+    documents,
     findProject: () => options.projectAvailable !== false
       ? ({ id: "project-any", rootPath: "/project" } as StoredProject)
       : null,
@@ -101,10 +102,19 @@ function harness(initial = session(), options: {
     syncEpic: vi.fn(() => { events.push("epic-synced"); }),
     updateDocument,
   });
-  return { application, events, phaseNodes, store, updateDocument };
+  return { application, events, phaseNodes, store, updateDocument, documents };
 }
 
 describe("deep-dive completion application", () => {
+  it("binds the source write to the same current snapshot sent for updating", async () => {
+    const current = harness();
+    current.documents.readPreparationSource.mockReturnValue({
+      documents: [{ path: "/memory/source.md", markdown: "Fresh target containing user edits" }],
+      promptMarkdown: "Fresh preparation context",
+    } as never);
+    await current.application.complete("dd-any");
+    expect(current.documents.write).toHaveBeenCalledWith("/memory/source.md", "# Updated", "Fresh target containing user edits");
+  });
   it("rejects incomplete answers and missing writable source before running workflow nodes", async () => {
     const incomplete = session();
     (incomplete.questions[0] as { status: string }).status = "pending";

@@ -5,8 +5,12 @@ import type { StoredDeepDiveSession } from "@hepha/db";
 import type { DeepDiveQuestion, WorkItemCard } from "@hepha/shared";
 import { sanitizeValidationMarkerReferences } from "../../work-item-validation.js";
 import type { PiPromptRunOptions } from "../../runtime/pi/pi-argument-builder.js";
+import { deepDiveSessionContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
+import type { DeepDivePreparationSource } from "./deep-dive-preparation-source.js";
+import { applyDeepDiveEdits } from "../../exchanges/deep-dive-edits.js";
 
 interface DeepDiveDocumentUpdaterDependencies {
+  mcpPrompt?: DeepDiveMcpPrompt;
   maxModelRewriteCharacters: number;
   now?: () => Date;
   runPrompt(prompt: string, plan: import("@hepha/shared").HandoffPlanV1, options?: PiPromptRunOptions): Promise<string>;
@@ -21,9 +25,9 @@ export class DeepDiveDocumentUpdater {
   async update(
     session: StoredDeepDiveSession,
     questions: DeepDiveQuestion[],
-    options: { cwd?: string; plan: import("@hepha/shared").HandoffPlanV1; preparationContext?: string; workflowRunId?: string },
+    options: { cwd?: string; plan: import("@hepha/shared").HandoffPlanV1; preparationContext?: string; preparationSource?: DeepDivePreparationSource; workflowRunId?: string },
   ): Promise<string> {
-    if (session.originalDocument.length > this.dependencies.maxModelRewriteCharacters) {
+    if (!this.dependencies.mcpPrompt && session.originalDocument.length > this.dependencies.maxModelRewriteCharacters) {
       return createDeterministicDeepDiveDocumentUpdate(
         session,
         questions,
@@ -35,12 +39,16 @@ export class DeepDiveDocumentUpdater {
     }
 
     try {
+      const context = this.dependencies.mcpPrompt ? deepDiveSessionContext(session, questions, options.preparationSource) : null;
       const output = await this.dependencies.runPrompt(
-        buildDeepDiveDocumentUpdatePrompt(session, questions, options.preparationContext),
+        this.dependencies.mcpPrompt ? await this.dependencies.mcpPrompt({
+          stage: "apply_answers", workflowRunId: options.workflowRunId ?? session.id, targetPath: requireDeepDiveTargetPath(session.originalDocumentPath),
+          context: context!,
+        }) : buildDeepDiveDocumentUpdatePrompt(session, questions, options.preparationContext),
         options.plan,
         {
           cwd: options.cwd,
-          implementationProfile: true,
+          implementationProfile: !this.dependencies.mcpPrompt,
           sessionFile: resolve(
             this.dependencies.sessionDirectory,
             `${options.workflowRunId ?? `deep-dive-${randomUUID()}`}-deep-dive-document-update.json`,
@@ -51,8 +59,10 @@ export class DeepDiveDocumentUpdater {
         },
       );
 
-      return cleanResolvedValidationMarkerText(stripMarkdownFence(output));
+      if (context) return applyDeepDiveEdits(output, context.target.markdown);
+      return `${cleanResolvedValidationMarkerText(stripMarkdownFence(output)).trim()}\n`;
     } catch (error) {
+      if (this.dependencies.mcpPrompt) throw error;
       this.dependencies.warn?.(
         "Deep-dive document update agent unavailable; falling back to deterministic document update.",
         error,

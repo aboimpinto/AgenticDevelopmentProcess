@@ -15,7 +15,15 @@ export interface DeepDiveSourceDocumentEvidence {
 
 /** Owns durable Deep-Dive source-document replacement and evidence reads. */
 export class DeepDiveSourceDocumentRepository {
-  write(path: string, markdown: string): void {
+  write(path: string, markdown: string, expectedSource?: string): void {
+    if (expectedSource !== undefined) {
+      if (readFileSync(path, "utf8") !== expectedSource) {
+        throw new Error("DEEP_DIVE_SOURCE_CHANGED: the target changed during the update; retry against the current document.");
+      }
+      if (markdown === expectedSource) return;
+      writeFileSync(path, markdown, "utf8");
+      return;
+    }
     writeFileSync(path, `${markdown.trim()}\n`, "utf8");
   }
 

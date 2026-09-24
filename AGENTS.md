@@ -48,9 +48,13 @@ behavior.
 - `packages/shared/` owns contracts shared across the dashboard and
   orchestrator.
 
-The older DevCycle MCP behavior is migration source material, not HEPHA's
-runtime architecture. Convert reusable procedures into native, versioned HEPHA
-contracts rather than adding a permanent MCP dependency.
+HEPHA owns deterministic orchestration, UI, storage and validated exchanges.
+When MCP is the configured recipe source, DevCycle MCP owns the Deep-Dive,
+Refine Feature, Start Feature and Continue Implementing procedures. Do not
+duplicate those procedures in host prompts, discovered skills or templates.
+Native workflows remain an explicit alternative; a failed MCP recipe must not
+silently switch to native instructions. See the
+[procedure ownership audit](docs/architecture/mcp-procedure-ownership-audit.md).
 
 ## Development rules
 
