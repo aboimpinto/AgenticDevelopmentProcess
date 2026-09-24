@@ -248,6 +248,12 @@ export class DevCycleMcpCompatibilityApplication {
     // Include deterministic pre-launch manual-task seeding in the baseline.
     const initial = readCompatibilityProgress(feature);
     const initialTasks = readCompatibilityTaskStates(feature);
+    // Snapshot prior references before Pi can write new gate records. Historical
+    // lookup must never grant a new check access to an old passing report.
+    const historicalRecords = new Map(initialPhases.flatMap(p => {
+      const loaded = loadPhaseGateRecord(p.documentPath);
+      return loaded?.valid ? [[p.number, loaded.value.payload] as const] : [];
+    }));
     const baselines = new Map(initialPhases.map(p => [p.number, retainPhaseGateBaseline(p.documentPath)]));
     const observations = resolve(workspace.cwd, ".hepha", "phase-evidence", `${metadata.runId}.jsonl`);
     const request = createDevCycleMcpCompatibilityRequest({
@@ -306,7 +312,8 @@ export class DevCycleMcpCompatibilityApplication {
       if (current.resolved.has(p.number) && (!initial.resolved.has(p.number) || p.number === phase?.number)
         && !loadPhaseGateRecord(p.documentPath)) problems.push(`${p.title}: Publish the structured phase gate record; report prose is not acceptance evidence.`);
       if (current.resolved.has(p.number) || p.number === phase?.number) {
-        problems.push(...(readPhaseGates(p, workspace.cwd, [project.rootPath]) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
+        problems.push(...(readPhaseGates(p, workspace.cwd, historicalRecords.has(p.number)
+          ? { projectRoot: project.rootPath, record: historicalRecords.get(p.number)! } : undefined) ?? []).filter(isUnresolvedQualityGate).map(g => `${p.title}: ${g.justification}`));
       }
     }
     const unresolved = firstPhaseGateRepair(feature);

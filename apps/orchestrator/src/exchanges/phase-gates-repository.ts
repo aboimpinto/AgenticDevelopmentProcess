@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import type { FeaturePhaseQualityGateDecision, PhaseSummary } from "@hepha/shared";
@@ -45,19 +46,30 @@ export function testExecutionProblem(output: string): string | null {
   return "Execution needs a native runner result showing tests actually ran; import the runner report before repeating execution.";
 }
 
-export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = [], historicalEvidenceRoots: readonly string[] = []) {
+export interface HistoricalPhaseGateEvidence {
+  readonly projectRoot: string;
+  /** Immutable pre-worker gate record, not the current or newly written record. */
+  readonly record: PhaseGateRecord;
+}
+
+export function phaseGateProof(documentPath: string, projectRoot?: string, workingDirectories: readonly string[] = [],
+  history?: HistoricalPhaseGateEvidence & { readonly currentRecord: PhaseGateRecord }) {
   const bases = [...workingDirectories.map(cwd => resolve(projectRoot ?? dirname(documentPath), cwd)), projectRoot, resolve(dirname(documentPath), ".."), dirname(documentPath)].filter((p): p is string => !!p);
   // Old launch locations may contain receipts/reports, never substitute source
   // files from a different checkout when validating current acceptance coverage.
-  const evidenceBases = [...bases, ...historicalEvidenceRoots.flatMap(root => [
-    ...workingDirectories.map(cwd => resolve(root, cwd)), root,
-  ])];
+  const historicalRecord = history?.record.phaseId === basename(documentPath)
+    && isDeepStrictEqual(history.record, history.currentRecord) ? history.record : undefined;
+  const evidenceBases = historicalRecord && history ? [...bases,
+    ...historicalRecord.checks.map(check => resolve(history.projectRoot, check.cwd)), history.projectRoot,
+  ] : bases;
   function locate(path: string, roots = bases) { return roots.map(base => resolve(base, path)).find(p => existsSync(p) && statSync(p).isFile()); }
-  function text(path: string) { const file = locate(path, evidenceBases); return file ? readFileSync(file, "utf8") : null; }
+  function text(path: string, allowHistory = false) { const file = locate(path, allowHistory ? evidenceBases : bases); return file ? readFileSync(file, "utf8") : null; }
   return {
     source: (path: string) => !!locate(path),
     review(path: string): string | null {
-      const report = text(path);
+      const allowHistory = !!historicalRecord && historicalRecord.review.reportPath === path
+        && isDeepStrictEqual(historicalRecord.review, history?.currentRecord.review);
+      const report = text(path, allowHistory);
       if (!report) return "Review report is unavailable.";
       // Review verdict fields are an established report protocol, not phase names.
       return /^\s*\*{0,2}(?:Status|Verdict|Result)\*{0,2}\s*:\s*\*{0,2}APPROVED(?:_WITH_NOTES)?\b/im.test(report)
@@ -66,9 +78,10 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
     },
     check(check: PhaseGateRecord["checks"][number]): string | null {
       if (!check.evidence.length) return `${check.id}: execution evidence is missing.`;
+      const allowHistory = !!historicalRecord?.checks.some(previous => isDeepStrictEqual(previous, check));
       let verified = false;
       for (const evidence of check.evidence) {
-        const raw = text(evidence.path);
+        const raw = text(evidence.path, allowHistory);
         if (!raw) return `${check.id}: evidence is unavailable: ${evidence.path}`;
         if (!evidence.toolCallId && (check.gate === "tests" || check.gate === "gherkin_e2e") && !raw.trimStart().startsWith("{")) {
           const problem = testExecutionProblem(raw);
@@ -103,14 +116,14 @@ export function phaseGateProof(documentPath: string, projectRoot?: string, worki
   };
 }
 
-export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string, historicalEvidenceRoots: readonly string[] = []): FeaturePhaseQualityGateDecision[] | null {
+export function readPhaseGates(phase: Pick<PhaseSummary, "documentPath">, projectRoot?: string, history?: HistoricalPhaseGateEvidence): FeaturePhaseQualityGateDecision[] | null {
   const record = loadPhaseGateRecord(phase.documentPath);
   if (!record) return null;
   if (!record.valid) return [{ gate: "tests", status: "missing", evidencePaths: [phaseGateRecordPath(phase.documentPath)],
     justification: `Repair phase gate JSON: ${record.diagnostics.map(d => d.message).join("; ")}` }];
   if (record.value.payload.phaseId !== basename(phase.documentPath)) return [{ gate: "tests", status: "missing", evidencePaths: [], justification: "Gate result belongs to another phase document; retain its assigned opaque identity." }];
   try {
-    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd), historicalEvidenceRoots);
+    const proof = phaseGateProof(phase.documentPath, projectRoot, record.value.payload.checks.map(c => c.cwd), history ? { ...history, currentRecord: record.value.payload } : undefined);
     const baselinePath = `${phase.documentPath}.gates.baseline.json`;
     if (existsSync(baselinePath)) {
       const baseline = phaseGatesProtocol.decode(readFileSync(baselinePath, "utf8"));

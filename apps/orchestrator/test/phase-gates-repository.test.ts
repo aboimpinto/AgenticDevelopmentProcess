@@ -138,10 +138,37 @@ it("retains historical relative reports without replacing worktree source or hid
   f.record.review = { outcome: "approved", reportPath: "old-review.md" };
   f.record.checks = [{ id: "historical", gate: "tests", required: true, command: "node --test", cwd: ".", outcome: "passed", evidence: [{ path: "old-tests.log" }] }];
   f.save();
-  const gates = () => readPhaseGates({ documentPath: f.documentPath }, worktree, [registered])!;
+  const history = { projectRoot: registered, record: structuredClone(f.record) };
+  const gates = () => readPhaseGates({ documentPath: f.documentPath }, worktree, history)!;
   expect(gates().filter(g => g.gate === "tests" || g.gate === "code_review").every(g => g.status === "satisfied")).toBe(true);
-  expect(phaseGateProof(f.documentPath, worktree, ["."], [registered]).source("removed.test.ts")).toBe(false);
+  expect(phaseGateProof(f.documentPath, worktree, ["."], { ...history, currentRecord: f.record }).source("removed.test.ts")).toBe(false);
   // A current failing report is authoritative; the old passing copy cannot mask it.
   writeFileSync(resolve(worktree, "old-tests.log"), "# pass 1\n# fail 1\n");
   expect(gates().find(g => g.gate === "tests")?.status).toBe("missing");
+});
+
+
+it("does not grant new or changed gate records access to historical passing reports", () => {
+  const f = fixture();
+  const registered = resolve(f.root, "registered");
+  const worktree = resolve(f.root, "worktree");
+  mkdirSync(registered); mkdirSync(worktree);
+  writeFileSync(resolve(registered, "old.log"), "# pass 2\n# fail 0\n");
+  writeFileSync(resolve(registered, "review.md"), "**Status**: APPROVED\n");
+  const before = structuredClone(f.record); // No checks or review were recorded before launch.
+  f.record.checks = [{ id: "new", gate: "tests", required: true, command: "node --test new.test.cjs", cwd: ".", outcome: "passed", evidence: [{ path: "old.log" }] }];
+  f.record.flags.needCodeReview = true;
+  f.record.review = { outcome: "approved", reportPath: "review.md" };
+  f.save();
+  const gates = readPhaseGates({ documentPath: f.documentPath }, worktree, { projectRoot: registered, record: before })!;
+  expect(gates.find(g => g.gate === "tests")?.status).toBe("missing");
+  expect(gates.find(g => g.gate === "code_review")?.status).toBe("missing");
+  const recorded = structuredClone(f.record);
+  f.record.checks[0]!.command = "node --test changed.test.cjs"; f.save();
+  const changed = readPhaseGates({ documentPath: f.documentPath }, worktree, { projectRoot: registered, record: recorded })!;
+  expect(changed.find(g => g.gate === "tests")?.status).toBe("missing");
+  f.record.checks = recorded.checks;
+  f.record.criteria = [{ id: "new-scope", description: "Different acceptance scope" }]; f.save();
+  const newScope = readPhaseGates({ documentPath: f.documentPath }, worktree, { projectRoot: registered, record: recorded })!;
+  expect(newScope.find(g => g.gate === "tests")?.status).toBe("missing");
 });
