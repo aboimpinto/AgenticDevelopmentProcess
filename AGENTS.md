@@ -162,13 +162,19 @@ detect architectural impasses and repeated lack of progress rather than stopping
 on ordinary findings or looping indefinitely. This policy's documentation does
 not imply that all existing runtime boundaries already conform.
 
-## Pull request follow-up and Greptile
+## Pull request follow-up: Greptile and Kodus
 
-Greptile is the maintainer's configured GitHub code reviewer for HEPHA. Opening
+Greptile and Kodus (Kody) are the maintainer's configured GitHub reviewers for
+HEPHA. Both are being evaluated on the same PRs. Opening
 or pushing a PR is not the end of the task: follow
 [the PR review procedure](docs/contributing/pr-review.md) until review findings
 and required checks are handled, or report the concrete external blocker.
 
+- Request and inspect both reviewers on the current head; assess findings from
+  both with the same evidence standard. Record unavailable or skipped Kodus
+  reviews explicitly; they provide no evidence for the comparison, but their
+  absence alone does not add a merge gate during evaluation. Address actionable
+  findings from either bot before merging.
 - Wait for Greptile's completed review of the current head before merging. Read
   its summary, inline threads, submitted reviews, and checks; green CI alone
   does not establish that Greptile reviewed the change.
