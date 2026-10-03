@@ -997,7 +997,7 @@ packages:
     resolution: {integrity: sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw==}
     engines: {node: '>= 10'}
 
-  commander@8.3.1:
+  commander@8.3.0:
     resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
     engines: {node: '>= 12'}
 
@@ -2751,7 +2751,7 @@ snapshots:
 
   commander@7.2.0: {}
 
-  commander@8.3.1: {}
+  commander@8.3.0: {}
 
   concurrently@10.0.5:
     dependencies:
@@ -3164,7 +3164,7 @@ snapshots:
 
   katex@0.16.47:
     dependencies:
-      commander: 8.3.1
+      commander: 8.3.0
 
   khroma@2.1.0: {}
 
