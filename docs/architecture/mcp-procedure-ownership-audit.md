@@ -7,8 +7,8 @@ Implementing when the selected recipe source is `devcycle-mcp`.
 | --- | --- | --- |
 | Deep-Dive | DevCycle `deep-dive`, `response_mode=host_stage`, one of opening/follow_up/clarify/apply_answers | Target locator, one context snapshot, saved answers, model routing, UI persistence, result validation and source write |
 | Refine Feature | Returned `refine-feature` recipe and its shared MCP policies | Exact tool arguments, current artifact diagnostics, resolved target decisions and provider artifact admission |
-| Start Feature | Returned `start-feature` recipe, including its continuation handoff | Authorized single-phase session, phase/evidence locations, lifecycle validation and the outer autonomous loop |
-| Continue Implementing | Returned `continue-implementation` recipe and shared phase-gate policy/schema | The same session boundary, host execution observations, independent evidence validation and authorized continuation |
+| Start Feature | Returned `start-feature` recipe, including its continuation handoff | Requested autonomous or supervised session, resolved code checkout, phase/evidence locations and lifecycle validation |
+| Continue Implementing | Returned `continue-implementation` recipe and shared phase-gate policy/schema | The same session boundary, artifact progress observations and independent evidence validation at return |
 
 ## Removed duplication
 
@@ -54,10 +54,17 @@ Host-directed gate repair remains a separate recovery action which does not
 fetch an MCP recipe. It receives the host's local gate exchange contract once;
 it is not a second policy layer appended to an MCP recipe session. Deterministic
 phase admission, cancellation, manual receipt validation and lifecycle recovery
-remain HEPHA responsibilities.
+remain HEPHA responsibilities. MCP implementation does not automatically launch
+this repair action after its Pi session returns.
 
-This change does not resolve the separate Pi/HEPHA token-budget guard conflict,
-alter configured acceptance criteria, or establish live-model completion.
+MCP delivery actions use the Pi-owned session boundary introduced in PR #55:
+one autonomous action has one session for the whole action; supervised mode
+limits that session to one phase. Pi owns context sizing and compaction without
+the HEPHA request guard. HEPHA observes durable artifacts and validates evidence
+at return; it does not launch automatic continuation, repair or finalization
+sessions. Hosted, tool-free Deep-Dive stages retain the normal bounded prompt
+runner policy. These changes do not alter configured acceptance criteria or
+establish live-model completion.
 
 ## Configuration and deployment order
 

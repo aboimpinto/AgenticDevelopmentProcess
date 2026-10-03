@@ -63,7 +63,7 @@ export function buildPiPromptArgs(
     "--model", model.model,
     "--mode", "json",
     "--thinking", "high",
-    "--extension", MODEL_REQUEST_GUARD_PATH,
+    ...(!options.mcpProfile ? ["--extension", MODEL_REQUEST_GUARD_PATH] : []),
     "--print",
   ];
   if (!options.implementationProfile) {

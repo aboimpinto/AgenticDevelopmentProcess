@@ -73,6 +73,9 @@ describe("Pi argument builder", () => {
     expect(args).toEqual(expect.arrayContaining(["--no-skills", "--no-prompt-templates"]));
     expect(args).not.toContain("--skill");
     expect(args).not.toContain("/skills/native-refine");
+    expect(args).not.toContain(MODEL_REQUEST_GUARD_PATH);
+    expect(args.filter(arg => arg === "--thinking")).toHaveLength(1);
+    expect(args[args.indexOf("--thinking") + 1]).toBe("high");
   });
 
   it("honors every implementation isolation toggle", () => {

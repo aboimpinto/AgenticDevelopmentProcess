@@ -23,7 +23,7 @@ import { presentModelRequestFailure } from "./model-request-failure.js";
 
 export interface PlanBoundPiPromptRunOptions extends PiPromptRunOptions {
   readonly runtimeContext?: Partial<Pick<RuntimeAttemptContextV1,
-    "cardKey" | "phaseExecutionContractId" | "phaseNumber" | "taskId" | "workflowNodeId" | "selectedLessonIds"
+    "projectId" | "cardKey" | "phaseExecutionContractId" | "phaseNumber" | "taskId" | "workflowNodeId" | "selectedLessonIds"
   >>;
 }
 
@@ -199,7 +199,7 @@ function createRuntimeContext(
   const phaseExecutionContractId = options.runtimeContext?.phaseExecutionContractId ?? null;
   const phaseNumber = options.runtimeContext?.phaseNumber ?? null;
   return {
-    projectId: safeProjectIdentity(options.cwd ?? workspaceRoot),
+    projectId: safeProjectIdentity(options.runtimeContext?.projectId ?? options.cwd ?? workspaceRoot),
     cardKey: options.runtimeContext?.cardKey ?? null,
     workflowRunId: options.workflowRunId ?? null,
     workflowNodeId: options.runtimeContext?.workflowNodeId ?? null,

@@ -1,3 +1,4 @@
+import { resolveCompatibilityExecutionWorkspace } from "../workflows/recipes/compatibility-execution-workspace.js";
 import type { CardMetadataStore } from "@hepha/db";
 import type { FeatureWorkflowActionInput, FeatureWorkflowActionResponse } from "@hepha/shared";
 import { randomUUID } from "node:crypto";
@@ -55,6 +56,7 @@ export function createFeatureRecipeSourceApplications(
     notifyChanged: dependencies.notifyChanged,
     resolvePlan: (actionId) => dependencies.routeResolver.resolvePlan(actionId),
     resolveTarget: (input) => dependencies.targets.resolveCompatibility(input),
+    resolveExecutionWorkspace: resolveCompatibilityExecutionWorkspace,
     runWorker: (input) => dependencies.worker.execute(input),
     scanProject: (project) => dependencies.workItems.scan(project),
     seedManualTestSkips: (input) => seedRefinedManualTestSkips({

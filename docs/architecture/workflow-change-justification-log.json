@@ -4267,6 +4267,64 @@
         "apps/orchestrator/test/deep-dive-completion-application.test.ts",
         "apps/orchestrator/test/deep-dive-mcp-procedure.feature"
       ]
+    },
+    {
+      "id": "WJ-2026-153",
+      "date": "2026-09-24",
+      "summary": "Delegate each MCP action and context lifecycle to one Pi session; observe durable artifacts",
+      "transitionIds": [
+        "WF-MCP-PHASE-QUALITY-ADMISSION",
+        "WF-MCP-LIFECYCLE-RECOVERY",
+        "WF-MCP-SESSION-CONTINUE",
+        "WF-RECIPE-SOURCE-MCP",
+        "WF-MODEL-REQUEST-POLICY"
+      ],
+      "whyHappened": "The host guarded every MCP conversation request using a conservative output reservation and local tokenizer. It also forced autonomous commands into repeated single-phase and repair sessions.",
+      "causalChain": "Tool inspection grows the fresh Pi conversation -> host estimate reaches its smaller limit before Pi compaction -> process killed. Host phase loops obscured the requested autonomous execution boundary.",
+      "testGap": "Thin prompt tests did not execute the launch guard against a large Responses tool result or assert one worker across autonomous phases. The initial cap tests supplied only launch-environment values; review identified the need to test the original host environment through real worker isolation.",
+      "missingDecision": "One autonomous action has one Pi session; a supervised action has one phase session. Pi alone manages context. Host progress follows files; terminal acceptance follows independently validated approved scope and evidence.",
+      "codeChanges": [
+        "apps/orchestrator/src/runtime/pi/pi-argument-builder.ts",
+        "apps/orchestrator/src/runtime/pi/pi-one-shot-runner.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-lifecycle-state.ts",
+        "apps/orchestrator/src/workflows/recipes/compatibility-implementation-recovery.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/pi-one-shot-runner.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.feature",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts"
+      ]
+    },
+    {
+      "id": "WJ-2026-154",
+      "date": "2026-09-24",
+      "summary": "Bind MCP implementation to its feature worktree and external documentation authority",
+      "transitionIds": [
+        "WF-RECIPE-SOURCE-MCP"
+      ],
+      "whyHappened": "Workers always inherited the registered checkout even when a dedicated feature worktree existed. External MemoryBank Git ownership was not declared.",
+      "causalChain": "Wrong launch cwd plus shared external documents led the worker to treat unrelated parent edits as an acceptance blocker.",
+      "testGap": "Lifecycle fixtures had no real Git topology and did not assert the worker cwd with a dirty external document owner. Review exposed receipt identity coupled to cwd and missing historical relative-report lookup.",
+      "missingDecision": "Resolve a unique feature checkout before launch; keep code cleanliness gates there and leave external parent Git state untouched. Historical report fallback requires an exact unchanged pre-worker check/review reference; new or revised checks cannot acquire stale passing evidence. Resolve each check against its own working directory, and retain valid references across unrelated record changes. Evidence eligibility also retains its mapped acceptance scope; revised criteria/assertions cannot borrow prior executions or approval.",
+      "codeChanges": [
+        "apps/orchestrator/src/workflows/recipes/compatibility-execution-workspace.ts",
+        "apps/orchestrator/src/workflows/recipes/devcycle-mcp-compatibility-application.ts",
+        "apps/orchestrator/src/workflows/phases/implementation-worker-application.ts",
+        "apps/orchestrator/src/bootstrap/feature-recipe-source-applications.ts",
+        "apps/orchestrator/src/runtime/pi/plan-bound-pi-prompt-runner.ts",
+        "apps/orchestrator/src/exchanges/phase-gates-repository.ts",
+        "apps/orchestrator/src/exchanges/phase-gate-evidence-scope.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/compatibility-execution-workspace.integration.test.ts",
+        "apps/orchestrator/test/compatibility-execution-workspace.feature",
+        "apps/orchestrator/test/compatibility-implementation-lifecycle.integration.test.ts",
+        "apps/orchestrator/test/implementation-worker-application.test.ts",
+        "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
+        "apps/orchestrator/test/phase-gates-repository.test.ts"
+      ]
     }
   ]
 }
