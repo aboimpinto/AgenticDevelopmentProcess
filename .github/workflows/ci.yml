@@ -76,3 +76,20 @@ jobs:
           name: quality-evaluator-report
           path: scripts/quality-evaluator.ts
           retention-days: 30
+
+  diagram-browser-tests:
+    name: Diagram Browser Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify real Mermaid rendering and recovery
+        run: pnpm exec playwright test apps/web/e2e/mermaid-preview.spec.ts --project=chromium
