@@ -25,7 +25,13 @@ retain their own configured review requirements.
    Also request Kodus with `@kody start-review` when automatic review has not
    started. Inspect its comments, inline threads, reviews and check/status output
    for the same head. Avoid repeated requests while either reviewer is queued.
-4. Assess each finding from either reviewer against the code and agreed contract.
+4. During the comparison, keep the head unchanged until both reviewers finish
+   and record their findings before applying review-driven fixes. Compare
+   confirmed defects, overlap, unique findings and false positives on that same
+   snapshot. If a reviewer cannot run, follow the availability policy below; do
+   not invent approval or claim an equivalent comparison. Urgent fixes need not
+   wait for an experiment: record the interrupted comparison explicitly.
+   Assess each finding from either reviewer against the code and agreed contract.
    Apply justified fixes with appropriate regression coverage. For false positives, explain the
    counter-evidence in the thread. For suggestions outside the agreed scope,
    record a linked follow-up or lessons-learned entry for later
@@ -64,6 +70,9 @@ false positives, duplicate findings, actionable fixes and any skipped files or
 unavailable reviews. Compare findings against the diff and tests rather than
 confidence scores or comment counts. A no-findings dependency review is useful
 validation but does not establish equal ability to review application logic.
+A review after another bot's fixes measures the remaining code, not whether the
+second bot could detect the original defects. Do not reintroduce defects or
+reopen merged work solely to recreate an evaluation sample.
 
 Kodus is under evaluation; it does not silently replace the existing Greptile
 merge requirement. If either review is missing, investigate and report its state.

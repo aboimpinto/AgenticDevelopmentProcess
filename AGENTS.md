@@ -174,6 +174,11 @@ or pushing a PR is not the end of the task: follow
 [the PR review procedure](docs/contributing/pr-review.md) until review findings
 and required checks are handled, or report the concrete external blocker.
 
+- During the reviewer comparison, collect both completed reviews on the same
+  unchanged head before applying review-driven fixes. Record findings and their
+  overlap first, then repair and request both reviewers on the updated head. If
+  a reviewer is unavailable or an urgent fix cannot wait, record the limitation;
+  do not claim a like-for-like comparison across different code snapshots.
 - Request and inspect both reviewers on the current head; assess findings from
   both with the same evidence standard. Record unavailable or skipped Kodus
   reviews explicitly; they provide no evidence for the comparison, but their
