@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   createFeatureRecipeSourcePolicy,
   featureRecipeOperations,
+  deepDiveRecipeSource,
 } from "../src/workflows/recipes/feature-recipe-source-policy.js";
 
 describe("feature recipe source policy", () => {
+  it("selects Deep-Dive from the same global authority with an explicit override", () => {
+    expect(deepDiveRecipeSource({})).toBe("native-hepha");
+    expect(deepDiveRecipeSource({ HEPHA_FEATURE_RECIPE_SOURCE: "devcycle-mcp" })).toBe("devcycle-mcp");
+    expect(deepDiveRecipeSource({ HEPHA_FEATURE_RECIPE_SOURCE: "devcycle-mcp", HEPHA_DEEP_DIVE_RECIPE_SOURCE: "native-hepha" })).toBe("native-hepha");
+    expect(() => deepDiveRecipeSource({ HEPHA_DEEP_DIVE_RECIPE_SOURCE: "unknown" })).toThrow("FEATURE_RECIPE_SOURCE_INVALID");
+  });
   it("keeps every supported action on native Hepha by default", () => {
     const policy = createFeatureRecipeSourcePolicy({});
 

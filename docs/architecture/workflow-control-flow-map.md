@@ -927,8 +927,32 @@ incompatible exchange versions or missing mandatory flags remain blocked.
 
 A host-directed phase-gate repair is a distinct recovery action: it does not fetch
 an MCP recipe and therefore receives HEPHA's local gate contract. Native workflow
-prompts continue to receive their own policies. This launch-prompt reduction does
-not change Pi context-budget guards or the host-owned phase continuation loop.
+prompts continue to receive their own policies. MCP implementation does not
+automatically invoke this repair action after Pi returns. Pi owns its context
+and compaction; HEPHA does not attach its request guard to MCP delivery sessions.
+
+MCP workers disable native workflow skills and prompt templates. Deep-Dive uses
+the same selected procedure authority through stateless hosted stages rather than
+the feature worker adapter. HEPHA fetches exactly one stage contract, adds saved
+context once, invokes the registered model without tools, and preserves its UI and
+source persistence. Missing/incompatible contracts and invalid question output
+cannot fall back to native success. See the [four-call audit](mcp-procedure-ownership-audit.md).
+All hosted stages receive current preparation context and saved decisions.
+Apply-answers returns the versioned `deep-dive.edits` exchange. The host applies
+only unique, non-overlapping scoped edits. A supplied preparation snapshot must
+contain the target before model execution; an incomplete snapshot fails without
+writing or recording acceptance. Persistence refuses a source changed during
+model execution. Whole/partial Markdown responses cannot replace the source.
+Response bodies are bounded during streaming; oversized streams are cancelled.
+
+```mermaid
+flowchart LR
+  Interview["HEPHA interview stage and saved state"] -->|"WF-DD-MCP-PROCEDURE<br/>MCP selected"| HostedRecipe["Fetch and validate one MCP hosted stage"]
+  HostedRecipe -->|"active session + valid contract"| InterviewModel["Tool-free Pi: recipe + context once"]
+  HostedRecipe -->|"missing/incompatible recipe or stopped session"| InterviewFailure["Visible failure; no native fallback"]
+  InterviewModel -->|"valid result; exact edits; source still current"| InterviewUI["HEPHA UI, answer persistence and target write"]
+  InterviewModel -->|"invalid result"| InterviewFailure
+```
 
 Implementation actions resolve the feature's code checkout before launching Pi.
 The resolver enumerates Git worktrees and matches the feature identifier at branch
@@ -962,12 +986,13 @@ records one workflow run and dispatches a plan-bound Pi worker with the
 registered action/model identity. That
 worker receives the workspace-scoped `pi-mcp-adapter` and `.mcp.json`, calls the
 mapped DevCycle recipe once, validates the recipe's `pending_execution` client
-contract, and executes it locally. Preparation uses one session. Implementation
-uses one phase per session, including its review and acceptance. HEPHA owns the
-outer loop and selects each next action from rescanned durable evidence. Only
-explicit `autonomous: true` authorizes advancing to subsequent phases and
-finalization; false or omitted autonomy stops at the selected phase boundary.
-Each new session resolves its own registered command plan. Native workflow applications and prompts
+contract, and executes it locally. Preparation uses one session. An autonomous
+implementation action uses one Pi session for the whole action, including its
+phase progression, reviews and acceptance. Supervised mode limits the session to
+one phase. HEPHA observes phase files and the feature inventory while Pi runs,
+then validates declared evidence at return. It does not inject conversation turns
+or launch automatic continuation, repair or finalization sessions.
+Each requested action resolves its registered command plan. Native workflow applications and prompts
 remain unchanged and are selected immediately when the policy says
 `native-hepha`.
 

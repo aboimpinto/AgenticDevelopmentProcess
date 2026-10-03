@@ -237,7 +237,7 @@ const {
   deepDiveSkillPath,
   designFeatureSkillPath,
   ensurePiCargoShimDirectory,
-  fingerprintAbsoluteSafetyCap, featureRecipeSourcePolicy,
+  fingerprintAbsoluteSafetyCap, featureRecipeSourcePolicy, deepDiveMcpConfigPath,
   implementationIdleTimeoutMs,
   implementationRunTimeoutMs,
   implementationSkillPaths,
@@ -587,7 +587,7 @@ const {
   runPrompt: runOneShotPiPrompt,
   settings: {
     deepDiveDocumentUpdateTimeoutMs,
-    deepDiveModelRewriteMaxChars,
+    deepDiveModelRewriteMaxChars, deepDiveMcpConfigPath,
     runTimeoutMs,
     sessionDir,
   },

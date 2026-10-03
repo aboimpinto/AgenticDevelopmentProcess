@@ -23,8 +23,8 @@ describe("portable model-authority production inventory", () => {
     const result = validatePortableModelAuthorityInventory({ workspaceRoot });
 
     expect(result.diagnostics).toEqual([]);
-    expect(result.selectedAssetCount).toBe(62);
-    expect(result.assetPaths).toHaveLength(62);
+    expect(result.selectedAssetCount).toBe(63);
+    expect(result.assetPaths).toHaveLength(63);
     expect(result.launchNodeActions.map(({ workflow, nodeId, action }) =>
       `${workflow}:${nodeId}:${action}`)).toEqual(expectedLaunches);
     expect(result.assetPaths).toContain(".hepha/commands/start-feature-postprocess.md");
@@ -287,7 +287,7 @@ receipt. Only an explicit Hepha launcher or dashboard dispatch creates a worker.
     });
 
     expect(result.assetPaths).not.toContain(relativePath);
-    expect(result.selectedAssetCount).toBe(62);
+    expect(result.selectedAssetCount).toBe(63);
     expect(result.diagnostics).toContainEqual(expect.objectContaining({
       code: "PORTABLE_ASSET_ROUTING_FIELD_FORBIDDEN",
       path: relativePath,
@@ -349,7 +349,7 @@ receipt. Only an explicit Hepha launcher or dashboard dispatch creates a worker.
     cpSync(resolve(root, ".workflows"), resolve(root, ".hepha/workflows"), { recursive: true });
     const equivalent = validatePortableModelAuthorityInventory({ workspaceRoot: root });
     expect(equivalent.diagnostics).toEqual([]);
-    expect(equivalent.selectedAssetCount).toBe(69);
+    expect(equivalent.selectedAssetCount).toBe(70);
 
     const copiedWorkflow = resolve(root, ".hepha/workflows/complete-feature.workflow.yaml");
     writeFileSync(copiedWorkflow, readFileSync(copiedWorkflow, "utf8")

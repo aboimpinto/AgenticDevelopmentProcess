@@ -4,10 +4,12 @@ import { resolve } from "node:path";
 import type { DeepDiveQuestion, WorkItemCard } from "@hepha/shared";
 import type { StoredProject } from "../../projects/stored-project.js";
 import type { PiPromptRunOptions } from "../../runtime/pi/pi-argument-builder.js";
-import { parseGeneratedDeepDiveQuestions } from "./deep-dive-question-parser.js";
+import { parseGeneratedDeepDiveQuestions, parseHostedDeepDiveQuestions } from "./deep-dive-question-parser.js";
 import type { DeepDivePreparationSource } from "./deep-dive-preparation-source.js";
+import { deepDivePreparationContext, requireDeepDiveTargetPath, type DeepDiveMcpPrompt } from "./deep-dive-mcp-procedure.js";
 
 interface DeepDiveQuestionPlannerDependencies {
+  mcpPrompt?: DeepDiveMcpPrompt;
   renderLessons(project: StoredProject): string;
   runPrompt(prompt: string, plan: import("@hepha/shared").HandoffPlanV1, options?: PiPromptRunOptions): Promise<string>;
   sessionDirectory: string;
@@ -27,9 +29,15 @@ export class DeepDiveQuestionPlanner {
     const validationTopics = extractNeedsValidationTopics(sourceMarkdown);
 
     try {
-      const generatedQuestions = parseGeneratedDeepDiveQuestions(
+      const generatedQuestions = (this.dependencies.mcpPrompt ? parseHostedDeepDiveQuestions : parseGeneratedDeepDiveQuestions)(
         await this.dependencies.runPrompt(
-          buildDeepDiveQuestionPrompt(
+          this.dependencies.mcpPrompt ? await this.dependencies.mcpPrompt({
+            stage: "opening", workflowRunId: options.workflowRunId, targetPath: requireDeepDiveTargetPath(item.documentPath), context: {
+              target: { id: item.externalId, title: item.title, kind: item.kind, markdown: item.specMarkdown },
+              preparationDocuments: deepDivePreparationContext(item.documentPath!, options.preparationSource),
+              focus: options.focus ?? "", lessons: this.dependencies.renderLessons(project),
+            },
+          }) : buildDeepDiveQuestionPrompt(
             item,
             validationTopics,
             this.dependencies.renderLessons(project),
@@ -39,7 +47,7 @@ export class DeepDiveQuestionPlanner {
           options.plan,
           {
             cwd: project.rootPath,
-            implementationProfile: true,
+            implementationProfile: !this.dependencies.mcpPrompt,
             sessionFile: resolve(
               this.dependencies.sessionDirectory,
               `${options.workflowRunId ?? `deep-dive-${randomUUID()}`}-deep-dive-questions.json`,

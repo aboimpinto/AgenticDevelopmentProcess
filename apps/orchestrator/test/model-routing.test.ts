@@ -1100,8 +1100,8 @@ describe("model routing", () => {
     expect(getFunctionSource("buildRefineFeaturePrompt")).toContain(
       'refine-feature ${formatProjectSkillTarget(project, feature, "")}',
     );
-    expect(deepDiveQuestionPlannerSource).toContain("implementationProfile: true");
-    expect(deepDiveDocumentUpdaterSource).toContain("implementationProfile: true");
+    expect(deepDiveQuestionPlannerSource).toContain("implementationProfile: !this.dependencies.mcpPrompt");
+    expect(deepDiveDocumentUpdaterSource).toContain("implementationProfile: !this.dependencies.mcpPrompt");
     expect(getFunctionSource("buildPhaseImplementationPrompt")).toContain("renderPhaseExecutionPreparationRules");
     expect(getFunctionSource("buildCompleteFeaturePrompt")).toContain("serializedBuildCommandsSkillRule");
     expect(phaseWorkerPromptPoliciesSource).toContain("apply the `serialized-build-commands` skill");

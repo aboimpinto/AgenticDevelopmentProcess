@@ -50,6 +50,7 @@
         "complete-feature-result.schema.json",
         "debt-observation-v1.schema.json",
         "deep-dive-document-update.schema.json",
+        "deep-dive-edits-payload-v1.schema.json",
         "deep-dive-questions.schema.json",
         "design-feature-files.schema.json",
         "refine-feature-result.schema.json",

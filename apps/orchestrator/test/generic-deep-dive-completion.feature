@@ -28,3 +28,9 @@ Feature: Generic Deep-Dive completion
     Given all session questions become answered
     When the project still exists
     Then the answers-ready workflow node is recorded exactly once
+
+  Scenario: Incomplete preparation cannot overwrite the target
+    Given all decisions are answered but the preparation snapshot omits the target document
+    When completion is requested
+    Then no model update or document write is performed
+    And the session fails without recording successful acceptance evidence
