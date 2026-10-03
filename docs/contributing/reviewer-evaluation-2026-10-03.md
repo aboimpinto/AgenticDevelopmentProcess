@@ -10,8 +10,8 @@ benchmark of application-code review quality. Review dates: 2026-10-03.
 | [#61: jsdom](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/61#issuecomment-5971195092) | `2c049e4d` | No findings. Greptile also found no outstanding issue on this head. Kodus's initial file inventory listed the lockfile, not the changed manifest. |
 | [#65: review procedure](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/65#issuecomment-5971195215) | `0ad1de40` | No findings. Greptile also found no outstanding issue on this head. An earlier Greptile finding had already been fixed before Kodus reviewed it. |
 | [#62: Vite](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/62#discussion_r4174008120) | Check run: `2d16738c` | Correctly identified unresolved merge markers and their install/build impact. The markers were repaired before the review finished. The posted inline comment was attached to newer head `83a0d04e`, although its text described the earlier snapshot. |
-| [#63: Lucide](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/63) | `1a94e208` | No findings. Later integration commits needed fresh review; the earlier result is not approval of those commits. |
-| [#64: Node typings](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/64) | `42a2fb8b` | No findings. Later integration commits needed fresh review; the earlier result is not approval of those commits. |
+| [#63: Lucide](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/63#issuecomment-5971253231) | `1a94e208` | No findings. Later integration commits needed fresh review; the earlier result is not approval of those commits. |
+| [#64: Node typings](https://github.com/aboimpinto/AgenticDevelopmentProcess/pull/64#issuecomment-5971252762) | `42a2fb8b` | No findings. Later integration commits needed fresh review; the earlier result is not approval of those commits. |
 
 Kodus completed five reviews: four no-findings results and one confirmed defect.
 The Vite finding is a true positive on the earlier commit, already repaired, not
