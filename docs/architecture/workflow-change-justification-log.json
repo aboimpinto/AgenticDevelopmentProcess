@@ -4325,6 +4325,27 @@
         "apps/orchestrator/test/feat-062-worker-execution.integration.test.ts",
         "apps/orchestrator/test/phase-gates-repository.test.ts"
       ]
+    },
+    {
+      "id": "WJ-2026-155",
+      "date": "2026-10-03",
+      "summary": "Reject incomplete Deep-Dive preparation before source updates",
+      "transitionIds": [
+        "WF-DD-COMPLETE",
+        "WF-DD-FAIL"
+      ],
+      "whyHappened": "Kodus found that a supplied snapshot without its primary document fell through to an unguarded legacy write.",
+      "causalChain": "Missing primary snapshot -> stale session source used by updater -> persistence drops source-change check -> intervening user edits can be overwritten.",
+      "testGap": "Completion fixtures covered a valid current primary but did not reject empty or sibling-only preparation snapshots.",
+      "missingDecision": "Validate target presence in every supplied preparation snapshot before generating an update; fail without writing or recording successful evidence. Preserve the existing optional preparation adapter contract.",
+      "codeChanges": [
+        "apps/orchestrator/src/application/deep-dive/deep-dive-completion-application.ts"
+      ],
+      "testsAdded": [
+        "apps/orchestrator/test/deep-dive-completion-application.test.ts",
+        "apps/orchestrator/test/generic-deep-dive-completion.feature",
+        "apps/orchestrator/test/generic-deep-dive-completion.integration.test.ts"
+      ]
     }
   ]
 }

@@ -17,7 +17,7 @@ const repositorySource = readFileSync(
 
 describe("generic Deep-Dive completion", () => {
   it("binds all scenarios without fixed numeric workflow identities", () => {
-    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(5);
+    expect(feature.match(/^\s*Scenario:/gm)).toHaveLength(6);
     expect(feature).not.toMatch(/\b(?:FEAT|EPIC|Phase|Task)[- ]\d+\b/i);
   });
 

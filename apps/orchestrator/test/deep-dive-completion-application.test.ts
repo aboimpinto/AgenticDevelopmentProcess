@@ -85,7 +85,10 @@ function harness(initial = session(), options: {
   const documents = {
     readEvidence: vi.fn(() => evidence),
     readPreparationEvidence: vi.fn(() => preparationEvidence),
-    readPreparationSource: vi.fn(() => ({ promptMarkdown: "# Feature\n\n# Design context" } as never)),
+    readPreparationSource: vi.fn(() => ({
+      documents: [{ path: initial.originalDocumentPath, markdown: initial.originalDocument }],
+      promptMarkdown: "# Feature\n\n# Design context",
+    } as never)),
     write: vi.fn(() => { events.push("document-written"); }),
   };
   const application = new DeepDiveCompletionApplication({
@@ -115,6 +118,21 @@ describe("deep-dive completion application", () => {
     await current.application.complete("dd-any");
     expect(current.documents.write).toHaveBeenCalledWith("/memory/source.md", "# Updated", "Fresh target containing user edits");
   });
+  it.each([{ documents: [] }, { documents: [{ path: "/memory/design.md", markdown: "Sibling design" }] }])(
+    "rejects a preparation snapshot without the target before generating or writing updates: %j",
+    async ({ documents }) => {
+      const current = harness();
+      current.documents.readPreparationSource.mockReturnValue({ documents, promptMarkdown: "Design only" } as never);
+      await expect(current.application.complete("dd-any")).rejects.toThrow("DEEP_DIVE_SOURCE_SNAPSHOT_MISMATCH");
+      expect(current.updateDocument).not.toHaveBeenCalled();
+      expect(current.documents.write).not.toHaveBeenCalled();
+      expect(current.store.recordHephaDeepDive).not.toHaveBeenCalled();
+      expect(current.store.recordFeatureWorkflowCompletion).not.toHaveBeenCalled();
+      expect(current.store.updateDeepDiveSession).toHaveBeenLastCalledWith(expect.objectContaining({ status: "failed" }));
+      expect(current.events.at(-1)).toBe("notify:deep-dive.failed");
+    },
+  );
+
   it("rejects incomplete answers and missing writable source before running workflow nodes", async () => {
     const incomplete = session();
     (incomplete.questions[0] as { status: string }).status = "pending";

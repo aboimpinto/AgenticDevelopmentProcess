@@ -83,6 +83,10 @@ export class DeepDiveCompletionApplication {
           session.originalDocumentPath!,
           session.cardKind as WorkItemCard["kind"],
         );
+        const primary = preparationSource?.documents?.find(document => document.path === session.originalDocumentPath);
+        if (preparationSource && !primary) {
+          throw new Error("DEEP_DIVE_SOURCE_SNAPSHOT_MISMATCH: the preparation snapshot does not contain the target document; refusing an unguarded update.");
+        }
         const updatedMarkdown = await this.dependencies.updateDocument(updatingSession, questions, {
           cwd: project.rootPath,
           plan: this.dependencies.requireModel(undefined, `${command} update-document node`),
@@ -90,7 +94,6 @@ export class DeepDiveCompletionApplication {
           preparationSource,
           workflowRunId: session.id,
         });
-        const primary = preparationSource?.documents?.find(document => document.path === session.originalDocumentPath);
         if (primary) this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown, primary.markdown);
         else this.dependencies.documents.write(session.originalDocumentPath!, updatedMarkdown);
         return {

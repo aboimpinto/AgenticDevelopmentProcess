@@ -782,7 +782,7 @@
       "to": "updated source document",
       "ownerPath": "apps/orchestrator/src/application/deep-dive/deep-dive-completion-application.ts",
       "ownerSymbol": "DeepDiveCompletionApplication.complete",
-      "rationale": "Rewrite the source only after the explicit Deep-Dive answer gate is satisfied, recording deterministic boundaries without future human-sign-off implementation tasks.",
+      "rationale": "Rewrite the source only after the explicit Deep-Dive answer gate is satisfied. A supplied preparation snapshot must contain the target document before model execution; otherwise fail without writing or recording acceptance. Bind persistence to that same snapshot and reject intervening edits, recording deterministic boundaries without future human-sign-off implementation tasks.",
       "unitTestPaths": [
         "apps/orchestrator/test/deep-dive-completion-application.test.ts",
         "apps/orchestrator/test/deep-dive-document-updater.test.ts"

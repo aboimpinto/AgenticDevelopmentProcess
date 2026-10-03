@@ -939,7 +939,9 @@ source persistence. Missing/incompatible contracts and invalid question output
 cannot fall back to native success. See the [four-call audit](mcp-procedure-ownership-audit.md).
 All hosted stages receive current preparation context and saved decisions.
 Apply-answers returns the versioned `deep-dive.edits` exchange. The host applies
-only unique, non-overlapping scoped edits and refuses a source changed during
+only unique, non-overlapping scoped edits. A supplied preparation snapshot must
+contain the target before model execution; an incomplete snapshot fails without
+writing or recording acceptance. Persistence refuses a source changed during
 model execution. Whole/partial Markdown responses cannot replace the source.
 Response bodies are bounded during streaming; oversized streams are cancelled.
 
