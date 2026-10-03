@@ -172,7 +172,9 @@ and required checks are handled, or report the concrete external blocker.
 
 - Request and inspect both reviewers on the current head; assess findings from
   both with the same evidence standard. Record unavailable or skipped Kodus
-  reviews explicitly; they provide no evidence for the comparison.
+  reviews explicitly; they provide no evidence for the comparison, but their
+  absence alone does not add a merge gate during evaluation. Address actionable
+  findings from either bot before merging.
 - Wait for Greptile's completed review of the current head before merging. Read
   its summary, inline threads, submitted reviews, and checks; green CI alone
   does not establish that Greptile reviewed the change.

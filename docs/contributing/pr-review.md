@@ -43,7 +43,7 @@ retain their own configured review requirements.
 7. After an authorized merge, verify its state and linked issue closure. Report
    any new Dependabot batch separately from the PRs just completed.
 
-## If review does not arrive
+## If Greptile review does not arrive
 
 Inspect the app's check/status output and bot comments. Confirm HEPHA is enabled
 inside Greptile as well as allowed in the GitHub App installation. Check draft,
@@ -67,7 +67,11 @@ validation but does not establish equal ability to review application logic.
 
 Kodus is under evaluation; it does not silently replace the existing Greptile
 merge requirement. If either review is missing, investigate and report its state.
-Any change to the required reviewer policy belongs to the maintainer.
+A missing, skipped or unavailable Kodus review is recorded as missing comparison
+evidence; it does not itself block a merge once the existing Greptile, CI and
+merge-authorization requirements are met. Available actionable Kodus findings
+still need a verified fix or reasoned disposition before merging. Any change to
+the required reviewer policy belongs to the maintainer.
 
 ## Durable evidence
 
