@@ -26,6 +26,22 @@ test.describe("Mermaid document compatibility", () => {
     });
   }
 
+  test("renders mathematical labels with the patched KaTeX renderer", async ({ page }) => {
+    await installDashboardFixtures(page, [feature]);
+    await page.route("**/api/**/document", (route) => route.fulfill({ json: {
+      content: '```mermaid\nflowchart LR\n  A["$$x^2$$"] --> B[Verified]\n```',
+      readStatus: "ok", readError: null,
+    } }));
+    await page.goto("/");
+    await page.getByRole("region", { name: "MemoryBank work board" })
+      .locator("article.feature-card").first().click();
+    const diagram = page.locator(".mermaid-diagram svg");
+    await expect(diagram).toBeVisible();
+    await expect(diagram.locator(".katex")).toBeVisible();
+    await expect(diagram).toContainText("Verified");
+    await expect(page.locator(".mermaid-diagram-error")).toHaveCount(0);
+  });
+
   test("shows malformed source safely and recovers when the document is reloaded", async ({ page }) => {
     await installDashboardFixtures(page, [feature]);
     let source = "this-is-not-a-diagram";
