@@ -13,6 +13,9 @@ overrides:
   "esbuild@>=0.27.3 <0.28.1": "0.28.1"
   # Chevrotain 11.1.2 pins 4.17.23: GHSA-r5fr-rjxr-66jc / GHSA-f23m-r3pf-42rh.
   "lodash-es@<=4.17.23": "4.18.1"
+  # Mermaid requires the vulnerable KaTeX 0.16 line (GHSA-238p-pmpm-9mq7).
+  "katex@>=0.11.0 <0.18.2": "0.18.2"
   postcss: "8.5.23"
-  shell-quote: "1.9.0"
+  "shell-quote@>=1.8.4 <1.11.0": "1.11.0"
+  "source-map-js@>=1.0.0 <1.2.2": "1.2.2"
   undici: "7.29.1"

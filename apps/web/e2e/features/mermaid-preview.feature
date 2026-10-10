@@ -14,6 +14,13 @@ Feature: Mermaid document compatibility
       | state     |
       | class     |
 
+  Scenario: Render mathematical labels after a KaTeX security upgrade
+    Given a document contains a Mermaid flowchart with a mathematical label
+    When the user opens its document preview
+    Then the real renderer displays the formula using KaTeX inside the SVG
+    And the other node labels remain readable
+    And no diagram error is shown
+
   Scenario: Recover from malformed diagram source
     Given a document contains an invalid Mermaid diagram
     When the user opens the document preview
